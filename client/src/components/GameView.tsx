@@ -1,6 +1,8 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
+import { ActionTypes } from '@zaff/shared';
 import { useSocket } from '../network/useSocket';
 import type { MtgJsonDeck } from '../services/mtgjson';
+import { scryfallImageUrl } from '../services/mtgjson';
 
 interface GameViewProps {
   address: string;
@@ -10,7 +12,38 @@ interface GameViewProps {
 }
 
 export default function GameView({ address, playerName, selectedDeck, onDisconnect }: GameViewProps) {
-  const { status, playerId, gameState, disconnect } = useSocket(address, playerName);
+  const { status, playerId, gameState, sendAction, disconnect } = useSocket(address, playerName);
+  const deckSentRef = useRef(false);
+
+  // Dispatch LOAD_DECK once when connected with a selected deck
+  useEffect(() => {
+    if (status !== 'connected' || !selectedDeck || deckSentRef.current) return;
+    deckSentRef.current = true;
+
+    const allBoards = [
+      ...selectedDeck.mainBoard,
+      ...selectedDeck.sideBoard,
+      ...selectedDeck.commander,
+    ];
+
+    // Expand each card entry by its count
+    const cards: { cardId: string; imageUrl: string }[] = [];
+    for (const card of allBoards) {
+      const scryfallId = card.identifiers.scryfallId;
+      if (!scryfallId) continue;
+      for (let i = 0; i < card.count; i++) {
+        cards.push({
+          cardId: scryfallId,
+          imageUrl: scryfallImageUrl(scryfallId),
+        });
+      }
+    }
+
+    sendAction({
+      type: ActionTypes.LOAD_DECK,
+      payload: { cards },
+    });
+  }, [status, selectedDeck, sendAction]);
 
   const connectedPlayers = useMemo(() => {
     return Object.entries(gameState.players)
@@ -82,11 +115,35 @@ export default function GameView({ address, playerName, selectedDeck, onDisconne
 
       {/* Main content area (future canvas space) */}
       <main className="flex-1 pt-12">
-        {selectedDeck && (
-          <p className="px-4 pt-4 text-sm text-zaff-muted">
-            Deck loaded: {selectedDeck.name} ({selectedDeck.type})
-          </p>
-        )}
+        <div className="px-4 pt-4 space-y-2">
+          {/* Your deck status */}
+          {playerId && (
+            <p className="text-sm text-zaff-muted">
+              Your deck:{' '}
+              {(() => {
+                const deckZone = gameState.zones[`${playerId}:deck`];
+                const count = deckZone ? deckZone.length : 0;
+                return count > 0
+                  ? `${count} cards loaded`
+                  : 'No deck loaded';
+              })()}
+            </p>
+          )}
+
+          {/* Other players status */}
+          {Object.entries(gameState.players)
+            .filter(([id]) => id !== playerId)
+            .map(([id, player]) => {
+              const deckZone = gameState.zones[`${id}:deck`];
+              const hasDeck = deckZone && deckZone.length > 0;
+              return (
+                <p key={id} className="text-sm text-zaff-muted">
+                  {player.name} ({player.seat || 'no seat'}):{' '}
+                  {hasDeck ? 'Deck loaded' : 'No deck'}
+                </p>
+              );
+            })}
+        </div>
       </main>
     </div>
   );
