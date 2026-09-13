@@ -11,6 +11,7 @@ export default defineConfig({
   base: '/collectible-card-gaming/',
   server: {
     port: 5173,
+    allowedHosts: true,
     proxy: {
       '/ws': {
         target: 'ws://localhost:8080',
