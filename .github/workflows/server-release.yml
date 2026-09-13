@@ -1,0 +1,102 @@
+name: Server Release
+
+on:
+  push:
+    tags:
+      - 'server/v*'
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: server/go.mod
+      - name: Run tests
+        working-directory: server
+        run: go test -race -count=1 ./...
+      - name: Run vet
+        working-directory: server
+        run: go vet ./...
+
+  build:
+    name: Build ${{ matrix.os }}/${{ matrix.arch }}
+    needs: test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - os: linux
+            arch: amd64
+            ext: ''
+          - os: linux
+            arch: arm64
+            ext: ''
+          - os: darwin
+            arch: amd64
+            ext: ''
+          - os: darwin
+            arch: arm64
+            ext: ''
+          - os: windows
+            arch: amd64
+            ext: '.exe'
+          - os: windows
+            arch: arm64
+            ext: '.exe'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: server/go.mod
+
+      - name: Build binary
+        working-directory: server
+        env:
+          GOOS: ${{ matrix.os }}
+          GOARCH: ${{ matrix.arch }}
+          CGO_ENABLED: '0'
+        run: |
+          go build -o zaff-server-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.ext }} .
+
+      - name: Compress (tar.gz)
+        if: matrix.os != 'windows'
+        working-directory: server
+        run: |
+          tar czf zaff-server-${{ matrix.os }}-${{ matrix.arch }}.tar.gz \
+            zaff-server-${{ matrix.os }}-${{ matrix.arch }}
+
+      - name: Compress (zip)
+        if: matrix.os == 'windows'
+        working-directory: server
+        run: |
+          zip zaff-server-${{ matrix.os }}-${{ matrix.arch }}.zip \
+            zaff-server-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.ext }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: zaff-server-${{ matrix.os }}-${{ matrix.arch }}
+          path: server/zaff-server-${{ matrix.os }}-${{ matrix.arch }}.*
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*
+          generate_release_notes: true
