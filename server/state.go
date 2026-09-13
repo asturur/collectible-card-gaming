@@ -7,9 +7,21 @@ type GameState struct {
 	Zones   map[string][]string `json:"zones"`
 }
 
+// Seat constants for player table positions.
+const (
+	SeatSouth = "south"
+	SeatNorth = "north"
+	SeatEast  = "east"
+	SeatWest  = "west"
+)
+
+// SeatOrder defines the order seats are assigned to new players.
+var SeatOrder = []string{SeatSouth, SeatNorth, SeatEast, SeatWest}
+
 // Player represents a connected player.
 type Player struct {
 	Name      string `json:"name"`
+	Seat      string `json:"seat"`
 	Life      int    `json:"life"`
 	Connected bool   `json:"connected"`
 }

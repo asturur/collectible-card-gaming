@@ -131,6 +131,7 @@ func (r *Room) AddClient(client *Client) string {
 	playerID := client.PlayerID
 	r.State.Players[playerID] = &Player{
 		Name:      client.PlayerName,
+		Seat:      r.nextAvailableSeat(),
 		Life:      20,
 		Connected: true,
 	}
@@ -139,6 +140,24 @@ func (r *Room) AddClient(client *Client) string {
 
 	slog.Info("player joined", "playerId", playerID, "name", client.PlayerName)
 	return playerID
+}
+
+// nextAvailableSeat returns the first seat from SeatOrder that no existing
+// player occupies. Must be called with the lock held.
+func (r *Room) nextAvailableSeat() string {
+	taken := make(map[string]bool)
+	for _, p := range r.State.Players {
+		if p.Seat != "" {
+			taken[p.Seat] = true
+		}
+	}
+	for _, s := range SeatOrder {
+		if !taken[s] {
+			return s
+		}
+	}
+	// More than 4 players: return empty (shouldn't happen in normal use)
+	return ""
 }
 
 // RemoveClient marks a player as disconnected.
