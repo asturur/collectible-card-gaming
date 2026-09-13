@@ -1,0 +1,14 @@
+@import "tailwindcss";
+
+@theme {
+  /* ZAFF brand colors -- dark theme */
+  --color-zaff-bg: #0f172a;
+  --color-zaff-surface: #1e293b;
+  --color-zaff-primary: #6366f1;
+  --color-zaff-primary-hover: #818cf8;
+  --color-zaff-text: #f8fafc;
+  --color-zaff-muted: #94a3b8;
+  --color-zaff-border: #334155;
+
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+}
