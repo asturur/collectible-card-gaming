@@ -1,15 +1,102 @@
-import type { GameAction, ConnectionStatus } from '@zaff/shared';
+import type { Action, ServerMessage, ConnectionStatus, ClientMessage } from '@zaff/shared';
+
+export type ServerMessageHandler = (message: ServerMessage) => void;
+export type StatusChangeHandler = (status: ConnectionStatus) => void;
 
 /**
  * Interface for the game socket abstraction.
  * Implementations handle the actual WebSocket connection.
  */
 export interface GameSocket {
-  connect(address: string): void;
+  connect(address: string, playerName: string): void;
   disconnect(): void;
-  send(action: GameAction): void;
-  onMessage(handler: (action: GameAction) => void): void;
-  onStatusChange(handler: (status: ConnectionStatus) => void): void;
+  sendAction(action: Action): void;
+  sendUndo(seq: number): void;
+  sendPing(): void;
+  onMessage(handler: ServerMessageHandler): void;
+  onStatusChange(handler: StatusChangeHandler): void;
+}
+
+/**
+ * Real WebSocket implementation that connects to the Go game server.
+ */
+export class WebSocketGameSocket implements GameSocket {
+  private ws: WebSocket | null = null;
+  private messageHandlers: ServerMessageHandler[] = [];
+  private statusHandlers: StatusChangeHandler[] = [];
+  private _status: ConnectionStatus = 'disconnected';
+
+  get status(): ConnectionStatus {
+    return this._status;
+  }
+
+  connect(address: string, playerName: string): void {
+    this.setStatus('connecting');
+
+    const url = `ws://${address}/ws?name=${encodeURIComponent(playerName)}`;
+    this.ws = new WebSocket(url);
+
+    this.ws.onopen = () => {
+      this.setStatus('connected');
+    };
+
+    this.ws.onmessage = (event: MessageEvent) => {
+      try {
+        const message = JSON.parse(event.data as string) as ServerMessage;
+        this.messageHandlers.forEach((h) => h(message));
+      } catch {
+        // Ignore unparseable messages
+      }
+    };
+
+    this.ws.onclose = () => {
+      this.setStatus('disconnected');
+      this.ws = null;
+    };
+
+    this.ws.onerror = () => {
+      this.setStatus('error');
+    };
+  }
+
+  disconnect(): void {
+    if (this.ws) {
+      this.ws.close();
+      this.ws = null;
+    }
+    this.setStatus('disconnected');
+  }
+
+  sendAction(action: Action): void {
+    this.send({ msg: 'ACTION', action });
+  }
+
+  sendUndo(seq: number): void {
+    this.send({ msg: 'UNDO', seq });
+  }
+
+  sendPing(): void {
+    this.send({ msg: 'PING' });
+  }
+
+  onMessage(handler: ServerMessageHandler): void {
+    this.messageHandlers.push(handler);
+  }
+
+  onStatusChange(handler: StatusChangeHandler): void {
+    this.statusHandlers.push(handler);
+  }
+
+  private send(message: ClientMessage): void {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify(message));
+    }
+  }
+
+  private setStatus(status: ConnectionStatus): void {
+    this._status = status;
+    this.statusHandlers.forEach((h) => h(status));
+  }
 }
 
 /**
@@ -17,15 +104,15 @@ export interface GameSocket {
  * Does not open a real WebSocket connection.
  */
 export class MockGameSocket implements GameSocket {
-  private messageHandlers: Array<(action: GameAction) => void> = [];
-  private statusHandlers: Array<(status: ConnectionStatus) => void> = [];
+  private messageHandlers: ServerMessageHandler[] = [];
+  private statusHandlers: StatusChangeHandler[] = [];
   private _status: ConnectionStatus = 'disconnected';
 
   get status(): ConnectionStatus {
     return this._status;
   }
 
-  connect(_address: string): void {
+  connect(_address: string, _playerName: string): void {
     this.setStatus('connecting');
     // Simulate async connection
     setTimeout(() => this.setStatus('connected'), 100);
@@ -35,21 +122,29 @@ export class MockGameSocket implements GameSocket {
     this.setStatus('disconnected');
   }
 
-  send(_action: GameAction): void {
-    // Mock: no-op, could log or echo for testing
+  sendAction(_action: Action): void {
+    // Mock: no-op
   }
 
-  onMessage(handler: (action: GameAction) => void): void {
+  sendUndo(_seq: number): void {
+    // Mock: no-op
+  }
+
+  sendPing(): void {
+    // Mock: no-op
+  }
+
+  onMessage(handler: ServerMessageHandler): void {
     this.messageHandlers.push(handler);
   }
 
-  onStatusChange(handler: (status: ConnectionStatus) => void): void {
+  onStatusChange(handler: StatusChangeHandler): void {
     this.statusHandlers.push(handler);
   }
 
-  /** Simulate receiving a message (for tests). */
-  simulateMessage(action: GameAction): void {
-    this.messageHandlers.forEach((h) => h(action));
+  /** Simulate receiving a server message (for tests). */
+  simulateMessage(message: ServerMessage): void {
+    this.messageHandlers.forEach((h) => h(message));
   }
 
   private setStatus(status: ConnectionStatus): void {
