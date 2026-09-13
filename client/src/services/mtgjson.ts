@@ -53,8 +53,10 @@ export async function fetchDeckList(): Promise<DeckListEntry[]> {
   if (!res.ok) {
     throw new Error(`Failed to fetch deck list: ${res.status} ${res.statusText}`);
   }
-  const data = await res.json();
-  return data as DeckListEntry[];
+  const json = await res.json();
+  // MTGJSON wraps the list in { meta: {...}, data: [...] }
+  const entries = json.data ?? json;
+  return entries as DeckListEntry[];
 }
 
 /**
