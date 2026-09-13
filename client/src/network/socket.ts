@@ -33,7 +33,15 @@ export class WebSocketGameSocket implements GameSocket {
   connect(address: string, playerName: string): void {
     this.setStatus('connecting');
 
-    const url = `ws://${address}/ws?name=${encodeURIComponent(playerName)}`;
+    // Auto-detect protocol: use wss:// for HTTPS origins (e.g. Cloudflare tunnels)
+    const protocol = address.startsWith('https://') || address.startsWith('wss://')
+      ? 'wss'
+      : 'ws';
+    const host = address
+      .replace(/^https?:\/\//, '')
+      .replace(/^wss?:\/\//, '')
+      .replace(/\/+$/, '');
+    const url = `${protocol}://${host}/ws?name=${encodeURIComponent(playerName)}`;
     this.ws = new WebSocket(url);
 
     this.ws.onopen = () => {
