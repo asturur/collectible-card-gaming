@@ -53,6 +53,7 @@ func (r *Room) ProcessAction(action Action, playerID string) error {
 	msg := ServerMessage{
 		Msg:    MsgActionResult,
 		Action: &sa,
+		State:  r.State,
 	}
 
 	r.broadcast(msg)
@@ -103,6 +104,7 @@ func (r *Room) ProcessUndo(seq uint64, playerID string) error {
 	msg := ServerMessage{
 		Msg:    MsgActionResult,
 		Action: &sa,
+		State:  r.State,
 	}
 
 	r.broadcast(msg)
