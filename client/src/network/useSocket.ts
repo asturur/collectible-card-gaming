@@ -45,6 +45,7 @@ export function useSocket(serverAddress: string | null, playerName: string) {
                 ...prev.players,
                 [joinedId]: {
                   name: joinedName,
+                  seat: prev.players[joinedId]?.seat ?? '',
                   life: prev.players[joinedId]?.life ?? 20,
                   connected: true,
                 },
@@ -71,7 +72,9 @@ export function useSocket(serverAddress: string | null, playerName: string) {
           break;
 
         case 'ACTION_RESULT':
-          // Future: apply action to local state
+          if (message.state) {
+            setGameState(message.state);
+          }
           break;
 
         case 'ERROR':
