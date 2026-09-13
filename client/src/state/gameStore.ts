@@ -1,4 +1,4 @@
-import type { GameState, ConnectionStatus, GameAction } from '@zaff/shared';
+import type { GameState, ConnectionStatus, Action } from '@zaff/shared';
 import { initialGameState } from '@zaff/shared';
 
 /**
@@ -10,7 +10,7 @@ export interface GameStore {
   serverAddress: string | null;
   connectionStatus: ConnectionStatus;
   gameState: GameState;
-  dispatch: (action: GameAction) => void;
+  dispatch: (action: Action) => void;
 }
 
 /**
@@ -20,6 +20,6 @@ export function createInitialStore(): Omit<GameStore, 'dispatch'> {
   return {
     serverAddress: null,
     connectionStatus: 'disconnected',
-    gameState: initialGameState,
+    gameState: initialGameState(),
   };
 }

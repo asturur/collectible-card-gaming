@@ -1,54 +1,31 @@
 /**
- * Game actions that can be dispatched by players.
- * These flow over WebSocket between client and server.
+ * Game action types matching the Go server's protocol.go constants.
  */
 
-export interface BaseAction {
+export const ActionTypes = {
+  ADD_CARD: 'ADD_CARD',
+  REMOVE_CARD: 'REMOVE_CARD',
+  MOVE_CARD: 'MOVE_CARD',
+  SET_CARD_POSITION: 'SET_CARD_POSITION',
+  ROTATE_CARD: 'ROTATE_CARD',
+  FLIP_CARD: 'FLIP_CARD',
+  SHUFFLE_ZONE: 'SHUFFLE_ZONE',
+  SET_ZONE_ORDER: 'SET_ZONE_ORDER',
+  DRAW_CARD: 'DRAW_CARD',
+  SET_COUNTER: 'SET_COUNTER',
+  SET_PLAYER_LIFE: 'SET_PLAYER_LIFE',
+  LOAD_DECK: 'LOAD_DECK',
+  CLEAR_PLAYER_CARDS: 'CLEAR_PLAYER_CARDS',
+} as const;
+
+export interface Action {
   type: string;
+  payload: Record<string, unknown>;
+}
+
+export interface SequencedAction extends Action {
+  seq: number;
   playerId: string;
   timestamp: number;
+  undo: Action;
 }
-
-export interface JoinGameAction extends BaseAction {
-  type: 'JOIN_GAME';
-  payload: {
-    playerName: string;
-  };
-}
-
-export interface LeaveGameAction extends BaseAction {
-  type: 'LEAVE_GAME';
-}
-
-export interface DrawCardAction extends BaseAction {
-  type: 'DRAW_CARD';
-}
-
-export interface PlayCardAction extends BaseAction {
-  type: 'PLAY_CARD';
-  payload: {
-    cardId: string;
-    position: { x: number; y: number };
-    zone: string;
-  };
-}
-
-export interface MoveCardAction extends BaseAction {
-  type: 'MOVE_CARD';
-  payload: {
-    cardId: string;
-    position: { x: number; y: number };
-    zone: string;
-  };
-}
-
-/**
- * Union of all game actions.
- * Extend this as new actions are added.
- */
-export type GameAction =
-  | JoinGameAction
-  | LeaveGameAction
-  | DrawCardAction
-  | PlayCardAction
-  | MoveCardAction;

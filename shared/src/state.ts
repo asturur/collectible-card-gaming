@@ -1,38 +1,39 @@
 /**
  * Game state shape shared between client and server.
+ * Matches the Go server's state.go types exactly.
  */
 
-export interface Card {
-  id: string;
-  name: string;
-  imageUrl?: string;
-  position: { x: number; y: number };
-  zone: string;
-  ownerId: string;
-  faceUp: boolean;
-}
-
 export interface Player {
-  id: string;
   name: string;
+  life: number;
   connected: boolean;
 }
 
+export interface Card {
+  instanceId: string;
+  cardId: string;
+  imageUrl: string;
+  ownerId: string;
+  zone: string;
+  zoneIndex: number;
+  x: number;
+  y: number;
+  rotation: number;
+  faceDown: boolean;
+  counters: Record<string, number>;
+}
+
 export interface GameState {
-  players: Player[];
-  cards: Card[];
-  turnPlayerId: string | null;
-  phase: 'waiting' | 'playing' | 'finished';
+  players: Record<string, Player>;
+  cards: Record<string, Card>;
+  zones: Record<string, string[]>;
 }
 
 export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
 
 /**
- * Initial empty game state.
+ * Creates an initial empty game state with empty maps.
  */
-export const initialGameState: GameState = {
-  players: [],
-  cards: [],
-  turnPlayerId: null,
-  phase: 'waiting',
-};
+export function initialGameState(): GameState {
+  return { players: {}, cards: {}, zones: {} };
+}
