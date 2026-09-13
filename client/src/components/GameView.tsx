@@ -1,13 +1,15 @@
 import { useMemo } from 'react';
 import { useSocket } from '../network/useSocket';
+import type { MtgJsonDeck } from '../services/mtgjson';
 
 interface GameViewProps {
   address: string;
   playerName: string;
+  selectedDeck: MtgJsonDeck | null;
   onDisconnect: () => void;
 }
 
-export default function GameView({ address, playerName, onDisconnect }: GameViewProps) {
+export default function GameView({ address, playerName, selectedDeck, onDisconnect }: GameViewProps) {
   const { status, playerId, gameState, disconnect } = useSocket(address, playerName);
 
   const connectedPlayers = useMemo(() => {
@@ -79,7 +81,13 @@ export default function GameView({ address, playerName, onDisconnect }: GameView
       </header>
 
       {/* Main content area (future canvas space) */}
-      <main className="flex-1 pt-12" />
+      <main className="flex-1 pt-12">
+        {selectedDeck && (
+          <p className="px-4 pt-4 text-sm text-zaff-muted">
+            Deck loaded: {selectedDeck.name} ({selectedDeck.type})
+          </p>
+        )}
+      </main>
     </div>
   );
 }
