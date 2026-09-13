@@ -1,15 +1,23 @@
 {
   "name": "zaff",
   "private": true,
-  "workspaces": ["client", "server", "shared"],
+  "workspaces": [
+    "client",
+    "server",
+    "shared"
+  ],
   "scripts": {
     "dev": "npm run dev --workspace=client",
-    "dev:all": "npm run dev --workspace=client & npm run dev --workspace=server",
+    "dev:all": "concurrently -n client,server -c cyan,green \"npm run dev -w client\" \"cd server && go run . --port 8080\"",
+    "dev:server": "cd server && go run . --port 8080",
     "build": "npm run build --workspace=shared && npm run build --workspace=client",
     "test": "npm run test --workspace=client",
     "lint": "npm run lint --workspace=client"
   },
   "engines": {
     "node": ">=20.19.0"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.5"
   }
 }
