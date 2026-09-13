@@ -46,9 +46,39 @@ func (c *Client) SendMsg(msg ServerMessage) {
 	c.Send(data)
 }
 
+// startPing sends a WebSocket protocol-level ping every 15 seconds to keep
+// the connection alive through proxies and NATs. Stops when ctx is cancelled.
+func (c *Client) startPing(ctx context.Context) {
+	ticker := time.NewTicker(15 * time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			pingCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			err := c.Conn.Ping(pingCtx)
+			cancel()
+			if err != nil {
+				slog.Info("ping failed, client likely disconnected",
+					"playerId", c.PlayerID,
+					"error", err,
+				)
+				return
+			}
+		}
+	}
+}
+
 // ReadLoop reads messages from the WebSocket and dispatches them to the room.
+// It also starts a background ping goroutine to keep the connection alive.
 // It blocks until the connection is closed or an error occurs.
 func (c *Client) ReadLoop(ctx context.Context) {
+	// Start server-side keepalive pings
+	pingCtx, pingCancel := context.WithCancel(ctx)
+	go c.startPing(pingCtx)
+	defer pingCancel()
+
 	for {
 		_, data, err := c.Conn.Read(ctx)
 		if err != nil {

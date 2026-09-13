@@ -22,6 +22,7 @@ export interface GameSocket {
  */
 export class WebSocketGameSocket implements GameSocket {
   private ws: WebSocket | null = null;
+  private pingInterval: ReturnType<typeof setInterval> | null = null;
   private messageHandlers: ServerMessageHandler[] = [];
   private statusHandlers: StatusChangeHandler[] = [];
   private _status: ConnectionStatus = 'disconnected';
@@ -46,6 +47,9 @@ export class WebSocketGameSocket implements GameSocket {
 
     this.ws.onopen = () => {
       this.setStatus('connected');
+      // Send application-level pings every 15s to keep connection alive
+      // through proxies, NATs, and Cloudflare tunnels
+      this.pingInterval = setInterval(() => this.sendPing(), 15_000);
     };
 
     this.ws.onmessage = (event: MessageEvent) => {
@@ -58,6 +62,7 @@ export class WebSocketGameSocket implements GameSocket {
     };
 
     this.ws.onclose = () => {
+      this.clearPing();
       this.setStatus('disconnected');
       this.ws = null;
     };
@@ -68,6 +73,7 @@ export class WebSocketGameSocket implements GameSocket {
   }
 
   disconnect(): void {
+    this.clearPing();
     if (this.ws) {
       this.ws.close();
       this.ws = null;
@@ -98,6 +104,13 @@ export class WebSocketGameSocket implements GameSocket {
   private send(message: ClientMessage): void {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify(message));
+    }
+  }
+
+  private clearPing(): void {
+    if (this.pingInterval) {
+      clearInterval(this.pingInterval);
+      this.pingInterval = null;
     }
   }
 
