@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { getAllCards, scryfallImageUrl, type MtgJsonDeck, type MtgJsonCard } from '../services/mtgjson';
+import { scryfallImageUrl, type MtgJsonDeck, type MtgJsonCard } from '../services/mtgjson';
 
 interface DeckPreviewProps {
   deck: MtgJsonDeck;
@@ -28,7 +28,7 @@ function CardTile({ card }: { card: MtgJsonCard }) {
         </div>
       )}
       {card.count > 1 && (
-        <span className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-zaff-primary text-xs font-bold text-white shadow-lg">
+        <span className="absolute bottom-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-zaff-primary text-xs font-bold text-white shadow-lg">
           {card.count}
         </span>
       )}
@@ -36,13 +36,89 @@ function CardTile({ card }: { card: MtgJsonCard }) {
   );
 }
 
-export default function DeckPreview({ deck, onGoBack, onConfirm }: DeckPreviewProps) {
-  const cards = useMemo(() => getAllCards(deck), [deck]);
+/** Deduplicate cards by scryfallId, summing counts */
+function dedupeCards(cards: MtgJsonCard[]): MtgJsonCard[] {
+  const byId = new Map<string, MtgJsonCard>();
+  for (const card of cards) {
+    const id = card.identifiers.scryfallId;
+    if (!id) continue;
+    const existing = byId.get(id);
+    if (existing) {
+      existing.count += card.count;
+    } else {
+      byId.set(id, { ...card });
+    }
+  }
+  return [...byId.values()];
+}
 
-  const totalCards = useMemo(
-    () => cards.reduce((sum, c) => sum + c.count, 0),
-    [cards],
-  );
+/** Check if a card is a land by its type line */
+function isLand(card: MtgJsonCard): boolean {
+  return card.type.toLowerCase().includes('land');
+}
+
+interface DeckSection {
+  title: string;
+  cards: MtgJsonCard[];
+}
+
+function buildSections(deck: MtgJsonDeck): DeckSection[] {
+  const sections: DeckSection[] = [];
+
+  // Commander
+  if (deck.commander.length > 0) {
+    sections.push({
+      title: 'Commander',
+      cards: dedupeCards(deck.commander),
+    });
+  }
+
+  // Main board — split into spells and lands
+  if (deck.mainBoard.length > 0) {
+    const mainDeduped = dedupeCards(deck.mainBoard);
+    const spells = mainDeduped.filter((c) => !isLand(c));
+    const lands = mainDeduped.filter((c) => isLand(c));
+
+    if (spells.length > 0) {
+      sections.push({
+        title: 'Deck',
+        cards: spells,
+      });
+    }
+    if (lands.length > 0) {
+      sections.push({
+        title: 'Lands',
+        cards: lands,
+      });
+    }
+  }
+
+  // Side board
+  if (deck.sideBoard.length > 0) {
+    sections.push({
+      title: 'Sideboard',
+      cards: dedupeCards(deck.sideBoard),
+    });
+  }
+
+  return sections;
+}
+
+function countTotal(sections: DeckSection[]): { total: number; unique: number } {
+  let total = 0;
+  let unique = 0;
+  for (const section of sections) {
+    for (const card of section.cards) {
+      total += card.count;
+      unique += 1;
+    }
+  }
+  return { total, unique };
+}
+
+export default function DeckPreview({ deck, onGoBack, onConfirm }: DeckPreviewProps) {
+  const sections = useMemo(() => buildSections(deck), [deck]);
+  const { total, unique } = useMemo(() => countTotal(sections), [sections]);
 
   return (
     <div className="flex min-h-screen flex-col bg-zaff-bg text-zaff-text">
@@ -50,20 +126,30 @@ export default function DeckPreview({ deck, onGoBack, onConfirm }: DeckPreviewPr
       <header className="border-b border-zaff-border bg-zaff-surface px-6 py-4">
         <h2 className="text-2xl font-bold text-zaff-primary">{deck.name}</h2>
         <p className="mt-1 text-sm text-zaff-muted">
-          {deck.type} &middot; {totalCards} cards ({cards.length} unique)
+          {deck.type} &middot; {total} cards ({unique} unique)
         </p>
       </header>
 
-      {/* Card grid */}
+      {/* Card sections */}
       <main className="flex-1 overflow-y-auto px-6 py-6">
-        <div className="flex flex-wrap gap-4">
-          {cards.map((card) => (
-            <CardTile
-              key={card.identifiers.scryfallId ?? card.name}
-              card={card}
-            />
-          ))}
-        </div>
+        {sections.map((section) => (
+          <section key={section.title} className="mb-8">
+            <h3 className="mb-4 text-xl font-bold text-zaff-text">
+              {section.title}
+              <span className="ml-2 text-base font-normal text-zaff-muted">
+                ({section.cards.reduce((sum, c) => sum + c.count, 0)} cards)
+              </span>
+            </h3>
+            <div className="flex flex-wrap gap-4">
+              {section.cards.map((card) => (
+                <CardTile
+                  key={card.identifiers.scryfallId ?? card.name}
+                  card={card}
+                />
+              ))}
+            </div>
+          </section>
+        ))}
       </main>
 
       {/* Bottom action bar */}
