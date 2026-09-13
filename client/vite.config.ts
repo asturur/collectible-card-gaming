@@ -3,12 +3,12 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 
-export default defineConfig(({ mode }) => ({
+export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
   ],
-  base: mode === 'production' ? '/collectible-card-gaming/' : '/',
+  base: '/collectible-card-gaming/',
   server: {
     port: 5173,
     proxy: {
@@ -31,4 +31,4 @@ export default defineConfig(({ mode }) => ({
     setupFiles: './src/test/setup.ts',
     css: true,
   },
-}));
+});
