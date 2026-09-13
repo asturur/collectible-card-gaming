@@ -1,22 +1,36 @@
 import { useState, type FormEvent } from 'react';
 
 interface JoinScreenProps {
-  onJoin: (address: string) => void;
+  onJoin: (address: string, playerName: string) => void;
 }
 
 export default function JoinScreen({ onJoin }: JoinScreenProps) {
-  const [address, setAddress] = useState('');
-  const [error, setError] = useState('');
+  const [address, setAddress] = useState('localhost:8080');
+  const [playerName, setPlayerName] = useState('');
+  const [addressError, setAddressError] = useState('');
+  const [nameError, setNameError] = useState('');
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    const trimmed = address.trim();
-    if (!trimmed) {
-      setError('Server address is required');
-      return;
+    const trimmedAddress = address.trim();
+    const trimmedName = playerName.trim();
+
+    let hasError = false;
+    if (!trimmedAddress) {
+      setAddressError('Server address is required');
+      hasError = true;
+    } else {
+      setAddressError('');
     }
-    setError('');
-    onJoin(trimmed);
+    if (!trimmedName) {
+      setNameError('Player name is required');
+      hasError = true;
+    } else {
+      setNameError('');
+    }
+
+    if (hasError) return;
+    onJoin(trimmedAddress, trimmedName);
   }
 
   return (
@@ -44,18 +58,43 @@ export default function JoinScreen({ onJoin }: JoinScreenProps) {
           value={address}
           onChange={(e) => {
             setAddress(e.target.value);
-            if (error) setError('');
+            if (addressError) setAddressError('');
           }}
-          placeholder="ws://192.168.1.5:8080"
+          placeholder="localhost:8080"
           className="mb-1 w-full rounded-lg border border-zaff-border bg-zaff-bg px-4 py-3 text-zaff-text placeholder:text-zaff-muted focus:outline-none focus:ring-2 focus:ring-zaff-primary"
           autoComplete="off"
         />
-        {error && (
+        {addressError && (
           <p className="mb-3 text-sm text-red-400" role="alert">
-            {error}
+            {addressError}
           </p>
         )}
-        {!error && <div className="mb-3" />}
+        {!addressError && <div className="mb-3" />}
+
+        <label
+          htmlFor="player-name"
+          className="mb-2 block text-sm font-medium text-zaff-text"
+        >
+          Player Name
+        </label>
+        <input
+          id="player-name"
+          type="text"
+          value={playerName}
+          onChange={(e) => {
+            setPlayerName(e.target.value);
+            if (nameError) setNameError('');
+          }}
+          placeholder="Enter your name"
+          className="mb-1 w-full rounded-lg border border-zaff-border bg-zaff-bg px-4 py-3 text-zaff-text placeholder:text-zaff-muted focus:outline-none focus:ring-2 focus:ring-zaff-primary"
+          autoComplete="off"
+        />
+        {nameError && (
+          <p className="mb-3 text-sm text-red-400" role="alert">
+            {nameError}
+          </p>
+        )}
+        {!nameError && <div className="mb-3" />}
 
         <button
           type="submit"
