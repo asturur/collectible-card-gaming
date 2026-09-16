@@ -17,6 +17,10 @@ const (
 	ActionSetPlayerLife    = "SET_PLAYER_LIFE"
 	ActionLoadDeck         = "LOAD_DECK"
 	ActionClearPlayerCards = "CLEAR_PLAYER_CARDS"
+	ActionCardSelected     = "CARD_SELECTED"
+	ActionCardMoving       = "CARD_MOVING"
+	ActionRevealCard       = "REVEAL_CARD"
+	ActionTapCard          = "TAP_CARD"
 )
 
 // Client message type constants.
@@ -169,6 +173,28 @@ type ClearPlayerCardsPayload struct{}
 
 // UndoLoadDeckPayload stores full card states for undo of CLEAR_PLAYER_CARDS.
 type UndoLoadDeckPayload struct {
-	Cards     []Card  `json:"cards"`
+	Cards     []Card              `json:"cards"`
 	ZoneState map[string][]string `json:"zoneState"`
+}
+
+// CardSelectedPayload is the payload for CARD_SELECTED.
+type CardSelectedPayload struct {
+	InstanceID string `json:"instanceId"`
+}
+
+// CardMovingPayload is the payload for CARD_MOVING.
+type CardMovingPayload struct {
+	InstanceID string  `json:"instanceId"`
+	X          float64 `json:"x"`
+	Y          float64 `json:"y"`
+}
+
+// RevealCardPayload is the payload for REVEAL_CARD.
+type RevealCardPayload struct {
+	InstanceID string `json:"instanceId"`
+}
+
+// TapCardPayload is the payload for TAP_CARD.
+type TapCardPayload struct {
+	InstanceID string `json:"instanceId"`
 }

@@ -39,6 +39,14 @@ func Reduce(state *GameState, action Action, playerID string) (*Action, error) {
 		return reduceLoadDeck(state, action.Payload, playerID)
 	case ActionClearPlayerCards:
 		return reduceClearPlayerCards(state, playerID)
+	case ActionCardSelected:
+		return reduceCardSelected(state, action.Payload, playerID)
+	case ActionCardMoving:
+		return reduceCardMoving(state, action.Payload, playerID)
+	case ActionRevealCard:
+		return reduceRevealCard(state, action.Payload, playerID)
+	case ActionTapCard:
+		return reduceTapCard(state, action.Payload, playerID)
 	default:
 		return nil, fmt.Errorf("unknown action type: %s", action.Type)
 	}
@@ -465,4 +473,112 @@ func updateZoneIndices(state *GameState, zone string) {
 			card.ZoneIndex = i
 		}
 	}
+}
+
+func reduceCardSelected(state *GameState, rawPayload json.RawMessage, playerID string) (*Action, error) {
+	var p CardSelectedPayload
+	if err := json.Unmarshal(rawPayload, &p); err != nil {
+		return nil, fmt.Errorf("invalid CARD_SELECTED payload: %w", err)
+	}
+
+	// Find and record the previously selected card by this player (for undo)
+	var prevSelectedID string
+	for _, card := range state.Cards {
+		if card.SelectedBy == playerID {
+			prevSelectedID = card.InstanceID
+			card.SelectedBy = ""
+			break
+		}
+	}
+
+	// Select the new card (empty instanceId means deselect only)
+	if p.InstanceID != "" {
+		card, ok := state.Cards[p.InstanceID]
+		if !ok {
+			return nil, fmt.Errorf("card %s not found", p.InstanceID)
+		}
+		card.SelectedBy = playerID
+	}
+
+	// Undo restores the previous selection
+	undoPayload, _ := json.Marshal(CardSelectedPayload{InstanceID: prevSelectedID})
+	return &Action{Type: ActionCardSelected, Payload: undoPayload}, nil
+}
+
+func reduceRevealCard(state *GameState, rawPayload json.RawMessage, playerID string) (*Action, error) {
+	var p RevealCardPayload
+	if err := json.Unmarshal(rawPayload, &p); err != nil {
+		return nil, fmt.Errorf("invalid REVEAL_CARD payload: %w", err)
+	}
+
+	card, ok := state.Cards[p.InstanceID]
+	if !ok {
+		return nil, fmt.Errorf("card %s not found", p.InstanceID)
+	}
+
+	if card.OwnerID != playerID {
+		return nil, fmt.Errorf("player %s does not own card %s", playerID, p.InstanceID)
+	}
+
+	// Toggle faceDown
+	card.FaceDown = !card.FaceDown
+
+	// Self-inverse
+	undoPayload, _ := json.Marshal(RevealCardPayload{InstanceID: p.InstanceID})
+	return &Action{Type: ActionRevealCard, Payload: undoPayload}, nil
+}
+
+func reduceTapCard(state *GameState, rawPayload json.RawMessage, playerID string) (*Action, error) {
+	var p TapCardPayload
+	if err := json.Unmarshal(rawPayload, &p); err != nil {
+		return nil, fmt.Errorf("invalid TAP_CARD payload: %w", err)
+	}
+
+	card, ok := state.Cards[p.InstanceID]
+	if !ok {
+		return nil, fmt.Errorf("card %s not found", p.InstanceID)
+	}
+
+	if card.OwnerID != playerID {
+		return nil, fmt.Errorf("player %s does not own card %s", playerID, p.InstanceID)
+	}
+
+	// Toggle between 0 and 90 degrees
+	if card.Rotation == 0 {
+		card.Rotation = 90
+	} else {
+		card.Rotation = 0
+	}
+
+	// Self-inverse
+	undoPayload, _ := json.Marshal(TapCardPayload{InstanceID: p.InstanceID})
+	return &Action{Type: ActionTapCard, Payload: undoPayload}, nil
+}
+
+func reduceCardMoving(state *GameState, rawPayload json.RawMessage, playerID string) (*Action, error) {
+	var p CardMovingPayload
+	if err := json.Unmarshal(rawPayload, &p); err != nil {
+		return nil, fmt.Errorf("invalid CARD_MOVING payload: %w", err)
+	}
+
+	card, ok := state.Cards[p.InstanceID]
+	if !ok {
+		return nil, fmt.Errorf("card %s not found", p.InstanceID)
+	}
+
+	// Only the card owner can move it
+	if card.OwnerID != playerID {
+		return nil, fmt.Errorf("player %s does not own card %s", playerID, p.InstanceID)
+	}
+
+	undoPayload, _ := json.Marshal(CardMovingPayload{
+		InstanceID: p.InstanceID,
+		X:          card.X,
+		Y:          card.Y,
+	})
+
+	card.X = p.X
+	card.Y = p.Y
+
+	return &Action{Type: ActionCardMoving, Payload: undoPayload}, nil
 }

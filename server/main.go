@@ -17,6 +17,7 @@ import (
 
 func main() {
 	port := flag.Int("port", 8080, "port to listen on")
+	clientPort := flag.Int("client-port", 5173, "Vite dev client port to tunnel (0 to skip)")
 	tunnel := flag.String("tunnel", "", "tunnel mode: cloudflare, none (empty = interactive prompt)")
 	flag.Parse()
 
@@ -50,22 +51,41 @@ func main() {
 		tunnelMode = promptTunnelChoice()
 	}
 
-	var tunnelCmd *TunnelResult
+	var tunnels []*TunnelResult
 
 	switch tunnelMode {
 	case "cloudflare":
-		resultCh := make(chan TunnelResult, 1)
-		startCloudflareTunnel(*port, resultCh)
-		tr := <-resultCh
-		tunnelCmd = &tr
-		printConnectionBox(tr.URL, *port)
+		// Start server tunnel
+		serverCh := make(chan TunnelResult, 1)
+		startCloudflareTunnel(*port, "server", serverCh)
+
+		// Start client tunnel if port is set
+		var clientCh chan TunnelResult
+		if *clientPort > 0 {
+			clientCh = make(chan TunnelResult, 1)
+			startCloudflareTunnel(*clientPort, "client", clientCh)
+		}
+
+		// Wait for server tunnel
+		serverResult := <-serverCh
+		tunnels = append(tunnels, &serverResult)
+
+		// Wait for client tunnel
+		var clientURL string
+		if clientCh != nil {
+			clientResult := <-clientCh
+			tunnels = append(tunnels, &clientResult)
+			clientURL = clientResult.URL
+		}
+
+		printConnectionBox(serverResult.URL, clientURL, *port, *clientPort)
 
 	case "none":
-		printConnectionBox("", *port)
+		printConnectionBox("", "", *port, *clientPort)
 
 	default:
 		fmt.Printf("Unknown tunnel mode %q, using no tunnel.\n", tunnelMode)
-		printConnectionBox("", *port)
+		printConnectionBox("", "", *port, *clientPort)
 	}
 
 	// Wait for SIGINT or SIGTERM for graceful shutdown
@@ -75,11 +95,13 @@ func main() {
 
 	fmt.Println("\nShutting down...")
 
-	// Kill cloudflared subprocess if running
-	if tunnelCmd != nil && tunnelCmd.Cmd != nil && tunnelCmd.Cmd.Process != nil {
-		slog.Info("stopping cloudflare tunnel")
-		_ = tunnelCmd.Cmd.Process.Kill()
-		_, _ = tunnelCmd.Cmd.Process.Wait()
+	// Kill cloudflared subprocesses
+	for _, t := range tunnels {
+		if t != nil && t.Cmd != nil && t.Cmd.Process != nil {
+			slog.Info("stopping cloudflare tunnel")
+			_ = t.Cmd.Process.Kill()
+			_, _ = t.Cmd.Process.Wait()
+		}
 	}
 
 	// Gracefully shut down the HTTP server

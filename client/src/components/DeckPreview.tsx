@@ -28,7 +28,7 @@ function CardTile({ card }: { card: MtgJsonCard }) {
         </div>
       )}
       {card.count > 1 && (
-        <span className="absolute bottom-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-zaff-primary text-xs font-bold text-white shadow-lg">
+        <span className="absolute bottom-2 left-2 flex h-7 w-7 items-center justify-center rounded-full bg-zaff-primary text-xs font-bold text-white shadow-lg">
           {card.count}
         </span>
       )}

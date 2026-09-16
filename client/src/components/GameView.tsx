@@ -3,6 +3,7 @@ import { ActionTypes } from '@zaff/shared';
 import { useSocket } from '../network/useSocket';
 import type { MtgJsonDeck } from '../services/mtgjson';
 import { scryfallImageUrl } from '../services/mtgjson';
+import GameCanvas from './GameCanvas';
 
 interface GameViewProps {
   address: string;
@@ -51,6 +52,9 @@ export default function GameView({ address, playerName, selectedDeck, onDisconne
       .map(([id, p]) => ({ id, name: p.name }));
   }, [gameState.players]);
 
+  // Collect all cards from the game state as a flat array
+  const allCards = useMemo(() => Object.values(gameState.cards), [gameState.cards]);
+
   const playerCount = connectedPlayers.length;
 
   function handleDisconnect() {
@@ -75,9 +79,9 @@ export default function GameView({ address, playerName, selectedDeck, onDisconne
           : 'Disconnected';
 
   return (
-    <div className="flex min-h-screen flex-col bg-zaff-bg text-zaff-text">
+    <div className="relative h-screen w-screen overflow-hidden bg-zaff-bg text-zaff-text">
       {/* Status bar */}
-      <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between border-b border-zaff-border bg-zaff-surface px-4 py-2">
+      <header className="fixed top-0 left-0 right-0 z-50 flex h-10 items-center justify-between border-b border-zaff-border bg-zaff-surface px-4">
         {/* Left: connection status */}
         <div className="flex items-center gap-2">
           <span
@@ -113,38 +117,15 @@ export default function GameView({ address, playerName, selectedDeck, onDisconne
         </div>
       </header>
 
-      {/* Main content area (future canvas space) */}
-      <main className="flex-1 pt-12">
-        <div className="px-4 pt-4 space-y-2">
-          {/* Your deck status */}
-          {playerId && (
-            <p className="text-sm text-zaff-muted">
-              Your deck:{' '}
-              {(() => {
-                const deckZone = gameState.zones[`${playerId}:deck`];
-                const count = deckZone ? deckZone.length : 0;
-                return count > 0
-                  ? `${count} cards loaded`
-                  : 'No deck loaded';
-              })()}
-            </p>
-          )}
-
-          {/* Other players status */}
-          {Object.entries(gameState.players)
-            .filter(([id]) => id !== playerId)
-            .map(([id, player]) => {
-              const deckZone = gameState.zones[`${id}:deck`];
-              const hasDeck = deckZone && deckZone.length > 0;
-              return (
-                <p key={id} className="text-sm text-zaff-muted">
-                  {player.name} ({player.seat || 'no seat'}):{' '}
-                  {hasDeck ? 'Deck loaded' : 'No deck'}
-                </p>
-              );
-            })}
-        </div>
-      </main>
+      {/* FabricJS canvas fills everything below the header */}
+      {playerId && (
+        <GameCanvas
+          cards={allCards}
+          players={gameState.players}
+          playerId={playerId}
+          sendAction={sendAction}
+        />
+      )}
     </div>
   );
 }

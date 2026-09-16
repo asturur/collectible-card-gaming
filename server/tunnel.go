@@ -13,7 +13,7 @@ import (
 
 // TunnelResult holds the outcome of starting a tunnel.
 type TunnelResult struct {
-	URL string // The public tunnel URL (without scheme for display)
+	URL string // The public tunnel URL
 	Cmd *exec.Cmd
 }
 
@@ -46,7 +46,7 @@ func promptTunnelChoice() string {
 // startCloudflareTunnel starts cloudflared as a subprocess and parses the
 // generated tunnel URL from its stderr output. It returns a TunnelResult
 // on the provided channel once the URL is captured (or an error occurs).
-func startCloudflareTunnel(port int, result chan<- TunnelResult) {
+func startCloudflareTunnel(port int, label string, result chan<- TunnelResult) {
 	path, err := exec.LookPath("cloudflared")
 	if err != nil {
 		fmt.Println()
@@ -62,7 +62,7 @@ func startCloudflareTunnel(port int, result chan<- TunnelResult) {
 		return
 	}
 
-	slog.Info("starting cloudflare tunnel", "binary", path)
+	slog.Info("starting cloudflare tunnel", "label", label, "binary", path, "port", port)
 
 	localURL := fmt.Sprintf("http://localhost:%d", port)
 	cmd := exec.Command(path, "tunnel", "--url", localURL)
@@ -70,13 +70,13 @@ func startCloudflareTunnel(port int, result chan<- TunnelResult) {
 	// cloudflared logs to stderr
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
-		slog.Error("failed to get cloudflared stderr", "error", err)
+		slog.Error("failed to get cloudflared stderr", "label", label, "error", err)
 		result <- TunnelResult{}
 		return
 	}
 
 	if err := cmd.Start(); err != nil {
-		slog.Error("failed to start cloudflared", "error", err)
+		slog.Error("failed to start cloudflared", "label", label, "error", err)
 		result <- TunnelResult{}
 		return
 	}
@@ -90,7 +90,7 @@ func startCloudflareTunnel(port int, result chan<- TunnelResult) {
 		for scanner.Scan() {
 			line := scanner.Text()
 			// Forward cloudflared output with a prefix
-			fmt.Fprintf(os.Stderr, "[cloudflared] %s\n", line)
+			fmt.Fprintf(os.Stderr, "[cloudflared:%s] %s\n", label, line)
 
 			if !sent {
 				if match := urlPattern.FindString(line); match != "" {
@@ -105,40 +105,51 @@ func startCloudflareTunnel(port int, result chan<- TunnelResult) {
 
 		// If we never found a URL, send an empty result so main doesn't block forever
 		if !sent {
-			slog.Warn("cloudflared exited without producing a tunnel URL")
+			slog.Warn("cloudflared exited without producing a tunnel URL", "label", label)
 			result <- TunnelResult{Cmd: cmd}
 		}
 	}()
 }
 
 // printConnectionBox prints a bordered box with server connection info.
-func printConnectionBox(tunnelURL string, port int) {
-	const webApp = "https://asturur.github.io/collectible-card-gaming/"
-
-	if tunnelURL != "" {
-		// Strip scheme for display
-		displayURL := strings.TrimPrefix(tunnelURL, "https://")
-		displayURL = strings.TrimPrefix(displayURL, "http://")
+func printConnectionBox(serverTunnelURL string, clientTunnelURL string, serverPort int, clientPort int) {
+	if serverTunnelURL != "" {
+		serverDisplay := strings.TrimPrefix(serverTunnelURL, "https://")
+		serverDisplay = strings.TrimPrefix(serverDisplay, "http://")
 
 		lines := []string{
 			"ZAFF Game Server is ready!",
 			"",
 			"Share this server address with your friends:",
-			fmt.Sprintf("→ %s", displayURL),
-			"",
-			fmt.Sprintf("Web app: %s", webApp),
+			fmt.Sprintf("→ %s", serverDisplay),
+		}
+
+		if clientTunnelURL != "" {
+			lines = append(lines,
+				"",
+				"Dev client (remote testing):",
+				fmt.Sprintf("→ %s", clientTunnelURL),
+			)
+		}
+
+		lines = append(lines,
 			"",
 			"Press Ctrl+C to stop",
-		}
+		)
 		printBox(lines)
 	} else {
 		lines := []string{
 			"ZAFF Game Server is ready!",
 			"",
-			fmt.Sprintf("Server address: localhost:%d", port),
+			fmt.Sprintf("Server:  localhost:%d", serverPort),
+		}
+		if clientPort > 0 {
+			lines = append(lines, fmt.Sprintf("Client:  localhost:%d", clientPort))
+		}
+		lines = append(lines,
 			"",
 			"Press Ctrl+C to stop",
-		}
+		)
 		printBox(lines)
 	}
 }

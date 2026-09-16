@@ -38,6 +38,7 @@ type Card struct {
 	Y          float64        `json:"y"`
 	Rotation   float64        `json:"rotation"`
 	FaceDown   bool           `json:"faceDown"`
+	SelectedBy string         `json:"selectedBy"`
 	Counters   map[string]int `json:"counters"`
 }
 

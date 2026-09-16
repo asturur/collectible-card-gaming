@@ -21,6 +21,7 @@ export interface Card {
   y: number;
   rotation: number;
   faceDown: boolean;
+  selectedBy: string;
   counters: Record<string, number>;
 }
 

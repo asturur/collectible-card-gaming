@@ -55,6 +55,19 @@ export class WebSocketGameSocket implements GameSocket {
     this.ws.onmessage = (event: MessageEvent) => {
       try {
         const message = JSON.parse(event.data as string) as ServerMessage;
+        if (message.msg !== 'PONG') {
+          const label = message.msg === 'ACTION_RESULT' && message.action
+            ? `ACTION_RESULT:${message.action.type}`
+            : message.msg;
+          const detail = message.msg === 'ACTION_RESULT' && message.action
+            ? message.action.payload
+            : message.msg === 'STATE_SYNC'
+              ? { players: Object.keys(message.state?.players ?? {}), cards: Object.keys(message.state?.cards ?? {}).length, zones: Object.keys(message.state?.zones ?? {}) }
+              : message.msg === 'ERROR'
+                ? { error: message.error }
+                : { playerId: message.playerId, playerName: message.playerName };
+          console.log(`⬇️ ${label}`, detail);
+        }
         this.messageHandlers.forEach((h) => h(message));
       } catch {
         // Ignore unparseable messages
@@ -103,6 +116,13 @@ export class WebSocketGameSocket implements GameSocket {
 
   private send(message: ClientMessage): void {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      if (message.msg !== 'PING') {
+        const label = message.msg === 'ACTION'
+          ? `ACTION:${message.action.type}`
+          : message.msg;
+        const payload = message.msg === 'ACTION' ? message.action.payload : message.msg === 'UNDO' ? { seq: message.seq } : {};
+        console.log(`⬆️ ${label}`, payload);
+      }
       this.ws.send(JSON.stringify(message));
     }
   }

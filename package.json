@@ -8,9 +8,8 @@
   ],
   "scripts": {
     "dev": "npm run dev --workspace=client",
-    "dev:all": "concurrently -n client,server -c cyan,green \"npm run dev -w client\" \"cd server && go run . --port 8080\"",
+    "dev:all": "concurrently --handle-input --default-input-target server -n shared,client,server -c magenta,cyan,green \"npm run dev -w shared\" \"npm run dev -w client\" \"cd server && go run . --port 8080\"",
     "dev:server": "cd server && go run . --port 8080",
-    "dev:tunnel": "concurrently -n client,server,tunnel-app,tunnel-ws -c cyan,green,magenta,yellow \"npm run dev -w client\" \"cd server && go run . --port 8080\" \"cloudflared tunnel --url http://localhost:5173\" \"cloudflared tunnel --url http://localhost:8080\"",
     "build": "npm run build --workspace=shared && npm run build --workspace=client",
     "test": "npm run test --workspace=client",
     "lint": "npm run lint --workspace=client"
