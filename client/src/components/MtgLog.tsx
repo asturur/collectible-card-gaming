@@ -7,12 +7,13 @@ import GroupsRoster from './mtglog/GroupsRoster';
 import DeckList from './mtglog/DeckList';
 import DeckEditor from './mtglog/DeckEditor';
 import GameForm from './mtglog/GameForm';
+import GameList, { type Game } from './mtglog/GameList';
 
 interface MtgLogProps {
   onBack: () => void;
 }
 
-type MtgLogView = 'home' | 'players' | 'groups' | 'decks' | 'deckEditor' | 'newGame';
+type MtgLogView = 'home' | 'players' | 'groups' | 'decks' | 'deckEditor' | 'newGame' | 'games';
 
 /**
  * Registro Partite MTG — porting in corso (vedi plans/PLAN_5_MTG_LOG_PORTING.md).
@@ -23,6 +24,7 @@ export default function MtgLog({ onBack }: MtgLogProps) {
   const [session, setSession] = useState<Session | null | 'loading'>('loading');
   const [view, setView] = useState<MtgLogView>('home');
   const [editingDeckId, setEditingDeckId] = useState<string | null>(null);
+  const [editingGame, setEditingGame] = useState<Game | null>(null);
   const [importedDraft, setImportedDraft] = useState<{ name: string; cards: { name: string; qty: number }[] } | null>(
     null
   );
@@ -116,8 +118,30 @@ export default function MtgLog({ onBack }: MtgLogProps) {
     );
   }
 
+  if (view === 'games') {
+    return (
+      <GameList
+        userId={session.user.id}
+        onBack={() => setView('home')}
+        onEdit={(game) => {
+          setEditingGame(game);
+          setView('newGame');
+        }}
+      />
+    );
+  }
+
   if (view === 'newGame') {
-    return <GameForm onBack={() => setView('home')} />;
+    return (
+      <GameForm
+        editingGame={editingGame}
+        onBack={() => setView(editingGame ? 'games' : 'home')}
+        onSaved={() => {
+          setEditingGame(null);
+          setView('games');
+        }}
+      />
+    );
   }
 
   return (
@@ -130,10 +154,21 @@ export default function MtgLog({ onBack }: MtgLogProps) {
 
         <button
           type="button"
-          onClick={() => setView('newGame')}
+          onClick={() => {
+            setEditingGame(null);
+            setView('newGame');
+          }}
           className="mb-3 w-full rounded-lg bg-zaff-primary px-4 py-3 font-semibold text-white transition-colors hover:bg-zaff-primary-hover"
         >
           ▶ Nuova partita
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setView('games')}
+          className="mb-3 w-full rounded-lg bg-zaff-primary px-4 py-3 font-semibold text-white transition-colors hover:bg-zaff-primary-hover"
+        >
+          📜 Partite salvate
         </button>
 
         <button

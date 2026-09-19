@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
 import { subscribeToTable, supabase, TABLE_DECKS, TABLE_GAMES, TABLE_GROUPS, TABLE_PLAYERS } from '../../services/supabase';
+import type { Game } from './GameList';
 
 interface GameFormProps {
+  editingGame?: Game | null;
   onBack: () => void;
+  onSaved?: () => void;
 }
 
 const COLORS = ['W', 'U', 'B', 'R', 'G'] as const;
@@ -37,9 +40,9 @@ function emptyPlayerRow(): PlayerRow {
   };
 }
 
-/** Form "Nuova partita": giocatori dinamici, select mazzo/nome, punti vita,
- *  vincitore, note. Solo UI in questo step: il salvataggio arriva allo Step 8. */
-export default function GameForm({ onBack }: GameFormProps) {
+/** Form "Nuova partita"/"Modifica partita": giocatori dinamici, select mazzo/nome,
+ *  punti vita, vincitore, note. Salva (insert) o aggiorna (update) su `partite`. */
+export default function GameForm({ editingGame, onBack, onSaved }: GameFormProps) {
   const [groups, setGroups] = useState<string[]>([]);
   const [playerNames, setPlayerNames] = useState<string[]>([]);
   const [decks, setDecks] = useState<DeckOption[]>([]);
@@ -55,8 +58,8 @@ export default function GameForm({ onBack }: GameFormProps) {
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
-  async function loadOptions() {
-    if (!supabase) return;
+  async function loadOptions(): Promise<DeckOption[]> {
+    if (!supabase) return [];
     const [groupsRes, playersRes, decksRes] = await Promise.all([
       supabase.from(TABLE_GROUPS).select('name').order('name'),
       supabase.from(TABLE_PLAYERS).select('name').order('name'),
@@ -64,7 +67,9 @@ export default function GameForm({ onBack }: GameFormProps) {
     ]);
     setGroups((groupsRes.data ?? []).map((r) => r.name));
     setPlayerNames((playersRes.data ?? []).map((r) => r.name));
-    setDecks((decksRes.data ?? []).map((r) => ({ name: r.name, colors: r.colors ?? [] })));
+    const deckList = (decksRes.data ?? []).map((r) => ({ name: r.name, colors: r.colors ?? [] }));
+    setDecks(deckList);
+    return deckList;
   }
 
   useEffect(() => {
@@ -72,7 +77,30 @@ export default function GameForm({ onBack }: GameFormProps) {
       setLoading(false);
       return;
     }
-    loadOptions().finally(() => setLoading(false));
+    loadOptions().then((deckList) => {
+      if (editingGame) {
+        setDate(editingGame.date);
+        setFormat(editingGame.format);
+        setNotes(editingGame.notes);
+        setGroup(editingGame.group === 'Generale' ? '' : editingGame.group);
+        setPlayers(
+          editingGame.players.map((p) => {
+            const manual = Boolean(p.deck) && !deckList.some((d) => d.name === p.deck);
+            return {
+              name: p.name,
+              deckMode: manual ? 'manual' : 'select',
+              deckSelect: manual ? '' : p.deck || '',
+              deckManual: manual ? p.deck || '' : '',
+              desc: p.desc || '',
+              life: p.life === null || p.life === undefined ? '' : String(p.life),
+              winner: Boolean(p.winner),
+              colors: new Set(p.colors || []),
+            };
+          })
+        );
+      }
+      setLoading(false);
+    });
 
     // Se un altro dispositivo aggiunge/rinomina giocatori, mazzi o gruppi
     // mentre questo form è aperto, le liste si aggiornano da sole.
@@ -145,7 +173,6 @@ export default function GameForm({ onBack }: GameFormProps) {
       .map((p) => ({ ...p, name: p.name || 'Giocatore ' + p.seat }));
 
     const row = {
-      id: 'g' + Date.now() + Math.random().toString(36).slice(2, 7),
       date,
       format: format.trim(),
       notes: notes.trim(),
@@ -154,10 +181,19 @@ export default function GameForm({ onBack }: GameFormProps) {
     };
 
     setSaving(true);
-    const { error: insertError } = await supabase.from(TABLE_GAMES).insert(row);
+    const { error: saveError } = editingGame
+      ? await supabase.from(TABLE_GAMES).update(row).eq('id', editingGame.id)
+      : await supabase
+          .from(TABLE_GAMES)
+          .insert({ id: 'g' + Date.now() + Math.random().toString(36).slice(2, 7), ...row });
     setSaving(false);
-    if (insertError) {
-      setError('Salvataggio partita non riuscito: ' + insertError.message);
+    if (saveError) {
+      setError('Salvataggio partita non riuscito: ' + saveError.message);
+      return;
+    }
+
+    if (onSaved) {
+      onSaved();
       return;
     }
 
@@ -180,7 +216,9 @@ export default function GameForm({ onBack }: GameFormProps) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-zaff-bg px-4 py-10">
       <div className="w-full max-w-lg rounded-2xl border border-zaff-border bg-zaff-surface p-8 shadow-xl">
-        <h1 className="mb-6 text-center text-2xl font-bold tracking-tight text-zaff-primary">Nuova partita</h1>
+        <h1 className="mb-6 text-center text-2xl font-bold tracking-tight text-zaff-primary">
+          {editingGame ? 'Modifica partita' : 'Nuova partita'}
+        </h1>
 
         <label className="mb-1 block text-sm font-semibold text-zaff-text" htmlFor="group">
           Gruppo
@@ -383,7 +421,7 @@ export default function GameForm({ onBack }: GameFormProps) {
           disabled={saving}
           className="w-full rounded-lg bg-zaff-primary px-4 py-3 font-semibold text-white transition-colors hover:bg-zaff-primary-hover disabled:opacity-60"
         >
-          Salva partita
+          {editingGame ? 'Salva modifiche' : 'Salva partita'}
         </button>
 
         {message && <p className="mt-3 text-center text-sm text-green-400">{message}</p>}

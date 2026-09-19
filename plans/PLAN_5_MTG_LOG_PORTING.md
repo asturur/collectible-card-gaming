@@ -98,8 +98,17 @@ File originale di riferimento: `../registro-partite-mtg.html` (2120 righe).
   verificati (verifica salvataggio da controllare lato utente su Supabase,
   la lista arriva nello Step 9).
 
-- [ ] **Step 9 — Lista/dettaglio partite**
+- [x] **Step 9 — Lista/dettaglio partite**
   Storico partite, filtro per gruppo, appellativi scherzosi random per vincitore/perdenti.
+  Fatto: `client/src/components/mtglog/GameList.tsx`, raggiungibile da "📜 Partite
+  salvate" nella home del registro. Lista partite (data, giocatori, colori, corona
+  vincitore) con tab filtro per gruppo (solo se ≥2 gruppi), vista dettaglio con
+  appellativi scherzosi random (30 per vincitore, 30 per perdenti, in italiano)
+  assegnati una volta per apertura dettaglio. Modifica (solo proprie partite, via
+  `canEdit()`) apre `GameForm` in modalità edit (update invece di insert);
+  cancellazione diretta con conferma. `GameForm.tsx` esteso con prop `editingGame`/
+  `onSaved` per gestire sia creazione sia modifica. `MtgLog.tsx` collega le due
+  viste (`games`/`newGame`) e lo stato `editingGame`. Build e test verificati.
 
 - [ ] **Step 10 — Export immagine partita**
   html2canvas per esportare il dettaglio partita come PNG + Web Share API su mobile.
