@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import html2canvas from 'html2canvas';
 import { canEdit, subscribeToTable, supabase, TABLE_GAMES } from '../../services/supabase';
 
 export interface GamePlayer {
@@ -58,6 +59,14 @@ function dateLabel(iso: string): string {
   return `${d}/${m}/${y}`;
 }
 
+function idTimeSuffix(id: string): string {
+  const m = String(id).match(/^g(\d{13})/);
+  if (!m) return '';
+  const d = new Date(Number(m[1]));
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${pad(d.getHours())}-${pad(d.getMinutes())}-${pad(d.getSeconds())}`;
+}
+
 /** Storico partite: lista + dettaglio, filtro per gruppo (se ce n'è più di uno),
  *  appellativi scherzosi random per vincitore/perdenti nel dettaglio. */
 export default function GameList({ userId, onBack, onEdit }: GameListProps) {
@@ -66,6 +75,8 @@ export default function GameList({ userId, onBack, onEdit }: GameListProps) {
   const [error, setError] = useState('');
   const [groupFilter, setGroupFilter] = useState('all');
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const shareCardRef = useRef<HTMLDivElement>(null);
 
   async function loadGames() {
     if (!supabase) return;
@@ -130,6 +141,34 @@ export default function GameList({ userId, onBack, onEdit }: GameListProps) {
     await loadGames();
   }
 
+  async function handleExport(g: Game) {
+    if (!shareCardRef.current) return;
+    setExporting(true);
+    try {
+      const canvas = await html2canvas(shareCardRef.current, { backgroundColor: '#1e293b', scale: 2 });
+      canvas.toBlob((blob) => {
+        if (!blob) return;
+        const time = idTimeSuffix(g.id);
+        const fileName = `partita_${g.date || 'magic'}${time ? '_' + time : ''}.png`;
+        const file = new File([blob], fileName, { type: 'image/png' });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          navigator.share({ files: [file], title: 'Partita di Magic', text: 'Risultato della partita del ' + dateLabel(g.date) }).catch(() => {});
+        } else {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = fileName;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          URL.revokeObjectURL(url);
+        }
+      });
+    } finally {
+      setExporting(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-zaff-bg px-4">
@@ -142,41 +181,53 @@ export default function GameList({ userId, onBack, onEdit }: GameListProps) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-zaff-bg px-4 py-10">
         <div className="w-full max-w-md rounded-2xl border border-zaff-border bg-zaff-surface p-8 shadow-xl">
-          <h1 className="mb-1 text-center text-2xl font-bold tracking-tight text-zaff-primary">
-            {dateLabel(selectedGame.date)}
-          </h1>
-          <p className="mb-6 text-center text-sm text-zaff-muted">
-            {selectedGame.format || 'formato non indicato'} · {selectedGame.players.length} giocatori · gruppo:{' '}
-            {selectedGame.group}
-          </p>
+          <div ref={shareCardRef} className="bg-zaff-surface p-1">
+            <p className="mb-1 text-center text-xs uppercase tracking-wide text-zaff-muted">Registro partite di Magic</p>
+            <h1 className="mb-1 text-center text-2xl font-bold tracking-tight text-zaff-primary">
+              {dateLabel(selectedGame.date)}
+            </h1>
+            <p className="mb-6 text-center text-sm text-zaff-muted">
+              {selectedGame.format || 'formato non indicato'} · {selectedGame.players.length} giocatori · gruppo:{' '}
+              {selectedGame.group}
+            </p>
 
-          <ul className="mb-4 space-y-3">
-            {selectedGame.players.map((p, i) => (
-              <li key={i} className={`rounded-lg border p-3 ${p.winner ? 'border-zaff-primary' : 'border-zaff-border'}`}>
-                <div className="mb-1 flex items-center justify-between gap-2">
-                  <span className="font-semibold text-zaff-text">
-                    {p.winner && '🏆 '}
-                    {p.name}
-                  </span>
-                  {playerTags[i] && (
-                    <span className={`text-xs ${p.winner ? 'text-zaff-primary' : 'text-zaff-muted'}`}>
-                      {p.winner ? 'vincitore — ' : ''}
-                      {playerTags[i]}
+            <ul className="mb-4 space-y-3">
+              {selectedGame.players.map((p, i) => (
+                <li key={i} className={`rounded-lg border p-3 ${p.winner ? 'border-zaff-primary' : 'border-zaff-border'}`}>
+                  <div className="mb-1 flex items-center justify-between gap-2">
+                    <span className="font-semibold text-zaff-text">
+                      {p.winner && '🏆 '}
+                      {p.name}
                     </span>
-                  )}
-                </div>
-                <div className="flex items-center justify-between gap-2 text-sm text-zaff-muted">
-                  <span className="min-w-0 flex-1 truncate" title={p.deck || ''}>
-                    {(p.colors ?? []).length > 0 && <span className="mr-1">{(p.colors ?? []).join('')}</span>}
-                    {p.deck || '—'}
-                  </span>
-                  <span className="shrink-0">{p.life === null || p.life === undefined ? '–' : p.life} PV</span>
-                </div>
-              </li>
-            ))}
-          </ul>
+                    {playerTags[i] && (
+                      <span className={`text-xs ${p.winner ? 'text-zaff-primary' : 'text-zaff-muted'}`}>
+                        {p.winner ? 'vincitore — ' : ''}
+                        {playerTags[i]}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between gap-2 text-sm text-zaff-muted">
+                    <span className="min-w-0 flex-1 truncate" title={p.deck || ''}>
+                      {(p.colors ?? []).length > 0 && <span className="mr-1">{(p.colors ?? []).join('')}</span>}
+                      {p.deck || '—'}
+                    </span>
+                    <span className="shrink-0">{p.life === null || p.life === undefined ? '–' : p.life} PV</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
 
-          {selectedGame.notes && <p className="mb-4 text-sm text-zaff-muted">{selectedGame.notes}</p>}
+            {selectedGame.notes && <p className="mb-4 text-sm text-zaff-muted">{selectedGame.notes}</p>}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => handleExport(selectedGame)}
+            disabled={exporting}
+            className="mb-3 w-full rounded-lg bg-zaff-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-zaff-primary-hover disabled:opacity-60"
+          >
+            {exporting ? 'Genero immagine…' : '🖼️ Esporta risultati'}
+          </button>
 
           {canEdit(selectedGame.createdBy, userId) && (
             <div className="mb-3 flex gap-3">

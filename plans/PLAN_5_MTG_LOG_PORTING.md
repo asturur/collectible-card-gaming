@@ -110,8 +110,14 @@ File originale di riferimento: `../registro-partite-mtg.html` (2120 righe).
   `onSaved` per gestire sia creazione sia modifica. `MtgLog.tsx` collega le due
   viste (`games`/`newGame`) e lo stato `editingGame`. Build e test verificati.
 
-- [ ] **Step 10 — Export immagine partita**
+- [x] **Step 10 — Export immagine partita**
   html2canvas per esportare il dettaglio partita come PNG + Web Share API su mobile.
+  Fatto: dipendenza `html2canvas` aggiunta al client. `GameList.tsx` ha il bottone
+  "🖼️ Esporta risultati" nella vista dettaglio: cattura la porzione condivisibile
+  (titolo, data/formato/gruppo, elenco giocatori, note) con `html2canvas`, genera
+  un PNG e usa `navigator.share` se disponibile (mobile), altrimenti scarica il
+  file (nome `partita_<data>_<ora>.png`, stesso schema dell'originale). Build e
+  test verificati.
 
 - [ ] **Step 11 — Statistiche e classifica**
   Percentuale vittorie per mazzo, distinzione Homebrew/Precon, classifica giocatori
