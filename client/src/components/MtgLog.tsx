@@ -1,53 +1,86 @@
 import { useEffect, useState } from 'react';
+import type { Session } from '@supabase/supabase-js';
 import { isSupabaseConfigured, supabase } from '../services/supabase';
+import AuthScreen from './mtglog/AuthScreen';
 
 interface MtgLogProps {
   onBack: () => void;
 }
 
-type ConnectionStatus = 'checking' | 'ok' | 'error';
-
 /**
- * Registro Partite MTG — placeholder screen (Step 0 of the porting plan).
- * Verifies the Supabase connection; real features are added in later steps.
- * See plans/PLAN_5_MTG_LOG_PORTING.md
+ * Registro Partite MTG — porting in corso (vedi plans/PLAN_5_MTG_LOG_PORTING.md).
+ * Step 1: autenticazione. Le funzionalità del registro vengono aggiunte
+ * negli step successivi.
  */
 export default function MtgLog({ onBack }: MtgLogProps) {
-  const [status, setStatus] = useState<ConnectionStatus>('checking');
-  const [errorMessage, setErrorMessage] = useState('');
+  const [session, setSession] = useState<Session | null | 'loading'>('loading');
 
   useEffect(() => {
     if (!isSupabaseConfigured || !supabase) {
-      setStatus('error');
-      setErrorMessage('Supabase non configurato (variabili VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY mancanti).');
+      setSession(null);
       return;
     }
 
-    supabase.auth.getSession().then(({ error }) => {
-      if (error) {
-        setStatus('error');
-        setErrorMessage(error.message);
-      } else {
-        setStatus('ok');
-      }
-    });
+    supabase.auth.getSession().then(({ data }) => setSession(data.session));
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, newSession) => setSession(newSession));
+
+    return () => subscription.unsubscribe();
   }, []);
+
+  if (!isSupabaseConfigured) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-zaff-bg px-4">
+        <div className="w-full max-w-md rounded-2xl border border-zaff-border bg-zaff-surface p-8 text-center shadow-xl">
+          <p className="text-red-400">
+            Supabase non configurato (variabili VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY mancanti).
+          </p>
+          <button
+            type="button"
+            onClick={onBack}
+            className="mt-6 w-full rounded-lg border border-zaff-border px-4 py-3 font-semibold text-zaff-text transition-colors hover:bg-zaff-bg"
+          >
+            Torna indietro
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (session === 'loading') {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-zaff-bg px-4">
+        <p className="text-zaff-muted">Caricamento…</p>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return <AuthScreen onBack={onBack} />;
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-zaff-bg px-4">
       <div className="w-full max-w-md rounded-2xl border border-zaff-border bg-zaff-surface p-8 shadow-xl">
-        <h1 className="mb-6 text-center text-3xl font-bold tracking-tight text-zaff-primary">
+        <h1 className="mb-2 text-center text-3xl font-bold tracking-tight text-zaff-primary">
           Registro Partite
         </h1>
+        <p className="mb-8 text-center text-zaff-muted">Accesso come {session.user.email}</p>
 
-        {status === 'checking' && <p className="text-center text-zaff-muted">Connessione a Supabase in corso…</p>}
-        {status === 'ok' && <p className="text-center text-green-400">✓ Connesso a Supabase</p>}
-        {status === 'error' && <p className="text-center text-red-400">Errore: {errorMessage}</p>}
+        <button
+          type="button"
+          onClick={() => supabase?.auth.signOut()}
+          className="w-full rounded-lg border border-zaff-border px-4 py-3 font-semibold text-zaff-text transition-colors hover:bg-zaff-bg"
+        >
+          Esci
+        </button>
 
         <button
           type="button"
           onClick={onBack}
-          className="mt-8 w-full rounded-lg border border-zaff-border px-4 py-3 font-semibold text-zaff-text transition-colors hover:bg-zaff-bg"
+          className="mt-3 w-full text-center text-sm text-zaff-muted transition-colors hover:text-zaff-primary"
         >
           Torna indietro
         </button>

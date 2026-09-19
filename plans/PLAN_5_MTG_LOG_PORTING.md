@@ -20,9 +20,13 @@ File originale di riferimento: `../registro-partite-mtg.html` (2120 righe).
   `client/.env.local` con credenziali (non committato), pagina `MtgLog.tsx`
   raggiungibile da un link in `JoinScreen.tsx`. Build, test e dev server verificati.
 
-- [ ] **Step 1 — Autenticazione**
+- [x] **Step 1 — Autenticazione**
   Form login/registrazione (email+password) + gestione sessione.
   Verifica: login/logout funzionano.
+  Fatto: `client/src/components/mtglog/AuthScreen.tsx` (signin/signup, gestione
+  errori/messaggi come nell'originale), `MtgLog.tsx` gestisce la sessione con
+  `supabase.auth.getSession()` + `onAuthStateChange`, mostra login o schermata
+  autenticata con logout. Build e test verificati.
 
 - [ ] **Step 2 — Rubrica giocatori**
   Lista, aggiungi, rinomina (con propagazione ovunque), elimina.
