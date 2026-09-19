@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { subscribeToTable, supabase, TABLE_DECKS, TABLE_GAMES, TABLE_GROUPS, TABLE_PLAYERS } from '../../services/supabase';
 import type { Game } from './GameList';
+import LifeCounter from './LifeCounter';
 
 interface GameFormProps {
   editingGame?: Game | null;
@@ -57,6 +58,7 @@ export default function GameForm({ editingGame, onBack, onSaved }: GameFormProps
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [lifeCounterOpen, setLifeCounterOpen] = useState(false);
 
   async function loadOptions(): Promise<DeckOption[]> {
     if (!supabase) return [];
@@ -148,6 +150,21 @@ export default function GameForm({ editingGame, onBack, onSaved }: GameFormProps
     updatePlayer(index, { deckSelect: value, colors: chosen ? new Set(chosen.colors) : players[index].colors });
   }
 
+  function handleOpenLifeCounter() {
+    setError('');
+    const names = players.map((p) => p.name.trim()).filter(Boolean);
+    if (!names.length) {
+      setError('Scegli almeno un giocatore prima di avviare il conteggio.');
+      return;
+    }
+    setLifeCounterOpen(true);
+  }
+
+  function handleLifeCounterFinish(lives: Record<string, number>) {
+    setPlayers((prev) => prev.map((p) => (p.name.trim() in lives ? { ...p, life: String(lives[p.name.trim()]) } : p)));
+    setLifeCounterOpen(false);
+  }
+
   async function handleSaveClick() {
     setMessage('');
     setError('');
@@ -210,6 +227,17 @@ export default function GameForm({ editingGame, onBack, onSaved }: GameFormProps
       <div className="flex min-h-screen items-center justify-center bg-zaff-bg px-4">
         <p className="text-zaff-muted">Caricamento…</p>
       </div>
+    );
+  }
+
+  if (lifeCounterOpen) {
+    return (
+      <LifeCounter
+        players={players.map((p) => p.name.trim()).filter(Boolean)}
+        startLife={startLife}
+        onCancel={() => setLifeCounterOpen(false)}
+        onFinish={handleLifeCounterFinish}
+      />
     );
   }
 
@@ -401,8 +429,16 @@ export default function GameForm({ editingGame, onBack, onSaved }: GameFormProps
           min={1}
           value={startLife}
           onChange={(e) => setStartLife(Math.max(1, parseInt(e.target.value, 10) || 1))}
-          className="mb-4 w-32 rounded-lg border border-zaff-border bg-zaff-bg px-3 py-2 text-zaff-text focus:outline-none focus:ring-2 focus:ring-zaff-primary"
+          className="mb-2 w-32 rounded-lg border border-zaff-border bg-zaff-bg px-3 py-2 text-zaff-text focus:outline-none focus:ring-2 focus:ring-zaff-primary"
         />
+
+        <button
+          type="button"
+          onClick={handleOpenLifeCounter}
+          className="mb-4 w-full rounded-lg border border-zaff-border px-4 py-2 text-sm font-semibold text-zaff-primary transition-colors hover:bg-zaff-bg"
+        >
+          ▶ Conta i punti vita
+        </button>
 
         <label className="mb-1 block text-sm font-semibold text-zaff-text" htmlFor="notes">
           Appunti

@@ -130,8 +130,15 @@ File originale di riferimento: `../registro-partite-mtg.html` (2120 righe).
   Precon/Non classificato, filtro per origine, ordinamento per % vittorie/partite/
   nome, barra di progresso per mazzo). Build e test verificati.
 
-- [ ] **Step 12 — Modalità "Conta i punti vita"**
+- [x] **Step 12 — Modalità "Conta i punti vita"**
   Schermo intero, stepper +/- a 4 zone d'angolo, funzione High Roll (d20).
+  Fatto: `client/src/components/mtglog/LifeCounter.tsx`, aperto dal bottone
+  "▶ Conta i punti vita" in `GameForm.tsx` (usa i nomi giocatore già inseriti nel
+  form + punti vita iniziali). Overlay a tutto schermo con griglia di carte
+  giocatore (stepper a 4 zone d'angolo −5/+5/−1/+1), "🎲 High Roll" (permutazione
+  1–20 senza pareggi, evidenzia il più alto, "Tira di nuovo"), "Fine partita"
+  che riporta i punti vita nei campi del form (per nome), "Annulla" per uscire
+  senza modifiche. Build e test verificati.
 
 - [ ] **Step 13 — Rifiniture finali**
   Verifica permessi (`created_by` / RLS) su tutte le entità, gestione dati legacy
