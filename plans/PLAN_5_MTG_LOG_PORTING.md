@@ -43,8 +43,12 @@ File originale di riferimento: `../registro-partite-mtg.html` (2120 righe).
   Nota: il tab filtro per gruppo sulla lista partite è rimandato allo Step 9,
   quando esisterà una lista partite da filtrare. Build e test verificati.
 
-- [ ] **Step 4 — Lista/visualizzazione mazzi**
+- [x] **Step 4 — Lista/visualizzazione mazzi**
   Solo lettura: lista mazzi salvati, dettaglio, badge Homebrew/Precon.
+  Fatto: `client/src/components/mtglog/DeckList.tsx`, raggiungibile da "Mazzi
+  salvati" nella home. Lista + vista dettaglio con elenco carte. Modifica/
+  cancellazione/colori mazzo rimandati allo Step 5 (editor). Build e test
+  verificati.
 
 - [ ] **Step 5 — Editor mazzo (ricerca Scryfall)**
   Creazione/modifica manuale mazzo con autocomplete carte e rilevamento colori
