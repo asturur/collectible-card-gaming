@@ -22,6 +22,9 @@ export default function MtgLog({ onBack }: MtgLogProps) {
   const [session, setSession] = useState<Session | null | 'loading'>('loading');
   const [view, setView] = useState<MtgLogView>('home');
   const [editingDeckId, setEditingDeckId] = useState<string | null>(null);
+  const [importedDraft, setImportedDraft] = useState<{ name: string; cards: { name: string; qty: number }[] } | null>(
+    null
+  );
 
   useEffect(() => {
     if (!isSupabaseConfigured || !supabase) {
@@ -84,10 +87,17 @@ export default function MtgLog({ onBack }: MtgLogProps) {
         onBack={() => setView('home')}
         onCreate={() => {
           setEditingDeckId(null);
+          setImportedDraft(null);
           setView('deckEditor');
         }}
         onEdit={(id) => {
           setEditingDeckId(id);
+          setImportedDraft(null);
+          setView('deckEditor');
+        }}
+        onImportFile={(name, cards) => {
+          setEditingDeckId(null);
+          setImportedDraft({ name, cards });
           setView('deckEditor');
         }}
       />
@@ -98,6 +108,7 @@ export default function MtgLog({ onBack }: MtgLogProps) {
     return (
       <DeckEditor
         deckId={editingDeckId}
+        initialDraft={importedDraft}
         onBack={() => setView('decks')}
         onSaved={() => setView('decks')}
       />

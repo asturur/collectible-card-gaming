@@ -3,6 +3,7 @@ import { supabase, TABLE_DECKS } from '../../services/supabase';
 
 interface DeckEditorProps {
   deckId: string | null;
+  initialDraft?: { name: string; cards: DraftCard[] } | null;
   onBack: () => void;
   onSaved: () => void;
 }
@@ -11,6 +12,23 @@ interface DraftCard {
   name: string;
   qty: number;
 }
+
+interface PreconCardEntry {
+  name: string;
+  count?: number;
+}
+
+interface PreconDeck {
+  name: string;
+  set_name?: string;
+  type?: string;
+  category?: string;
+  commander?: PreconCardEntry[];
+  cards?: PreconCardEntry[];
+}
+
+const PRECON_CACHE_KEY = 'mtg:precon-cache';
+const PRECON_URL = 'https://raw.githubusercontent.com/taw/magic-preconstructed-decks-data/master/decks_v2.json';
 
 const COLORS = ['W', 'U', 'B', 'R', 'G'] as const;
 
@@ -45,13 +63,14 @@ async function searchCards(query: string): Promise<string[]> {
   }
 }
 
-/** Creazione/modifica manuale di un mazzo, con autocomplete carte (Scryfall) e
- *  rilevamento automatico dei colori dalle terre base. Import file/precon: Step 6. */
-export default function DeckEditor({ deckId, onBack, onSaved }: DeckEditorProps) {
-  const [name, setName] = useState('');
+/** Creazione/modifica manuale di un mazzo, con autocomplete carte (Scryfall),
+ *  rilevamento automatico dei colori dalle terre base, e import (file ManaBox
+ *  passato come `initialDraft`, o mazzo precon Commander cercato qui). */
+export default function DeckEditor({ deckId, initialDraft, onBack, onSaved }: DeckEditorProps) {
+  const [name, setName] = useState(initialDraft?.name ?? '');
   const [source, setSource] = useState('');
   const [colors, setColors] = useState<Set<string>>(new Set());
-  const [draft, setDraft] = useState<DraftCard[]>([]);
+  const [draft, setDraft] = useState<DraftCard[]>(initialDraft?.cards ?? []);
   const [cardSearch, setCardSearch] = useState('');
   const [pickedCardName, setPickedCardName] = useState('');
   const [qty, setQty] = useState(1);
@@ -60,9 +79,15 @@ export default function DeckEditor({ deckId, onBack, onSaved }: DeckEditorProps)
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
+  const [preconOpen, setPreconOpen] = useState(false);
+  const [preconData, setPreconData] = useState<PreconDeck[] | null>(null);
+  const [preconStatus, setPreconStatus] = useState('');
+  const [preconSearch, setPreconSearch] = useState('');
+
   useEffect(() => {
     if (!deckId || !supabase) {
       setLoading(false);
+      if (initialDraft?.cards.length) autoDetectColors(initialDraft.cards.map((c) => c.name));
       return;
     }
     supabase
@@ -81,6 +106,7 @@ export default function DeckEditor({ deckId, onBack, onSaved }: DeckEditorProps)
         }
         setLoading(false);
       });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deckId]);
 
   useEffect(() => {
@@ -100,6 +126,77 @@ export default function DeckEditor({ deckId, onBack, onSaved }: DeckEditorProps)
     const found = detectLandColors(cardNames);
     if (found.size === 0) return;
     setColors((prev) => new Set([...prev, ...found]));
+  }
+
+  async function loadPreconData(): Promise<PreconDeck[] | null> {
+    if (preconData) return preconData;
+    setPreconStatus('Carico l\u2019elenco dei mazzi precon (solo la prima volta)…');
+    try {
+      const cached = localStorage.getItem(PRECON_CACHE_KEY);
+      if (cached) {
+        const parsed = JSON.parse(cached) as PreconDeck[];
+        setPreconData(parsed);
+        setPreconStatus('');
+        return parsed;
+      }
+    } catch {
+      // ignore cache errors, fall through to fetch
+    }
+    try {
+      const res = await fetch(PRECON_URL);
+      const all = (await res.json()) as PreconDeck[];
+      const filtered = all.filter(
+        (d) =>
+          (d.type ?? '').toLowerCase().includes('commander') ||
+          (d.category ?? '').toLowerCase().includes('commander') ||
+          (d.commander?.length ?? 0) > 0
+      );
+      try {
+        localStorage.setItem(PRECON_CACHE_KEY, JSON.stringify(filtered));
+      } catch {
+        // localStorage full or unavailable: skip caching
+      }
+      setPreconData(filtered);
+      setPreconStatus('');
+      return filtered;
+    } catch {
+      setPreconStatus('Non sono riuscito a scaricare l\u2019elenco dei precon. Riprova più tardi.');
+      return null;
+    }
+  }
+
+  async function togglePreconBox() {
+    const opening = !preconOpen;
+    setPreconOpen(opening);
+    if (opening && !preconData) await loadPreconData();
+  }
+
+  const preconMatches = (() => {
+    const q = preconSearch.trim().toLowerCase();
+    if (!preconData || q.length < 2) return [];
+    return preconData
+      .filter((d) => d.name.toLowerCase().includes(q) || (d.set_name ?? '').toLowerCase().includes(q))
+      .slice(0, 25);
+  })();
+
+  function importPrecon(deck: PreconDeck) {
+    const merged: Record<string, DraftCard> = {};
+    const addAll = (list: PreconCardEntry[] | undefined) =>
+      (list ?? []).forEach((c) => {
+        const key = c.name.toLowerCase();
+        merged[key] = merged[key] ?? { name: c.name, qty: 0 };
+        merged[key].qty += c.count ?? 1;
+      });
+    addAll(deck.commander);
+    addAll(deck.cards);
+    const newDraft = Object.values(merged);
+    setDraft(newDraft);
+    setName(deck.name);
+    setSource('precon');
+    setColors(new Set());
+    autoDetectColors(newDraft.map((c) => c.name));
+    setPreconOpen(false);
+    setPreconSearch('');
   }
 
   function toggleColor(c: string) {
@@ -243,6 +340,46 @@ export default function DeckEditor({ deckId, onBack, onSaved }: DeckEditorProps)
         <p className="mb-4 text-xs text-zaff-muted">
           Si accendono da soli quando aggiungi terre base; puoi correggerli a mano in ogni momento.
         </p>
+
+        <button
+          type="button"
+          onClick={togglePreconBox}
+          className="mb-4 w-full rounded-lg border border-zaff-border px-4 py-2 text-sm font-semibold text-zaff-text transition-colors hover:bg-zaff-bg"
+        >
+          Importa un mazzo precon Commander…
+        </button>
+        {preconOpen && (
+          <div className="mb-4 rounded-lg border border-zaff-border p-3">
+            <input
+              type="text"
+              autoComplete="off"
+              value={preconSearch}
+              onChange={(e) => setPreconSearch(e.target.value)}
+              placeholder="Cerca il nome del precon (es. Elven Empire)…"
+              className="mb-2 w-full rounded-lg border border-zaff-border bg-zaff-bg px-3 py-2 text-zaff-text placeholder:text-zaff-muted focus:outline-none focus:ring-2 focus:ring-zaff-primary"
+            />
+            {preconStatus && <p className="mb-2 text-xs text-zaff-muted">{preconStatus}</p>}
+            {preconSearch.trim().length >= 2 && preconMatches.length === 0 && !preconStatus && (
+              <p className="text-xs text-zaff-muted">Nessun mazzo trovato.</p>
+            )}
+            {preconMatches.length > 0 && (
+              <ul className="max-h-48 divide-y divide-zaff-border overflow-y-auto">
+                {preconMatches.map((d, i) => (
+                  <li key={d.name + i}>
+                    <button
+                      type="button"
+                      onClick={() => importPrecon(d)}
+                      className="flex w-full items-center justify-between gap-2 py-2 text-left text-sm text-zaff-text hover:text-zaff-primary"
+                    >
+                      <span className="min-w-0 flex-1 truncate">{d.name}</span>
+                      <span className="shrink-0 text-xs text-zaff-muted">{d.set_name}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
 
         <div className="relative mb-4">
           <label className="mb-1 block text-sm font-semibold text-zaff-text" htmlFor="cardSearch">

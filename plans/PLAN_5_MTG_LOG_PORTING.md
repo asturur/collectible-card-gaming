@@ -62,9 +62,16 @@ File originale di riferimento: `../registro-partite-mtg.html` (2120 righe).
   esteso con cancellazione mazzo. Import file ManaBox e mazzi precon Commander
   rimandati allo Step 6 come da piano. Build e test verificati.
 
-- [ ] **Step 6 — Import mazzi**
+- [x] **Step 6 — Import mazzi**
   Import da file `.txt` esportato da ManaBox + import mazzi precostruiti Commander
   (JSON comunitario).
+  Fatto: `DeckList.tsx` ha il bottone "Importa mazzo (file ManaBox)" che legge
+  il file, lo fa analizzare (`parseManaboxText`) e apre `DeckEditor` con la
+  bozza precompilata (colori rilevati automaticamente). `DeckEditor.tsx` ha
+  il bottone "Importa un mazzo precon Commander…" che cerca nell'archivio
+  comunitario (con cache in `localStorage`, chiave `mtg:precon-cache`) e importa
+  il mazzo scelto (comandante + carte, origine "precon", colori auto-rilevati).
+  Build e test verificati.
 
 - [ ] **Step 7 — Form "Nuova Partita"**
   Giocatori dinamici, select mazzo/nome, punti vita, vincitore (switch), note.

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { canEdit, supabase, TABLE_DECKS } from '../../services/supabase';
 
 interface DeckListProps {
@@ -6,11 +6,34 @@ interface DeckListProps {
   onBack: () => void;
   onCreate: () => void;
   onEdit: (id: string) => void;
+  onImportFile: (name: string, cards: DeckCard[]) => void;
 }
 
 interface DeckCard {
   name: string;
   qty: number;
+}
+
+/** Legge un file di testo esportato da ManaBox: ogni riga è
+ *  "<copie> <nome carta> [(espansione) numero]"; espansione e numero
+ *  sono facoltativi e vengono ignorati. */
+function parseManaboxText(text: string): DeckCard[] {
+  const merged: Record<string, DeckCard> = {};
+  text.split(/\r?\n/).forEach((rawLine) => {
+    const line = rawLine.trim();
+    if (!line) return;
+    const m = line.match(/^(\d+)\s+(.+)$/);
+    if (!m) return;
+    const qty = parseInt(m[1], 10);
+    const rest = m[2].trim();
+    const setMatch = rest.match(/^(.*)\s+\([^)]+\)\s+\S+$/);
+    const name = (setMatch ? setMatch[1] : rest).trim();
+    if (!name || !qty) return;
+    const key = name.toLowerCase();
+    merged[key] = merged[key] ?? { name, qty: 0 };
+    merged[key].qty += qty;
+  });
+  return Object.values(merged);
 }
 
 interface Deck {
@@ -33,11 +56,28 @@ function sourceLabel(source: string): string | null {
 }
 
 /** Lista mazzi salvati + dettaglio, con creazione/modifica/cancellazione (Step 5). */
-export default function DeckList({ userId, onBack, onCreate, onEdit }: DeckListProps) {
+export default function DeckList({ userId, onBack, onCreate, onEdit, onImportFile }: DeckListProps) {
   const [decks, setDecks] = useState<Deck[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  function handleFileChange(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const parsed = parseManaboxText(String(reader.result));
+      if (!parsed.length) {
+        setError('Non sono riuscito a leggere nessuna carta da questo file: controlla il formato.');
+        return;
+      }
+      onImportFile(file.name.replace(/\.[^/.]+$/, ''), parsed);
+    };
+    reader.readAsText(file, 'utf-8');
+  }
 
   async function loadDecks() {
     if (!supabase) return;
@@ -122,10 +162,19 @@ export default function DeckList({ userId, onBack, onCreate, onEdit }: DeckListP
         <button
           type="button"
           onClick={onCreate}
-          className="mb-4 w-full rounded-lg border border-zaff-border px-4 py-2 text-sm font-semibold text-zaff-primary transition-colors hover:bg-zaff-bg"
+          className="mb-2 w-full rounded-lg border border-zaff-border px-4 py-2 text-sm font-semibold text-zaff-primary transition-colors hover:bg-zaff-bg"
         >
           + Crea nuovo mazzo
         </button>
+
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          className="mb-4 w-full rounded-lg border border-zaff-border px-4 py-2 text-sm font-semibold text-zaff-text transition-colors hover:bg-zaff-bg"
+        >
+          📄 Importa mazzo (file ManaBox)
+        </button>
+        <input ref={fileInputRef} type="file" accept=".txt" hidden onChange={handleFileChange} />
 
         {loading ? (
           <p className="text-center text-zaff-muted">Caricamento…</p>
