@@ -50,9 +50,17 @@ File originale di riferimento: `../registro-partite-mtg.html` (2120 righe).
   cancellazione/colori mazzo rimandati allo Step 5 (editor). Build e test
   verificati.
 
-- [ ] **Step 5 — Editor mazzo (ricerca Scryfall)**
+- [x] **Step 5 — Editor mazzo (ricerca Scryfall)**
   Creazione/modifica manuale mazzo con autocomplete carte e rilevamento colori
   automatico dalle terre base.
+  Fatto: `client/src/components/mtglog/DeckEditor.tsx`, raggiungibile da
+  "+ Crea nuovo mazzo" e "Modifica" (solo mazzi propri, via `canEdit()`) in
+  `DeckList.tsx`. Nome/origine mazzo, pallini colore (toggle manuale +
+  accensione automatica rilevando le terre base nei nomi carta aggiunti),
+  ricerca carta con autocomplete Scryfall (debounce 250ms), aggiunta/rimozione
+  carte dalla bozza, salvataggio (insert/update su `mazzi`). `DeckList.tsx`
+  esteso con cancellazione mazzo. Import file ManaBox e mazzi precon Commander
+  rimandati allo Step 6 come da piano. Build e test verificati.
 
 - [ ] **Step 6 — Import mazzi**
   Import da file `.txt` esportato da ManaBox + import mazzi precostruiti Commander

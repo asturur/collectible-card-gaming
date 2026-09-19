@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
-import { supabase, TABLE_DECKS } from '../../services/supabase';
+import { canEdit, supabase, TABLE_DECKS } from '../../services/supabase';
 
 interface DeckListProps {
+  userId: string;
   onBack: () => void;
+  onCreate: () => void;
+  onEdit: (id: string) => void;
 }
 
 interface DeckCard {
@@ -29,40 +32,51 @@ function sourceLabel(source: string): string | null {
   return null;
 }
 
-/** Lista mazzi salvati (sola lettura) + dettaglio. La modifica arriva nello Step 5. */
-export default function DeckList({ onBack }: DeckListProps) {
+/** Lista mazzi salvati + dettaglio, con creazione/modifica/cancellazione (Step 5). */
+export default function DeckList({ userId, onBack, onCreate, onEdit }: DeckListProps) {
   const [decks, setDecks] = useState<Deck[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  async function loadDecks() {
+    if (!supabase) return;
+    const { data, error: loadError } = await supabase.from(TABLE_DECKS).select('*').order('name');
+    if (loadError) {
+      setError('Non riesco a leggere i mazzi: ' + loadError.message);
+      return;
+    }
+    setDecks(
+      (data ?? []).map((r) => ({
+        id: r.id,
+        name: r.name,
+        cards: r.cards ?? [],
+        source: r.source ?? '',
+        colors: r.colors ?? [],
+        createdBy: r.created_by ?? null,
+      }))
+    );
+  }
 
   useEffect(() => {
     if (!supabase) {
       setLoading(false);
       return;
     }
-    supabase
-      .from(TABLE_DECKS)
-      .select('*')
-      .order('name')
-      .then(({ data, error: loadError }) => {
-        if (loadError) {
-          setError('Non riesco a leggere i mazzi: ' + loadError.message);
-        } else {
-          setDecks(
-            (data ?? []).map((r) => ({
-              id: r.id,
-              name: r.name,
-              cards: r.cards ?? [],
-              source: r.source ?? '',
-              colors: r.colors ?? [],
-              createdBy: r.created_by ?? null,
-            }))
-          );
-        }
-        setLoading(false);
-      });
+    loadDecks().finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  async function handleDelete(id: string) {
+    if (!supabase) return;
+    if (!confirm('Cancellare questo mazzo? Le partite che lo usano già continueranno a mostrarne solo il nome.')) return;
+    const { error: deleteError } = await supabase.from(TABLE_DECKS).delete().eq('id', id);
+    if (deleteError) {
+      setError('Cancellazione mazzo non riuscita: ' + deleteError.message);
+      return;
+    }
+    await loadDecks();
+  }
 
   const selectedDeck = decks.find((d) => d.id === selectedId) ?? null;
 
@@ -103,7 +117,15 @@ export default function DeckList({ onBack }: DeckListProps) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-zaff-bg px-4 py-10">
       <div className="w-full max-w-md rounded-2xl border border-zaff-border bg-zaff-surface p-8 shadow-xl">
-        <h1 className="mb-6 text-center text-2xl font-bold tracking-tight text-zaff-primary">Mazzi salvati</h1>
+        <h1 className="mb-2 text-center text-2xl font-bold tracking-tight text-zaff-primary">Mazzi salvati</h1>
+
+        <button
+          type="button"
+          onClick={onCreate}
+          className="mb-4 w-full rounded-lg border border-zaff-border px-4 py-2 text-sm font-semibold text-zaff-primary transition-colors hover:bg-zaff-bg"
+        >
+          + Crea nuovo mazzo
+        </button>
 
         {loading ? (
           <p className="text-center text-zaff-muted">Caricamento…</p>
@@ -122,13 +144,24 @@ export default function DeckList({ onBack }: DeckListProps) {
                   )}
                   <span className="ml-2 text-xs text-zaff-muted">({deckTotal(d)} carte)</span>
                 </span>
-                <button
-                  type="button"
-                  onClick={() => setSelectedId(d.id)}
-                  className="shrink-0 text-sm text-zaff-primary hover:underline"
-                >
-                  Visualizza
-                </button>
+                {canEdit(d.createdBy, userId) ? (
+                  <div className="flex shrink-0 gap-3">
+                    <button type="button" onClick={() => onEdit(d.id)} className="text-sm text-zaff-primary hover:underline">
+                      Modifica
+                    </button>
+                    <button type="button" onClick={() => handleDelete(d.id)} className="text-sm text-red-400 hover:underline">
+                      Cancella
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedId(d.id)}
+                    className="shrink-0 text-sm text-zaff-primary hover:underline"
+                  >
+                    Visualizza
+                  </button>
+                )}
               </li>
             ))}
           </ul>

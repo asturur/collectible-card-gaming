@@ -5,12 +5,13 @@ import AuthScreen from './mtglog/AuthScreen';
 import PlayersRoster from './mtglog/PlayersRoster';
 import GroupsRoster from './mtglog/GroupsRoster';
 import DeckList from './mtglog/DeckList';
+import DeckEditor from './mtglog/DeckEditor';
 
 interface MtgLogProps {
   onBack: () => void;
 }
 
-type MtgLogView = 'home' | 'players' | 'groups' | 'decks';
+type MtgLogView = 'home' | 'players' | 'groups' | 'decks' | 'deckEditor';
 
 /**
  * Registro Partite MTG — porting in corso (vedi plans/PLAN_5_MTG_LOG_PORTING.md).
@@ -20,6 +21,7 @@ type MtgLogView = 'home' | 'players' | 'groups' | 'decks';
 export default function MtgLog({ onBack }: MtgLogProps) {
   const [session, setSession] = useState<Session | null | 'loading'>('loading');
   const [view, setView] = useState<MtgLogView>('home');
+  const [editingDeckId, setEditingDeckId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isSupabaseConfigured || !supabase) {
@@ -76,7 +78,30 @@ export default function MtgLog({ onBack }: MtgLogProps) {
   }
 
   if (view === 'decks') {
-    return <DeckList onBack={() => setView('home')} />;
+    return (
+      <DeckList
+        userId={session.user.id}
+        onBack={() => setView('home')}
+        onCreate={() => {
+          setEditingDeckId(null);
+          setView('deckEditor');
+        }}
+        onEdit={(id) => {
+          setEditingDeckId(id);
+          setView('deckEditor');
+        }}
+      />
+    );
+  }
+
+  if (view === 'deckEditor') {
+    return (
+      <DeckEditor
+        deckId={editingDeckId}
+        onBack={() => setView('decks')}
+        onSaved={() => setView('decks')}
+      />
+    );
   }
 
   return (
