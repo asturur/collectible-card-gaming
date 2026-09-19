@@ -3,9 +3,10 @@ import JoinScreen from './components/JoinScreen';
 import DeckPicker from './components/DeckPicker';
 import DeckPreview from './components/DeckPreview';
 import GameView from './components/GameView';
+import MtgLog from './components/MtgLog';
 import type { MtgJsonDeck } from './services/mtgjson';
 
-type AppScreen = 'join' | 'pickDeck' | 'previewDeck' | 'game';
+type AppScreen = 'join' | 'pickDeck' | 'previewDeck' | 'game' | 'mtgLog';
 
 interface Connection {
   address: string;
@@ -44,7 +45,10 @@ export default function App() {
 
   switch (screen) {
     case 'join':
-      return <JoinScreen onJoin={handleJoin} />;
+      return <JoinScreen onJoin={handleJoin} onOpenMtgLog={() => setScreen('mtgLog')} />;
+
+    case 'mtgLog':
+      return <MtgLog onBack={() => setScreen('join')} />;
 
     case 'pickDeck':
       return <DeckPicker onDeckSelected={handleDeckSelected} />;

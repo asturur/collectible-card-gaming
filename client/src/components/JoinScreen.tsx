@@ -5,6 +5,7 @@ const RELEASES_URL = `${REPO_URL}/releases`;
 
 interface JoinScreenProps {
   onJoin: (address: string, playerName: string) => void;
+  onOpenMtgLog?: () => void;
 }
 
 /** GitHub icon (Octicons mark) */
@@ -21,7 +22,7 @@ function GitHubIcon({ className }: { className?: string }) {
   );
 }
 
-export default function JoinScreen({ onJoin }: JoinScreenProps) {
+export default function JoinScreen({ onJoin, onOpenMtgLog }: JoinScreenProps) {
   const [address, setAddress] = useState('localhost:8080');
   const [playerName, setPlayerName] = useState('');
   const [addressError, setAddressError] = useState('');
@@ -162,6 +163,14 @@ export default function JoinScreen({ onJoin }: JoinScreenProps) {
           <GitHubIcon className="h-4 w-4" />
           Download server from here
         </a>
+
+        <button
+          type="button"
+          onClick={() => onOpenMtgLog?.()}
+          className="mt-2 w-full text-center text-sm text-zaff-muted transition-colors hover:text-zaff-primary"
+        >
+          Registro Partite MTG
+        </button>
       </form>
     </div>
   );
