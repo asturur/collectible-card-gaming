@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase, TABLE_DECKS } from '../../services/supabase';
+import { ManaPips } from './ManaIcon';
+import { BTN_GHOST, BTN_LINK, BTN_PRIMARY, INPUT, LABEL, MINI } from './ui';
 
 interface DeckEditorProps {
   deckId: string | null;
@@ -29,8 +31,6 @@ interface PreconDeck {
 
 const PRECON_CACHE_KEY = 'mtg:precon-cache';
 const PRECON_URL = 'https://raw.githubusercontent.com/taw/magic-preconstructed-decks-data/master/decks_v2.json';
-
-const COLORS = ['W', 'U', 'B', 'R', 'G'] as const;
 
 const BASIC_LAND_COLOR: Record<string, string> = {
   plains: 'W',
@@ -65,7 +65,8 @@ async function searchCards(query: string): Promise<string[]> {
 
 /** Creazione/modifica manuale di un mazzo, con autocomplete carte (Scryfall),
  *  rilevamento automatico dei colori dalle terre base, e import (file ManaBox
- *  passato come `initialDraft`, o mazzo precon Commander cercato qui). */
+ *  passato come `initialDraft`, o mazzo precon Commander cercato qui).
+ *  Va mostrato dentro un `Modal` (titolo e chiusura li mette il riquadro). */
 export default function DeckEditor({ deckId, initialDraft, onBack, onSaved }: DeckEditorProps) {
   const [name, setName] = useState(initialDraft?.name ?? '');
   const [source, setSource] = useState('');
@@ -279,21 +280,13 @@ export default function DeckEditor({ deckId, initialDraft, onBack, onSaved }: De
   const total = draft.reduce((sum, c) => sum + c.qty, 0);
 
   if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-zaff-bg px-4">
-        <p className="text-zaff-muted">Caricamento…</p>
-      </div>
-    );
+    return <p className="text-zaff-muted">Caricamento…</p>;
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zaff-bg px-4 py-10">
-      <div className="w-full max-w-md rounded-2xl border border-zaff-border bg-zaff-surface p-8 shadow-xl">
-        <h1 className="mb-6 text-center text-2xl font-bold tracking-tight text-zaff-primary">
-          {deckId ? 'Modifica mazzo' : 'Nuovo mazzo'}
-        </h1>
-
-        <label className="mb-1 block text-sm font-semibold text-zaff-text" htmlFor="deckName">
+    <>
+      <div className="mb-3.5">
+        <label className={LABEL} htmlFor="deckName">
           Nome mazzo
         </label>
         <input
@@ -302,198 +295,174 @@ export default function DeckEditor({ deckId, initialDraft, onBack, onSaved }: De
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="es. Mono nero aggro by Ale"
-          className="mb-4 w-full rounded-lg border border-zaff-border bg-zaff-bg px-3 py-2 text-zaff-text placeholder:text-zaff-muted focus:outline-none focus:ring-2 focus:ring-zaff-primary"
+          className={INPUT}
         />
+      </div>
 
-        <label className="mb-1 block text-sm font-semibold text-zaff-text" htmlFor="deckSource">
+      <div className="mb-3.5">
+        <label className={LABEL} htmlFor="deckSource">
           Origine mazzo
         </label>
-        <select
-          id="deckSource"
-          value={source}
-          onChange={(e) => setSource(e.target.value)}
-          className="mb-4 w-full rounded-lg border border-zaff-border bg-zaff-bg px-3 py-2 text-zaff-text focus:outline-none focus:ring-2 focus:ring-zaff-primary"
-        >
+        <select id="deckSource" value={source} onChange={(e) => setSource(e.target.value)} className={INPUT}>
           <option value="">Non specificato</option>
           <option value="brew">Homebrew (fatto in casa)</option>
           <option value="precon">Precon (di fabbrica)</option>
         </select>
+      </div>
 
-        <p className="mb-1 text-sm font-semibold text-zaff-text">Colori del mazzo</p>
-        <div className="mb-1 flex gap-2">
-          {COLORS.map((c) => (
-            <button
-              key={c}
-              type="button"
-              onClick={() => toggleColor(c)}
-              aria-pressed={colors.has(c)}
-              className={`h-8 w-8 rounded-full border text-sm font-bold transition-colors ${
-                colors.has(c)
-                  ? 'border-zaff-primary bg-zaff-primary text-white'
-                  : 'border-zaff-border bg-zaff-bg text-zaff-muted'
-              }`}
-            >
-              {c}
-            </button>
-          ))}
-        </div>
-        <p className="mb-4 text-xs text-zaff-muted">
+      <div className="mb-3.5">
+        <label className={LABEL}>Colori del mazzo</label>
+        <ManaPips colors={colors} onToggle={toggleColor} />
+        <p className={`mt-1.5 ${MINI}`}>
           Si accendono da soli quando aggiungi terre base; puoi correggerli a mano in ogni momento.
         </p>
+      </div>
 
-        <button
-          type="button"
-          onClick={togglePreconBox}
-          className="mb-4 w-full rounded-lg border border-zaff-border px-4 py-2 text-sm font-semibold text-zaff-text transition-colors hover:bg-zaff-bg"
-        >
-          Importa un mazzo precon Commander…
-        </button>
-        {preconOpen && (
-          <div className="mb-4 rounded-lg border border-zaff-border p-3">
-            <input
-              type="text"
-              autoComplete="off"
-              value={preconSearch}
-              onChange={(e) => setPreconSearch(e.target.value)}
-              placeholder="Cerca il nome del precon (es. Elven Empire)…"
-              className="mb-2 w-full rounded-lg border border-zaff-border bg-zaff-bg px-3 py-2 text-zaff-text placeholder:text-zaff-muted focus:outline-none focus:ring-2 focus:ring-zaff-primary"
-            />
-            {preconStatus && <p className="mb-2 text-xs text-zaff-muted">{preconStatus}</p>}
-            {preconSearch.trim().length >= 2 && preconMatches.length === 0 && !preconStatus && (
-              <p className="text-xs text-zaff-muted">Nessun mazzo trovato.</p>
-            )}
-            {preconMatches.length > 0 && (
-              <ul className="max-h-48 divide-y divide-zaff-border overflow-y-auto">
-                {preconMatches.map((d, i) => (
-                  <li key={d.name + i}>
-                    <button
-                      type="button"
-                      onClick={() => importPrecon(d)}
-                      className="flex w-full items-center justify-between gap-2 py-2 text-left text-sm text-zaff-text hover:text-zaff-primary"
-                    >
-                      <span className="min-w-0 flex-1 truncate">{d.name}</span>
-                      <span className="shrink-0 text-xs text-zaff-muted">{d.set_name}</span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
+      <button type="button" onClick={togglePreconBox} className={BTN_LINK}>
+        Importa un mazzo precon Commander…
+      </button>
 
-        <div className="relative mb-4">
-          <label className="mb-1 block text-sm font-semibold text-zaff-text" htmlFor="cardSearch">
-            Cerca carta
-          </label>
+      {preconOpen && (
+        <div className="mb-3.5 mt-0.5 rounded-lg border border-zaff-border bg-zaff-bg p-3">
           <input
-            id="cardSearch"
             type="text"
+            value={preconSearch}
+            onChange={(e) => setPreconSearch(e.target.value)}
             autoComplete="off"
-            value={cardSearch}
-            onChange={(e) => {
-              setCardSearch(e.target.value);
-              setPickedCardName('');
-            }}
-            onKeyDown={(e) => e.key === 'Enter' && handleAddCard()}
-            placeholder="Scrivi il nome della carta…"
-            className="w-full rounded-lg border border-zaff-border bg-zaff-bg px-3 py-2 text-zaff-text placeholder:text-zaff-muted focus:outline-none focus:ring-2 focus:ring-zaff-primary"
+            placeholder="Cerca il nome del precon (es. Elven Empire)…"
+            className={INPUT}
           />
-          {suggestions.length > 0 && (
-            <div className="absolute z-10 mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-zaff-border bg-zaff-surface shadow-lg">
-              {suggestions.map((n) => (
+          {preconStatus && <p className={`mt-1.5 ${MINI}`}>{preconStatus}</p>}
+          {preconMatches.length > 0 && (
+            <div className="mt-2 max-h-[260px] overflow-y-auto">
+              {preconMatches.map((d) => (
                 <button
-                  key={n}
+                  key={d.name + (d.set_name ?? '')}
                   type="button"
-                  onClick={() => {
-                    setCardSearch(n);
-                    setPickedCardName(n);
-                    setSuggestions([]);
-                  }}
-                  className="block w-full truncate px-3 py-2 text-left text-sm text-zaff-text hover:bg-zaff-bg"
+                  onClick={() => importPrecon(d)}
+                  className="flex w-full items-baseline justify-between gap-2.5 border-b border-zaff-border px-1 py-1.5 text-left text-sm text-zaff-text transition last:border-b-0 hover:bg-zaff-surface"
                 >
-                  {n}
+                  <span className="min-w-0 truncate">{d.name}</span>
+                  <small className="shrink-0 whitespace-nowrap text-xs text-zaff-muted">{d.set_name ?? ''}</small>
                 </button>
               ))}
             </div>
           )}
         </div>
+      )}
 
-        <div className="mb-4 flex gap-2">
-          <div className="w-20">
-            <label className="mb-1 block text-sm font-semibold text-zaff-text" htmlFor="cardQty">
-              Copie
-            </label>
-            <input
-              id="cardQty"
-              type="number"
-              min={1}
-              max={99}
-              value={qty}
-              onChange={(e) => setQty(Math.max(1, parseInt(e.target.value, 10) || 1))}
-              className="w-full rounded-lg border border-zaff-border bg-zaff-bg px-3 py-2 text-zaff-text focus:outline-none focus:ring-2 focus:ring-zaff-primary"
-            />
-          </div>
-          <div className="flex flex-1 items-end">
-            <button
-              type="button"
-              onClick={handleAddCard}
-              className="w-full rounded-lg border border-zaff-border px-4 py-2 font-semibold text-zaff-text transition-colors hover:bg-zaff-bg"
-            >
-              Aggiungi al mazzo
-            </button>
-          </div>
-        </div>
-
-        <div className="mb-2 flex items-center justify-between text-sm text-zaff-text">
-          <span>Totale carte</span>
-          <b>{total}</b>
-        </div>
-
-        {draft.length === 0 ? (
-          <p className="mb-4 text-sm text-zaff-muted">Nessuna carta ancora aggiunta.</p>
-        ) : (
-          <ul className="mb-4 max-h-64 divide-y divide-zaff-border overflow-y-auto">
-            {draft.map((c, i) => (
-              <li key={c.name} className="flex items-center justify-between gap-2 py-2 text-sm text-zaff-text">
-                <span className="min-w-0 flex-1 truncate">
-                  {c.qty}× {c.name}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => handleRemoveCard(i)}
-                  title="Togli carta"
-                  className="shrink-0 text-red-400 hover:underline"
-                >
-                  ×
-                </button>
-              </li>
+      <div className="relative mb-3.5 mt-3.5">
+        <label className={LABEL} htmlFor="cardSearch">
+          Cerca carta
+        </label>
+        <input
+          id="cardSearch"
+          type="text"
+          value={cardSearch}
+          onChange={(e) => {
+            setCardSearch(e.target.value);
+            setPickedCardName('');
+          }}
+          autoComplete="off"
+          placeholder="Scrivi il nome della carta…"
+          className={INPUT}
+        />
+        {suggestions.length > 0 && (
+          <div className="absolute inset-x-0 top-full z-10 max-h-[220px] overflow-y-auto rounded-lg border border-zaff-border bg-zaff-surface">
+            {suggestions.map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => {
+                  setCardSearch(n);
+                  setPickedCardName(n);
+                  setSuggestions([]);
+                }}
+                className="block w-full px-2.5 py-1.5 text-left text-sm text-zaff-text transition hover:bg-zaff-bg"
+              >
+                {n}
+              </button>
             ))}
-          </ul>
+          </div>
         )}
+      </div>
 
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={saving}
-          className="w-full rounded-lg bg-zaff-primary px-4 py-3 font-semibold text-white transition-colors hover:bg-zaff-primary-hover disabled:opacity-60"
-        >
+      <div className="mb-3.5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div>
+          <label className={LABEL} htmlFor="cardQty">
+            Copie
+          </label>
+          <input
+            id="cardQty"
+            type="number"
+            min={1}
+            max={99}
+            value={qty}
+            onChange={(e) => setQty(Math.max(1, parseInt(e.target.value, 10) || 1))}
+            className={INPUT}
+          />
+        </div>
+        <div className="flex items-end">
+          <button type="button" onClick={handleAddCard} className={`${BTN_GHOST} w-full`}>
+            Aggiungi al mazzo
+          </button>
+        </div>
+      </div>
+
+      <div className="my-3.5 flex items-center justify-between rounded-lg border border-zaff-primary bg-zaff-bg px-4 py-3">
+        <span className="text-sm text-zaff-muted">Totale carte</span>
+        <b className="bg-gradient-to-r from-zaff-primary to-zaff-accent bg-clip-text font-serif text-[26px] text-transparent">
+          {total}
+        </b>
+      </div>
+
+      {draft.length === 0 ? (
+        <p className={`mb-2.5 ${MINI}`}>Nessuna carta ancora aggiunta.</p>
+      ) : (
+        <div className="mb-2.5 max-h-64 overflow-y-auto">
+          {draft.map((c, i) => (
+            <div
+              key={c.name}
+              className="flex items-center justify-between gap-2 border-b border-zaff-border py-1.5 text-sm text-zaff-text last:border-b-0"
+            >
+              <span className="min-w-0 flex-1 truncate">
+                {c.qty}× {c.name}
+              </span>
+              <button
+                type="button"
+                onClick={() => handleRemoveCard(i)}
+                title="Togli carta"
+                className="shrink-0 px-1 text-zaff-muted transition hover:text-red-400"
+              >
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="flex flex-wrap items-center gap-2.5">
+        <button type="button" onClick={handleSave} disabled={saving} className={BTN_PRIMARY}>
           {deckId ? 'Salva modifiche' : 'Salva mazzo'}
         </button>
-
-        {error && (
-          <p className="mt-3 text-center text-sm text-red-400" role="alert">
-            {error}
-          </p>
-        )}
-
-        <button
-          type="button"
-          onClick={onBack}
-          className="mt-3 w-full rounded-lg border border-zaff-border px-4 py-3 font-semibold text-zaff-text transition-colors hover:bg-zaff-bg"
-        >
+        <button type="button" onClick={onBack} className={BTN_GHOST}>
           Annulla
         </button>
       </div>
-    </div>
+
+      {error && (
+        <p className="mt-3 text-sm text-red-400" role="alert">
+          {error}
+        </p>
+      )}
+
+      <p className={`mt-2.5 ${MINI}`}>
+        I nomi delle carte arrivano da{' '}
+        <a href="https://scryfall.com" target="_blank" rel="noopener" className="underline hover:text-zaff-gold">
+          Scryfall
+        </a>
+        ; i mazzi precon da un archivio pubblico della community Magic.
+      </p>
+    </>
   );
 }

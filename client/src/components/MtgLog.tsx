@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
-import { isSupabaseConfigured, supabase } from '../services/supabase';
+import { isSupabaseConfigured, subscribeToTable, supabase, TABLE_GAMES } from '../services/supabase';
 import AuthScreen from './mtglog/AuthScreen';
 import PlayersRoster from './mtglog/PlayersRoster';
 import GroupsRoster from './mtglog/GroupsRoster';
@@ -9,26 +9,48 @@ import DeckEditor from './mtglog/DeckEditor';
 import GameForm from './mtglog/GameForm';
 import GameList, { type Game } from './mtglog/GameList';
 import GameStats from './mtglog/GameStats';
+import Modal from './mtglog/Modal';
+import Standings from './mtglog/Standings';
+import { computeTally, rowToGame } from './mtglog/stats';
+import { BTN_GHOST, BTN_PRIMARY, tabClass } from './mtglog/ui';
+import { navLinkProps } from '../router';
 
 interface MtgLogProps {
-  onBack: () => void;
+  /** Porta alla piattaforma di gioco ZAFF (/zaff). */
+  onOpenZaff: () => void;
 }
 
-type MtgLogView = 'home' | 'players' | 'groups' | 'decks' | 'deckEditor' | 'newGame' | 'games' | 'stats';
+type MtgLogModal = null | 'players' | 'groups' | 'decks' | 'newGame' | 'games' | 'stats';
+
+/** Icona "mazzo di carte" del bottone Gestisci mazzi, come nell'app originale. */
+function DeckIcon() {
+  return (
+    <svg width="14" height="19" viewBox="0 0 14 19" className="-mb-0.5" aria-hidden="true">
+      <rect x="0.5" y="0.5" width="13" height="18" rx="2.2" fill="#0B0B0C" stroke="#0B0B0C" />
+      <rect x="1.8" y="1.8" width="10.4" height="15.4" rx="1.4" fill="#3B2A6B" />
+      <ellipse cx="7" cy="9.5" rx="3.6" ry="5.2" fill="#CBB994" />
+    </svg>
+  );
+}
 
 /**
  * Registro Partite MTG (vedi plans/PLAN_5_MTG_LOG_PORTING.md): autenticazione,
  * rubriche giocatori/gruppi, mazzi (editor + import), partite (form + storico +
  * export immagine), statistiche/classifica, contatore punti vita a tutto schermo.
+ *
+ * Impaginazione ripresa dall'app HTML originale: pagina larga con testata,
+ * classifica sempre in vista e tutto il resto in riquadri sovrapposti.
+ * È la home dell'app; ZAFF si raggiunge dal link in testata.
  */
-export default function MtgLog({ onBack }: MtgLogProps) {
+export default function MtgLog({ onOpenZaff }: MtgLogProps) {
   const [session, setSession] = useState<Session | null | 'loading'>('loading');
-  const [view, setView] = useState<MtgLogView>('home');
-  const [editingDeckId, setEditingDeckId] = useState<string | null>(null);
+  const [openModal, setOpenModal] = useState<MtgLogModal>(null);
+  const [deckEditor, setDeckEditor] = useState<
+    null | { deckId: string | null; draft: { name: string; cards: { name: string; qty: number }[] } | null }
+  >(null);
   const [editingGame, setEditingGame] = useState<Game | null>(null);
-  const [importedDraft, setImportedDraft] = useState<{ name: string; cards: { name: string; qty: number }[] } | null>(
-    null
-  );
+  const [games, setGames] = useState<Game[]>([]);
+  const [groupFilter, setGroupFilter] = useState('all');
 
   useEffect(() => {
     if (!isSupabaseConfigured || !supabase) {
@@ -45,20 +67,37 @@ export default function MtgLog({ onBack }: MtgLogProps) {
     return () => subscription.unsubscribe();
   }, []);
 
+  const loggedIn = session !== null && session !== 'loading';
+
+  useEffect(() => {
+    if (!loggedIn || !supabase) return;
+
+    async function loadGames() {
+      if (!supabase) return;
+      const { data } = await supabase.from(TABLE_GAMES).select('*');
+      setGames((data ?? []).map(rowToGame));
+    }
+
+    loadGames();
+    return subscribeToTable(TABLE_GAMES, loadGames);
+  }, [loggedIn]);
+
+  const groups = useMemo(() => [...new Set(games.map((g) => g.group))].sort((a, b) => a.localeCompare(b)), [games]);
+
+  useEffect(() => {
+    if (groupFilter !== 'all' && !groups.includes(groupFilter)) setGroupFilter('all');
+  }, [groups, groupFilter]);
+
   if (!isSupabaseConfigured) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-zaff-bg px-4">
-        <div className="w-full max-w-md rounded-2xl border border-zaff-border bg-zaff-surface p-8 text-center shadow-xl">
+        <div className="w-full max-w-md rounded-xl border border-zaff-border bg-zaff-surface p-8 text-center">
           <p className="text-red-400">
             Supabase non configurato (variabili VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY mancanti).
           </p>
-          <button
-            type="button"
-            onClick={onBack}
-            className="mt-6 w-full rounded-lg border border-zaff-border px-4 py-3 font-semibold text-zaff-text transition-colors hover:bg-zaff-bg"
-          >
-            Torna indietro
-          </button>
+          <a {...navLinkProps('zaff', onOpenZaff)} className={`mt-6 w-full ${BTN_GHOST}`}>
+            Vai a ZAFF →
+          </a>
         </div>
       </div>
     );
@@ -73,157 +112,179 @@ export default function MtgLog({ onBack }: MtgLogProps) {
   }
 
   if (!session) {
-    return <AuthScreen onBack={onBack} />;
+    return <AuthScreen onOpenZaff={onOpenZaff} />;
   }
 
-  if (view === 'players') {
-    return <PlayersRoster userId={session.user.id} onBack={() => setView('home')} />;
-  }
+  const userId = session.user.id;
+  const visibleGames = groupFilter === 'all' ? games : games.filter((g) => g.group === groupFilter);
+  const standings = computeTally(visibleGames);
 
-  if (view === 'groups') {
-    return <GroupsRoster userId={session.user.id} onBack={() => setView('home')} />;
-  }
-
-  if (view === 'decks') {
-    return (
-      <DeckList
-        userId={session.user.id}
-        onBack={() => setView('home')}
-        onCreate={() => {
-          setEditingDeckId(null);
-          setImportedDraft(null);
-          setView('deckEditor');
-        }}
-        onEdit={(id) => {
-          setEditingDeckId(id);
-          setImportedDraft(null);
-          setView('deckEditor');
-        }}
-        onImportFile={(name, cards) => {
-          setEditingDeckId(null);
-          setImportedDraft({ name, cards });
-          setView('deckEditor');
-        }}
-      />
-    );
-  }
-
-  if (view === 'deckEditor') {
-    return (
-      <DeckEditor
-        deckId={editingDeckId}
-        initialDraft={importedDraft}
-        onBack={() => setView('decks')}
-        onSaved={() => setView('decks')}
-      />
-    );
-  }
-
-  if (view === 'games') {
-    return (
-      <GameList
-        userId={session.user.id}
-        onBack={() => setView('home')}
-        onEdit={(game) => {
-          setEditingGame(game);
-          setView('newGame');
-        }}
-      />
-    );
-  }
-
-  if (view === 'stats') {
-    return <GameStats onBack={() => setView('home')} />;
-  }
-
-  if (view === 'newGame') {
-    return (
-      <GameForm
-        editingGame={editingGame}
-        onBack={() => setView(editingGame ? 'games' : 'home')}
-        onSaved={() => {
-          setEditingGame(null);
-          setView('games');
-        }}
-      />
-    );
+  function closeModal() {
+    setOpenModal(null);
+    setEditingGame(null);
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zaff-bg px-4">
-      <div className="w-full max-w-md rounded-2xl border border-zaff-border bg-zaff-surface p-8 shadow-xl">
-        <h1 className="mb-2 text-center text-3xl font-bold tracking-tight text-zaff-primary">
-          Registro Partite
-        </h1>
-        <p className="mb-8 text-center text-zaff-muted">Accesso come {session.user.email}</p>
+    <div className="min-h-screen bg-zaff-bg text-zaff-text">
+      <div className="mx-auto w-full max-w-[1180px] px-4 pb-20 pt-6 sm:px-5 sm:pt-7">
+        <header className="border-b-2 border-zaff-text pb-4 sm:pb-[18px]">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="min-w-0">
+              <h1 className="font-serif text-xl tracking-wide sm:text-[26px]">Registro partite di Magic</h1>
+              <p className="text-sm text-zaff-muted">
+                Chi gioca, con che mazzo, come è finita. Condiviso con tutto il gruppo.
+              </p>
+            </div>
 
-        <button
-          type="button"
-          onClick={() => {
-            setEditingGame(null);
-            setView('newGame');
-          }}
-          className="mb-3 w-full rounded-lg bg-zaff-primary px-4 py-3 font-semibold text-white transition-colors hover:bg-zaff-primary-hover"
-        >
-          ▶ Nuova partita
-        </button>
+            <div className="flex w-full flex-col items-stretch gap-0.5 sm:w-auto sm:items-end">
+              <div className="flex flex-wrap items-center gap-3 sm:justify-end">
+                <span className="truncate text-xs text-zaff-muted">{session.user.email}</span>
+                <button type="button" onClick={() => supabase?.auth.signOut()} className={BTN_GHOST}>
+                  Esci
+                </button>
+                <a {...navLinkProps('zaff', onOpenZaff)} className={BTN_GHOST}>
+                  Vai a ZAFF →
+                </a>
+              </div>
 
-        <button
-          type="button"
-          onClick={() => setView('games')}
-          className="mb-3 w-full rounded-lg bg-zaff-primary px-4 py-3 font-semibold text-white transition-colors hover:bg-zaff-primary-hover"
-        >
-          📜 Partite salvate
-        </button>
+              <div className="mtg-sep" />
 
-        <button
-          type="button"
-          onClick={() => setView('players')}
-          className="w-full rounded-lg bg-zaff-primary px-4 py-3 font-semibold text-white transition-colors hover:bg-zaff-primary-hover"
-        >
-          👤 Gestisci giocatori
-        </button>
+              <div className="flex flex-wrap gap-2.5 sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingGame(null);
+                    setOpenModal('newGame');
+                  }}
+                  className={BTN_PRIMARY}
+                >
+                  ➕ Nuova partita
+                </button>
+                <button type="button" onClick={() => setOpenModal('games')} className={BTN_PRIMARY}>
+                  📜 Partite salvate
+                </button>
+                <button type="button" onClick={() => setOpenModal('stats')} className={BTN_PRIMARY}>
+                  📊 Statistiche mazzi
+                </button>
+              </div>
 
-        <button
-          type="button"
-          onClick={() => setView('groups')}
-          className="mt-3 w-full rounded-lg bg-zaff-primary px-4 py-3 font-semibold text-white transition-colors hover:bg-zaff-primary-hover"
-        >
-          🏷️ Gestisci gruppi
-        </button>
+              <div className="mtg-sep" />
 
-        <button
-          type="button"
-          onClick={() => setView('decks')}
-          className="mt-3 w-full rounded-lg bg-zaff-primary px-4 py-3 font-semibold text-white transition-colors hover:bg-zaff-primary-hover"
-        >
-          🃏 Mazzi salvati
-        </button>
+              <div className="flex flex-wrap gap-2.5 sm:justify-end">
+                <button type="button" onClick={() => setOpenModal('players')} className={BTN_PRIMARY}>
+                  👤 Gestisci giocatori
+                </button>
+                <button type="button" onClick={() => setOpenModal('groups')} className={BTN_PRIMARY}>
+                  🏷️ Gestisci gruppi
+                </button>
+                <button type="button" onClick={() => setOpenModal('decks')} className={BTN_PRIMARY}>
+                  <DeckIcon /> Gestisci mazzi
+                </button>
+              </div>
+            </div>
+          </div>
 
-        <button
-          type="button"
-          onClick={() => setView('stats')}
-          className="mt-3 w-full rounded-lg bg-zaff-primary px-4 py-3 font-semibold text-white transition-colors hover:bg-zaff-primary-hover"
-        >
-          📊 Statistiche e classifica
-        </button>
+          {groups.length >= 2 && (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {['all', ...groups].map((g) => (
+                <button
+                  key={g}
+                  type="button"
+                  onClick={() => setGroupFilter(g)}
+                  aria-pressed={groupFilter === g}
+                  className={tabClass(groupFilter === g)}
+                >
+                  {g === 'all' ? 'Tutti i gruppi' : g}
+                </button>
+              ))}
+            </div>
+          )}
 
-        <button
-          type="button"
-          onClick={() => supabase?.auth.signOut()}
-          className="mt-3 w-full rounded-lg border border-zaff-border px-4 py-3 font-semibold text-zaff-text transition-colors hover:bg-zaff-bg"
-        >
-          Esci
-        </button>
-
-        <button
-          type="button"
-          onClick={onBack}
-          className="mt-3 w-full text-center text-sm text-zaff-muted transition-colors hover:text-zaff-primary"
-        >
-          Torna indietro
-        </button>
+          <Standings rows={standings} showPie={groupFilter !== 'all'} />
+        </header>
       </div>
+
+      {openModal === 'newGame' && (
+        <Modal wide title={editingGame ? 'Modifica partita' : 'Nuova partita'} onClose={closeModal}>
+          <GameForm
+            editingGame={editingGame}
+            onBack={closeModal}
+            onSaved={() => {
+              setEditingGame(null);
+              setOpenModal('games');
+            }}
+          />
+        </Modal>
+      )}
+
+      {openModal === 'games' && (
+        <Modal wide title="Partite salvate" onClose={closeModal}>
+          <GameList
+            userId={userId}
+            onEdit={(game) => {
+              setEditingGame(game);
+              setOpenModal('newGame');
+            }}
+          />
+        </Modal>
+      )}
+
+      {openModal === 'stats' && (
+        <Modal
+          wide
+          title="Statistiche mazzi"
+          subtitle="Percentuale di vittoria di ogni mazzo, su tutte le partite di tutti i gruppi."
+          onClose={closeModal}
+        >
+          <GameStats />
+        </Modal>
+      )}
+
+      {openModal === 'players' && (
+        <Modal
+          title="Giocatori"
+          subtitle="Rinomina o cancella i nomi in elenco. Le partite già salvate mantengono comunque il nome che avevano."
+          onClose={closeModal}
+        >
+          <PlayersRoster userId={userId} />
+        </Modal>
+      )}
+
+      {openModal === 'groups' && (
+        <Modal
+          title="Gruppi"
+          subtitle="Rinomina o cancella i gruppi in elenco. Le partite già salvate mantengono comunque il gruppo che avevano."
+          onClose={closeModal}
+        >
+          <GroupsRoster userId={userId} />
+        </Modal>
+      )}
+
+      {openModal === 'decks' && (
+        <Modal title="Mazzi salvati" onClose={closeModal}>
+          <DeckList
+            userId={userId}
+            onCreate={() => setDeckEditor({ deckId: null, draft: null })}
+            onEdit={(id) => setDeckEditor({ deckId: id, draft: null })}
+            onImportFile={(name, cards) => setDeckEditor({ deckId: null, draft: { name, cards } })}
+          />
+        </Modal>
+      )}
+
+      {deckEditor && (
+        <Modal
+          level={2}
+          title={deckEditor.deckId ? 'Modifica mazzo' : 'Nuovo mazzo'}
+          onClose={() => setDeckEditor(null)}
+        >
+          <DeckEditor
+            deckId={deckEditor.deckId}
+            initialDraft={deckEditor.draft}
+            onBack={() => setDeckEditor(null)}
+            onSaved={() => setDeckEditor(null)}
+          />
+        </Modal>
+      )}
     </div>
   );
 }

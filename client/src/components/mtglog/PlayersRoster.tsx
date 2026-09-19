@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { canEdit, supabase, TABLE_GAMES, TABLE_PLAYERS } from '../../services/supabase';
+import { BTN_DANGER_LINK, BTN_LINK, BTN_PRIMARY, INPUT } from './ui';
 
 interface PlayersRosterProps {
   userId: string;
-  onBack: () => void;
 }
 
 interface RosterEntry {
@@ -17,8 +17,9 @@ interface GamePlayer {
   [key: string]: unknown;
 }
 
-/** Rubrica giocatori condivisa: lista, aggiungi, rinomina (con propagazione), elimina. */
-export default function PlayersRoster({ userId, onBack }: PlayersRosterProps) {
+/** Rubrica giocatori condivisa: lista, aggiungi, rinomina (con propagazione), elimina.
+ *  Va mostrata dentro un `Modal` (titolo e chiusura li mette il riquadro). */
+export default function PlayersRoster({ userId }: PlayersRosterProps) {
   const [roster, setRoster] = useState<RosterEntry[]>([]);
   const [newName, setNewName] = useState('');
   const [renaming, setRenaming] = useState<string | null>(null);
@@ -116,90 +117,73 @@ export default function PlayersRoster({ userId, onBack }: PlayersRosterProps) {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zaff-bg px-4 py-10">
-      <div className="w-full max-w-md rounded-2xl border border-zaff-border bg-zaff-surface p-8 shadow-xl">
-        <h1 className="mb-2 text-center text-2xl font-bold tracking-tight text-zaff-primary">Giocatori</h1>
-        <p className="mb-6 text-center text-sm text-zaff-muted">
-          Rinomina o cancella i nomi in elenco. Le partite già salvate mantengono comunque il nome che avevano.
-        </p>
-
-        <div className="mb-4 flex gap-2">
-          <input
-            type="text"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
-            placeholder="Nome nuovo giocatore"
-            className="flex-1 rounded-lg border border-zaff-border bg-zaff-bg px-3 py-2 text-zaff-text placeholder:text-zaff-muted focus:outline-none focus:ring-2 focus:ring-zaff-primary"
-          />
-          <button
-            type="button"
-            onClick={handleAdd}
-            className="rounded-lg bg-zaff-primary px-4 py-2 font-semibold text-white transition-colors hover:bg-zaff-primary-hover"
-          >
-            Aggiungi
-          </button>
-        </div>
-
-        {loading ? (
-          <p className="text-center text-zaff-muted">Caricamento…</p>
-        ) : roster.length === 0 ? (
-          <p className="text-center text-sm text-zaff-muted">Ancora nessun giocatore in elenco.</p>
-        ) : (
-          <ul className="divide-y divide-zaff-border">
-            {roster.map((r) => (
-              <li key={r.name} className="flex items-center justify-between gap-2 py-2">
-                {renaming === r.name ? (
-                  <>
-                    <input
-                      type="text"
-                      value={renameValue}
-                      onChange={(e) => setRenameValue(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && confirmRename(r.name)}
-                      autoFocus
-                      className="flex-1 rounded-lg border border-zaff-border bg-zaff-bg px-3 py-1.5 text-zaff-text focus:outline-none focus:ring-2 focus:ring-zaff-primary"
-                    />
-                    <button type="button" onClick={() => confirmRename(r.name)} className="text-sm text-zaff-primary hover:underline">
-                      Salva
-                    </button>
-                    <button type="button" onClick={() => setRenaming(null)} className="text-sm text-zaff-muted hover:underline">
-                      Annulla
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <span className="truncate text-zaff-text">{r.name}</span>
-                    {canEdit(r.createdBy, userId) && (
-                      <div className="flex shrink-0 gap-3">
-                        <button type="button" onClick={() => startRename(r.name)} className="text-sm text-zaff-primary hover:underline">
-                          Rinomina
-                        </button>
-                        <button type="button" onClick={() => handleDelete(r.name)} className="text-sm text-red-400 hover:underline">
-                          Cancella
-                        </button>
-                      </div>
-                    )}
-                  </>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-
-        {error && (
-          <p className="mt-3 text-center text-sm text-red-400" role="alert">
-            {error}
-          </p>
-        )}
-
-        <button
-          type="button"
-          onClick={onBack}
-          className="mt-6 w-full rounded-lg border border-zaff-border px-4 py-3 font-semibold text-zaff-text transition-colors hover:bg-zaff-bg"
-        >
-          Torna indietro
+    <>
+      <div className="mb-4 flex gap-2">
+        <input
+          type="text"
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
+          placeholder="Nome nuovo giocatore"
+          className={INPUT}
+        />
+        <button type="button" onClick={handleAdd} className={`shrink-0 ${BTN_PRIMARY}`}>
+          Aggiungi
         </button>
       </div>
-    </div>
+
+      {loading ? (
+        <p className="text-zaff-muted">Caricamento…</p>
+      ) : roster.length === 0 ? (
+        <p className="text-sm text-zaff-muted">Ancora nessun giocatore in elenco.</p>
+      ) : (
+        <ul className="divide-y divide-zaff-border">
+          {roster.map((r) => (
+            <li key={r.name} className="flex items-center justify-between gap-2 py-2">
+              {renaming === r.name ? (
+                <>
+                  <input
+                    type="text"
+                    value={renameValue}
+                    onChange={(e) => setRenameValue(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && confirmRename(r.name)}
+                    autoFocus
+                    className={INPUT}
+                  />
+                  <div className="flex shrink-0 gap-1.5">
+                    <button type="button" onClick={() => confirmRename(r.name)} className={BTN_LINK}>
+                      Salva
+                    </button>
+                    <button type="button" onClick={() => setRenaming(null)} className={BTN_DANGER_LINK}>
+                      Annulla
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <span className="min-w-0 flex-1 truncate font-serif text-[15px] text-zaff-text">{r.name}</span>
+                  {canEdit(r.createdBy, userId) && (
+                    <div className="flex shrink-0 gap-1.5">
+                      <button type="button" onClick={() => startRename(r.name)} className={BTN_LINK}>
+                        Rinomina
+                      </button>
+                      <button type="button" onClick={() => handleDelete(r.name)} className={BTN_DANGER_LINK}>
+                        Cancella
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {error && (
+        <p className="mt-3 text-sm text-red-400" role="alert">
+          {error}
+        </p>
+      )}
+    </>
   );
 }

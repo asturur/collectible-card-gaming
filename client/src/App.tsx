@@ -1,12 +1,14 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import JoinScreen from './components/JoinScreen';
 import DeckPicker from './components/DeckPicker';
 import DeckPreview from './components/DeckPreview';
 import GameView from './components/GameView';
 import MtgLog from './components/MtgLog';
+import { useRoute } from './router';
 import type { MtgJsonDeck } from './services/mtgjson';
 
-type AppScreen = 'join' | 'pickDeck' | 'previewDeck' | 'game' | 'mtgLog';
+/** Schermate interne alla piattaforma di gioco ZAFF (tutte sotto /zaff). */
+type ZaffScreen = 'join' | 'pickDeck' | 'previewDeck' | 'game';
 
 interface Connection {
   address: string;
@@ -14,9 +16,14 @@ interface Connection {
 }
 
 export default function App() {
-  const [screen, setScreen] = useState<AppScreen>('join');
+  const [route, navigate] = useRoute();
+  const [screen, setScreen] = useState<ZaffScreen>('join');
   const [connection, setConnection] = useState<Connection | null>(null);
   const [selectedDeck, setSelectedDeck] = useState<MtgJsonDeck | null>(null);
+
+  useEffect(() => {
+    document.title = route === 'zaff' ? 'ZAFF — Collectible Card Gaming' : 'Registro partite di Magic';
+  }, [route]);
 
   function handleJoin(address: string, playerName: string) {
     setConnection({ address, playerName });
@@ -43,12 +50,19 @@ export default function App() {
     setScreen('join');
   }
 
+  /** Uscendo da ZAFF si chiude la partita in corso: tornando si riparte dal join. */
+  function goHome() {
+    handleDisconnect();
+    navigate('home');
+  }
+
+  if (route === 'home') {
+    return <MtgLog onOpenZaff={() => navigate('zaff')} />;
+  }
+
   switch (screen) {
     case 'join':
-      return <JoinScreen onJoin={handleJoin} onOpenMtgLog={() => setScreen('mtgLog')} />;
-
-    case 'mtgLog':
-      return <MtgLog onBack={() => setScreen('join')} />;
+      return <JoinScreen onJoin={handleJoin} onOpenMtgLog={goHome} />;
 
     case 'pickDeck':
       return <DeckPicker onDeckSelected={handleDeckSelected} />;

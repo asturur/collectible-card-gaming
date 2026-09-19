@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import html2canvas from 'html2canvas';
 import { canEdit, subscribeToTable, supabase, TABLE_GAMES } from '../../services/supabase';
+import Modal from './Modal';
+import { ManaIcons } from './ManaIcon';
+import { dateLabel, rowToGame } from './stats';
+import { BTN_DANGER_LINK, BTN_LINK, BTN_PRIMARY, tabClass } from './ui';
 
 export interface GamePlayer {
   name: string;
@@ -24,7 +28,6 @@ export interface Game {
 
 interface GameListProps {
   userId: string;
-  onBack: () => void;
   onEdit: (game: Game) => void;
 }
 
@@ -53,12 +56,6 @@ function randomFrom<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-function dateLabel(iso: string): string {
-  if (!iso) return 'Senza data';
-  const [y, m, d] = iso.split('-');
-  return `${d}/${m}/${y}`;
-}
-
 function idTimeSuffix(id: string): string {
   const m = String(id).match(/^g(\d{13})/);
   if (!m) return '';
@@ -68,8 +65,9 @@ function idTimeSuffix(id: string): string {
 }
 
 /** Storico partite: lista + dettaglio, filtro per gruppo (se ce n'è più di uno),
- *  appellativi scherzosi random per vincitore/perdenti nel dettaglio. */
-export default function GameList({ userId, onBack, onEdit }: GameListProps) {
+ *  appellativi scherzosi random per vincitore/perdenti nel dettaglio.
+ *  Va mostrata dentro un `Modal`; il dettaglio partita si apre come riquadro sopra. */
+export default function GameList({ userId, onEdit }: GameListProps) {
   const [games, setGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -89,17 +87,7 @@ export default function GameList({ userId, onBack, onEdit }: GameListProps) {
       setError('Non riesco a leggere il registro condiviso: ' + loadError.message);
       return;
     }
-    setGames(
-      (data ?? []).map((row) => ({
-        id: row.id,
-        date: row.date,
-        format: row.format ?? '',
-        notes: row.notes ?? '',
-        players: row.players ?? [],
-        group: row.gruppo ?? 'Generale',
-        createdBy: row.created_by ?? null,
-      }))
-    );
+    setGames((data ?? []).map(rowToGame));
   }
 
   useEffect(() => {
@@ -170,161 +158,54 @@ export default function GameList({ userId, onBack, onEdit }: GameListProps) {
   }
 
   if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-zaff-bg px-4">
-        <p className="text-zaff-muted">Caricamento…</p>
-      </div>
-    );
-  }
-
-  if (selectedGame) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-zaff-bg px-4 py-10">
-        <div className="w-full max-w-md rounded-2xl border border-zaff-border bg-zaff-surface p-8 shadow-xl">
-          <div ref={shareCardRef} className="bg-zaff-surface p-1">
-            <p className="mb-1 text-center text-xs uppercase tracking-wide text-zaff-muted">Registro partite di Magic</p>
-            <h1 className="mb-1 text-center text-2xl font-bold tracking-tight text-zaff-primary">
-              {dateLabel(selectedGame.date)}
-            </h1>
-            <p className="mb-6 text-center text-sm text-zaff-muted">
-              {selectedGame.format || 'formato non indicato'} · {selectedGame.players.length} giocatori · gruppo:{' '}
-              {selectedGame.group}
-            </p>
-
-            <ul className="mb-4 space-y-3">
-              {selectedGame.players.map((p, i) => (
-                <li key={i} className={`rounded-lg border p-3 ${p.winner ? 'border-zaff-primary' : 'border-zaff-border'}`}>
-                  <div className="mb-1 flex items-center justify-between gap-2">
-                    <span className="font-semibold text-zaff-text">
-                      {p.winner && '🏆 '}
-                      {p.name}
-                    </span>
-                    {playerTags[i] && (
-                      <span className={`text-xs ${p.winner ? 'text-zaff-primary' : 'text-zaff-muted'}`}>
-                        {p.winner ? 'vincitore — ' : ''}
-                        {playerTags[i]}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center justify-between gap-2 text-sm text-zaff-muted">
-                    <span className="min-w-0 flex-1 truncate" title={p.deck || ''}>
-                      {(p.colors ?? []).length > 0 && <span className="mr-1">{(p.colors ?? []).join('')}</span>}
-                      {p.deck || '—'}
-                    </span>
-                    <span className="shrink-0">{p.life === null || p.life === undefined ? '–' : p.life} PV</span>
-                  </div>
-                </li>
-              ))}
-            </ul>
-
-            {selectedGame.notes && <p className="mb-4 text-sm text-zaff-muted">{selectedGame.notes}</p>}
-          </div>
-
-          <button
-            type="button"
-            onClick={() => handleExport(selectedGame)}
-            disabled={exporting}
-            className="mb-3 w-full rounded-lg bg-zaff-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-zaff-primary-hover disabled:opacity-60"
-          >
-            {exporting ? 'Genero immagine…' : '🖼️ Esporta risultati'}
-          </button>
-
-          {canEdit(selectedGame.createdBy, userId) && (
-            <div className="mb-3 flex gap-3">
-              <button
-                type="button"
-                onClick={() => onEdit(selectedGame)}
-                className="flex-1 rounded-lg border border-zaff-border px-4 py-2 text-sm font-semibold text-zaff-primary transition-colors hover:bg-zaff-bg"
-              >
-                Modifica
-              </button>
-              <button
-                type="button"
-                onClick={() => handleDelete(selectedGame.id)}
-                className="flex-1 rounded-lg border border-zaff-border px-4 py-2 text-sm font-semibold text-red-400 transition-colors hover:bg-zaff-bg"
-              >
-                Cancella
-              </button>
-            </div>
-          )}
-
-          {error && (
-            <p className="mb-3 text-center text-sm text-red-400" role="alert">
-              {error}
-            </p>
-          )}
-
-          <button
-            type="button"
-            onClick={() => setSelectedId(null)}
-            className="w-full rounded-lg border border-zaff-border px-4 py-3 font-semibold text-zaff-text transition-colors hover:bg-zaff-bg"
-          >
-            Torna alla lista
-          </button>
-        </div>
-      </div>
-    );
+    return <p className="text-zaff-muted">Caricamento…</p>;
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zaff-bg px-4 py-10">
-      <div className="w-full max-w-md rounded-2xl border border-zaff-border bg-zaff-surface p-8 shadow-xl">
-        <h1 className="mb-2 text-center text-2xl font-bold tracking-tight text-zaff-primary">
-          Partite salvate {visibleGames.length > 0 && <span className="text-base text-zaff-muted">({visibleGames.length})</span>}
-        </h1>
-
-        {groups.length >= 2 && (
-          <div className="mb-4 flex flex-wrap gap-2">
+    <>
+      {groups.length >= 2 && (
+        <div className="mb-3 flex flex-wrap gap-2">
+          {['all', ...groups].map((g) => (
             <button
+              key={g}
               type="button"
-              onClick={() => setGroupFilter('all')}
-              aria-pressed={groupFilter === 'all'}
-              className={`rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${
-                groupFilter === 'all'
-                  ? 'border-zaff-primary bg-zaff-primary text-white'
-                  : 'border-zaff-border text-zaff-muted hover:bg-zaff-bg'
-              }`}
+              onClick={() => setGroupFilter(g)}
+              aria-pressed={groupFilter === g}
+              className={tabClass(groupFilter === g)}
             >
-              Tutti i gruppi
+              {g === 'all' ? 'Tutti i gruppi' : g}
             </button>
-            {groups.map((g) => (
-              <button
-                key={g}
-                type="button"
-                onClick={() => setGroupFilter(g)}
-                aria-pressed={groupFilter === g}
-                className={`rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${
-                  groupFilter === g
-                    ? 'border-zaff-primary bg-zaff-primary text-white'
-                    : 'border-zaff-border text-zaff-muted hover:bg-zaff-bg'
-                }`}
-              >
-                {g}
-              </button>
-            ))}
-          </div>
-        )}
+          ))}
+        </div>
+      )}
 
-        {visibleGames.length === 0 ? (
-          <p className="text-center text-sm text-zaff-muted">
-            Nessuna partita qui: aprila da &quot;Nuova partita&quot; nella home del registro.
-          </p>
-        ) : (
-          <ul className="divide-y divide-zaff-border">
+      {visibleGames.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-zaff-border p-6 text-center text-sm text-zaff-muted">
+          Nessuna partita qui: aprila da &quot;Nuova partita&quot; in cima alla pagina.
+        </div>
+      ) : (
+        <>
+          <p className="mb-2 text-xs text-zaff-muted">{visibleGames.length} partite</p>
+          <ul>
             {visibleGames.map((g) => (
               <li key={g.id}>
                 <button
                   type="button"
                   onClick={() => setSelectedId(g.id)}
-                  className="flex w-full flex-col gap-1 py-3 text-left hover:bg-zaff-bg"
+                  className="mb-2 flex w-full items-center gap-3.5 rounded-lg border border-zaff-border bg-zaff-bg px-3.5 py-3 text-left transition hover:border-zaff-primary"
                 >
-                  <span className="text-sm font-semibold text-zaff-text">{dateLabel(g.date)}</span>
-                  <span className="flex flex-wrap gap-x-2 text-xs text-zaff-muted">
+                  <span className="shrink-0 whitespace-nowrap border-r border-zaff-border pr-3 font-serif text-sm text-zaff-muted">
+                    {dateLabel(g.date)}
+                  </span>
+                  <span className="flex min-w-0 flex-1 flex-wrap gap-x-3.5 gap-y-1.5">
                     {g.players.map((p, i) => (
-                      <span key={i} className={p.winner ? 'font-semibold text-zaff-primary' : ''}>
+                      <span
+                        key={i}
+                        className={`whitespace-nowrap text-sm ${p.winner ? 'font-semibold text-zaff-highlight' : 'text-zaff-text'}`}
+                      >
                         {p.winner && '🏆 '}
                         {p.name}
-                        {(p.colors ?? []).length > 0 ? ` (${(p.colors ?? []).join('')})` : ''}
+                        <ManaIcons colors={p.colors} className="text-[13px]" />
                       </span>
                     ))}
                   </span>
@@ -332,22 +213,88 @@ export default function GameList({ userId, onBack, onEdit }: GameListProps) {
               </li>
             ))}
           </ul>
-        )}
+        </>
+      )}
 
-        {error && (
-          <p className="mt-3 text-center text-sm text-red-400" role="alert">
-            {error}
-          </p>
-        )}
+      {error && (
+        <p className="mt-3 text-sm text-red-400" role="alert">
+          {error}
+        </p>
+      )}
 
-        <button
-          type="button"
-          onClick={onBack}
-          className="mt-6 w-full rounded-lg border border-zaff-border px-4 py-3 font-semibold text-zaff-text transition-colors hover:bg-zaff-bg"
-        >
-          Torna indietro
-        </button>
-      </div>
-    </div>
+      {selectedGame && (
+        <Modal level={2} wide onClose={() => setSelectedId(null)}>
+          <div ref={shareCardRef} className="px-0.5 py-1.5">
+            <p className="mb-0.5 text-[11px] uppercase tracking-[0.06em] text-zaff-muted">Registro partite di Magic</p>
+            <h2 className="font-serif text-lg text-zaff-text sm:text-xl">{dateLabel(selectedGame.date)}</h2>
+            <p className="mb-3 text-xs text-zaff-muted">
+              {selectedGame.format || 'formato non indicato'} · {selectedGame.players.length} giocatori · gruppo:{' '}
+              {selectedGame.group}
+            </p>
+
+            <div>
+              {selectedGame.players.map((p, i) => (
+                <div
+                  key={i}
+                  className={`flex items-center gap-2.5 border-b border-zaff-border py-2.5 last:border-b-0 ${
+                    p.winner ? 'bg-zaff-highlight/10' : ''
+                  }`}
+                >
+                  <div className="min-w-0 flex-1">
+                    <span className="font-serif text-[15px] text-zaff-text">{p.name}</span>
+                    {playerTags[i] && (
+                      <span
+                        className={`block text-xs ${p.winner ? 'text-zaff-gold' : 'italic text-zaff-muted opacity-75'}`}
+                      >
+                        {p.winner ? 'vincitore — ' : ''}
+                        {playerTags[i]}
+                      </span>
+                    )}
+                  </div>
+                  <div
+                    className="flex max-w-[210px] shrink-0 flex-col items-end gap-0.5 text-right text-[13px] text-zaff-muted"
+                    title={p.deck || ''}
+                  >
+                    <ManaIcons colors={p.colors} className="text-[17px]" />
+                    <span className="max-w-[210px] truncate">{p.deck || '—'}</span>
+                  </div>
+                  <div className="w-11 shrink-0 text-right text-[17px] tabular-nums text-zaff-text">
+                    {p.life === null || p.life === undefined ? '–' : p.life}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {selectedGame.notes && (
+              <p className="mt-3 whitespace-pre-wrap rounded bg-zaff-bg px-3 py-2.5 text-sm text-zaff-text">
+                {selectedGame.notes}
+              </p>
+            )}
+          </div>
+
+          <div className="mt-3.5 flex flex-wrap items-center gap-2.5">
+            <button
+              type="button"
+              onClick={() => handleExport(selectedGame)}
+              disabled={exporting}
+              className={BTN_PRIMARY}
+            >
+              {exporting ? 'Genero immagine…' : '🖼️ Esporta risultati'}
+            </button>
+
+            {canEdit(selectedGame.createdBy, userId) && (
+              <>
+                <button type="button" onClick={() => onEdit(selectedGame)} className={BTN_LINK}>
+                  Modifica
+                </button>
+                <button type="button" onClick={() => handleDelete(selectedGame.id)} className={BTN_DANGER_LINK}>
+                  Cancella
+                </button>
+              </>
+            )}
+          </div>
+        </Modal>
+      )}
+    </>
   );
 }

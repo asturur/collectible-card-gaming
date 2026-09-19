@@ -1,10 +1,12 @@
 import { useState, type FormEvent } from 'react';
+import { navLinkProps } from '../router';
 
 const REPO_URL = 'https://github.com/asturur/collectible-card-gaming';
 const RELEASES_URL = `${REPO_URL}/releases`;
 
 interface JoinScreenProps {
   onJoin: (address: string, playerName: string) => void;
+  /** Torna alla home dell'app, il registro partite. */
   onOpenMtgLog?: () => void;
 }
 
@@ -164,13 +166,12 @@ export default function JoinScreen({ onJoin, onOpenMtgLog }: JoinScreenProps) {
           Download server from here
         </a>
 
-        <button
-          type="button"
-          onClick={() => onOpenMtgLog?.()}
-          className="mt-2 w-full text-center text-sm text-zaff-muted transition-colors hover:text-zaff-primary"
+        <a
+          {...navLinkProps('home', () => onOpenMtgLog?.())}
+          className="mt-2 block w-full text-center text-sm text-zaff-muted transition-colors hover:text-zaff-primary"
         >
-          Registro Partite MTG
-        </button>
+          ← Registro Partite MTG
+        </a>
       </form>
     </div>
   );

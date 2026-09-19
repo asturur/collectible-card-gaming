@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { subscribeToTable, supabase, TABLE_DECKS, TABLE_GAMES, TABLE_GROUPS, TABLE_PLAYERS } from '../../services/supabase';
 import type { Game } from './GameList';
 import LifeCounter from './LifeCounter';
+import { ManaPips } from './ManaIcon';
+import { BTN_GHOST, BTN_LINK, BTN_PRIMARY, INPUT, LABEL, MINI } from './ui';
 
 interface GameFormProps {
   editingGame?: Game | null;
@@ -9,7 +11,6 @@ interface GameFormProps {
   onSaved?: () => void;
 }
 
-const COLORS = ['W', 'U', 'B', 'R', 'G'] as const;
 const FORMATS = ['Commander', 'Standard', 'Modern', 'Pauper', 'Draft', 'Two-Headed Giant', 'Amichevole'];
 
 interface DeckOption {
@@ -41,8 +42,55 @@ function emptyPlayerRow(): PlayerRow {
   };
 }
 
+/** Stepper punti vita: − / campo numerico / +, come nell'app originale. */
+function LifeStepper({
+  value,
+  onChange,
+  placeholder,
+  className = '',
+}: {
+  value: string;
+  onChange: (next: string) => void;
+  placeholder?: string;
+  className?: string;
+}) {
+  function step(delta: number) {
+    const current = value === '' ? 0 : Number(value) || 0;
+    onChange(String(current + delta));
+  }
+  return (
+    <div className={`flex overflow-hidden rounded-lg border border-zaff-border ${className}`}>
+      <button
+        type="button"
+        onClick={() => step(-1)}
+        aria-label="Meno uno"
+        className="w-[30px] shrink-0 bg-zaff-bg text-base leading-none text-zaff-text transition hover:bg-zaff-gold hover:text-zaff-bg"
+      >
+        −
+      </button>
+      <input
+        type="number"
+        inputMode="numeric"
+        value={value}
+        placeholder={placeholder}
+        onChange={(e) => onChange(e.target.value)}
+        className="mtg-life-input w-11 min-w-0 flex-1 border-0 bg-zaff-bg px-0.5 py-2 text-center tabular-nums text-zaff-text placeholder:text-zaff-muted focus:outline-none"
+      />
+      <button
+        type="button"
+        onClick={() => step(1)}
+        aria-label="Più uno"
+        className="w-[30px] shrink-0 bg-zaff-bg text-base leading-none text-zaff-text transition hover:bg-zaff-gold hover:text-zaff-bg"
+      >
+        +
+      </button>
+    </div>
+  );
+}
+
 /** Form "Nuova partita"/"Modifica partita": giocatori dinamici, select mazzo/nome,
- *  punti vita, vincitore, note. Salva (insert) o aggiorna (update) su `partite`. */
+ *  punti vita, vincitore, note. Salva (insert) o aggiorna (update) su `partite`.
+ *  Va mostrato dentro un `Modal` (titolo e chiusura li mette il riquadro). */
 export default function GameForm({ editingGame, onBack, onSaved }: GameFormProps) {
   const [groups, setGroups] = useState<string[]>([]);
   const [playerNames, setPlayerNames] = useState<string[]>([]);
@@ -223,11 +271,7 @@ export default function GameForm({ editingGame, onBack, onSaved }: GameFormProps
   }
 
   if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-zaff-bg px-4">
-        <p className="text-zaff-muted">Caricamento…</p>
-      </div>
-    );
+    return <p className="text-zaff-muted">Caricamento…</p>;
   }
 
   if (lifeCounterOpen) {
@@ -242,21 +286,12 @@ export default function GameForm({ editingGame, onBack, onSaved }: GameFormProps
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zaff-bg px-4 py-10">
-      <div className="w-full max-w-lg rounded-2xl border border-zaff-border bg-zaff-surface p-8 shadow-xl">
-        <h1 className="mb-6 text-center text-2xl font-bold tracking-tight text-zaff-primary">
-          {editingGame ? 'Modifica partita' : 'Nuova partita'}
-        </h1>
-
-        <label className="mb-1 block text-sm font-semibold text-zaff-text" htmlFor="group">
+    <>
+      <div className="mb-3.5">
+        <label className={LABEL} htmlFor="group">
           Gruppo
         </label>
-        <select
-          id="group"
-          value={group}
-          onChange={(e) => setGroup(e.target.value)}
-          className="mb-4 w-full rounded-lg border border-zaff-border bg-zaff-bg px-3 py-2 text-zaff-text focus:outline-none focus:ring-2 focus:ring-zaff-primary"
-        >
+        <select id="group" value={group} onChange={(e) => setGroup(e.target.value)} className={INPUT}>
           <option value="">Generale</option>
           {groups.map((g) => (
             <option key={g} value={g}>
@@ -264,183 +299,167 @@ export default function GameForm({ editingGame, onBack, onSaved }: GameFormProps
             </option>
           ))}
         </select>
+      </div>
 
-        <div className="mb-4 flex gap-3">
-          <div className="flex-1">
-            <label className="mb-1 block text-sm font-semibold text-zaff-text" htmlFor="date">
-              Data
-            </label>
-            <input
-              id="date"
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="w-full rounded-lg border border-zaff-border bg-zaff-bg px-3 py-2 text-zaff-text focus:outline-none focus:ring-2 focus:ring-zaff-primary"
-            />
-          </div>
-          <div className="flex-1">
-            <label className="mb-1 block text-sm font-semibold text-zaff-text" htmlFor="fmt">
-              Formato
-            </label>
-            <input
-              id="fmt"
-              type="text"
-              list="fmts"
-              value={format}
-              onChange={(e) => setFormat(e.target.value)}
-              placeholder="Commander"
-              className="w-full rounded-lg border border-zaff-border bg-zaff-bg px-3 py-2 text-zaff-text placeholder:text-zaff-muted focus:outline-none focus:ring-2 focus:ring-zaff-primary"
-            />
-            <datalist id="fmts">
-              {FORMATS.map((f) => (
-                <option key={f} value={f} />
-              ))}
-            </datalist>
-          </div>
+      <div className="mb-3.5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div>
+          <label className={LABEL} htmlFor="date">
+            Data
+          </label>
+          <input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} className={INPUT} />
         </div>
+        <div>
+          <label className={LABEL} htmlFor="fmt">
+            Formato
+          </label>
+          <input
+            id="fmt"
+            type="text"
+            list="fmts"
+            value={format}
+            onChange={(e) => setFormat(e.target.value)}
+            placeholder="Commander"
+            className={INPUT}
+          />
+          <datalist id="fmts">
+            {FORMATS.map((f) => (
+              <option key={f} value={f} />
+            ))}
+          </datalist>
+        </div>
+      </div>
 
-        <p className="mb-1 text-sm font-semibold text-zaff-text">Giocatori</p>
-        <div className="mb-2 space-y-4">
-          {players.map((p, i) => (
-            <div key={i} className={`rounded-lg border p-3 ${p.winner ? 'border-zaff-primary' : 'border-zaff-border'}`}>
-              <div className="mb-2 flex items-center gap-2">
-                <input
-                  type="text"
-                  list={`playerNames-${i}`}
-                  value={p.name}
-                  onChange={(e) => updatePlayer(i, { name: e.target.value })}
-                  placeholder={`Giocatore ${i + 1}`}
-                  className="flex-1 rounded-lg border border-zaff-border bg-zaff-bg px-3 py-1.5 text-zaff-text placeholder:text-zaff-muted focus:outline-none focus:ring-2 focus:ring-zaff-primary"
-                />
-                <datalist id={`playerNames-${i}`}>
-                  {playerNames.map((n) => (
-                    <option key={n} value={n} />
-                  ))}
-                </datalist>
-                {players.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => removePlayer(i)}
-                    title="Togli giocatore"
-                    className="shrink-0 text-red-400 hover:underline"
-                  >
-                    ×
-                  </button>
-                )}
-              </div>
-
-              <div className="mb-2 flex items-center gap-2">
-                {p.deckMode === 'select' ? (
-                  <select
-                    value={p.deckSelect}
-                    onChange={(e) => handleDeckSelectChange(i, e.target.value)}
-                    className="flex-1 rounded-lg border border-zaff-border bg-zaff-bg px-3 py-1.5 text-zaff-text focus:outline-none focus:ring-2 focus:ring-zaff-primary"
-                  >
-                    <option value="">Nessun mazzo</option>
-                    {decks.map((d) => (
-                      <option key={d.name} value={d.name}>
-                        {d.name}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <input
-                    type="text"
-                    value={p.deckManual}
-                    onChange={(e) => updatePlayer(i, { deckManual: e.target.value })}
-                    placeholder="Nome mazzo libero"
-                    className="flex-1 rounded-lg border border-zaff-border bg-zaff-bg px-3 py-1.5 text-zaff-text placeholder:text-zaff-muted focus:outline-none focus:ring-2 focus:ring-zaff-primary"
-                  />
-                )}
-                <button
-                  type="button"
-                  onClick={() =>
-                    updatePlayer(i, {
-                      deckMode: p.deckMode === 'select' ? 'manual' : 'select',
-                      deckSelect: '',
-                      deckManual: '',
-                    })
-                  }
-                  className="shrink-0 text-sm text-zaff-primary hover:underline"
-                >
-                  {p.deckMode === 'select' ? 'Scrivi a mano' : 'Scegli dai mazzi salvati'}
-                </button>
-              </div>
-
+      <label className={LABEL}>Giocatori</label>
+      <div>
+        {players.map((p, i) => (
+          <div
+            key={i}
+            className={`mb-3 rounded-lg border bg-zaff-bg p-3 ${p.winner ? 'border-zaff-highlight' : 'border-zaff-border'}`}
+          >
+            <div className="mb-2 flex flex-wrap items-center gap-2">
               <input
                 type="text"
-                value={p.desc}
-                onChange={(e) => updatePlayer(i, { desc: e.target.value })}
-                placeholder="Com'è fatto il mazzo, strategia, note"
-                className="mb-2 w-full rounded-lg border border-zaff-border bg-zaff-bg px-3 py-1.5 text-zaff-text placeholder:text-zaff-muted focus:outline-none focus:ring-2 focus:ring-zaff-primary"
+                list={`playerNames-${i}`}
+                value={p.name}
+                onChange={(e) => updatePlayer(i, { name: e.target.value })}
+                placeholder={`Giocatore ${i + 1}`}
+                className={`${INPUT} min-w-0 flex-1 font-serif text-base`}
               />
+              <datalist id={`playerNames-${i}`}>
+                {playerNames.map((n) => (
+                  <option key={n} value={n} />
+                ))}
+              </datalist>
+              {players.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => removePlayer(i)}
+                  title="Togli giocatore"
+                  className="h-7 w-7 shrink-0 rounded-lg border border-zaff-border text-base leading-none text-zaff-muted transition hover:border-red-400 hover:text-red-400"
+                >
+                  ×
+                </button>
+              )}
+            </div>
 
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex gap-1">
-                  {COLORS.map((c) => (
-                    <button
-                      key={c}
-                      type="button"
-                      onClick={() => toggleColor(i, c)}
-                      aria-pressed={p.colors.has(c)}
-                      className={`h-7 w-7 rounded-full border text-xs font-bold transition-colors ${
-                        p.colors.has(c)
-                          ? 'border-zaff-primary bg-zaff-primary text-white'
-                          : 'border-zaff-border bg-zaff-bg text-zaff-muted'
-                      }`}
-                    >
-                      {c}
-                    </button>
+            <div className="mb-2 flex flex-wrap items-center gap-2">
+              {p.deckMode === 'select' ? (
+                <select
+                  value={p.deckSelect}
+                  onChange={(e) => handleDeckSelectChange(i, e.target.value)}
+                  className={`${INPUT} min-w-0 flex-1`}
+                >
+                  <option value="">Nessun mazzo</option>
+                  {decks.map((d) => (
+                    <option key={d.name} value={d.name}>
+                      {d.name}
+                    </option>
                   ))}
-                </div>
+                </select>
+              ) : (
+                <input
+                  type="text"
+                  value={p.deckManual}
+                  onChange={(e) => updatePlayer(i, { deckManual: e.target.value })}
+                  placeholder="Nome mazzo libero"
+                  className={`${INPUT} min-w-0 flex-1`}
+                />
+              )}
+              <button
+                type="button"
+                onClick={() =>
+                  updatePlayer(i, {
+                    deckMode: p.deckMode === 'select' ? 'manual' : 'select',
+                    deckSelect: '',
+                    deckManual: '',
+                  })
+                }
+                className={`${BTN_LINK} shrink-0 text-xs`}
+              >
+                {p.deckMode === 'select' ? 'Scrivi a mano' : 'Scegli dai mazzi salvati'}
+              </button>
+            </div>
 
-                <label className="flex items-center gap-1 text-sm text-zaff-text">
-                  <input type="checkbox" checked={p.winner} onChange={() => toggleWinner(i)} />
+            <input
+              type="text"
+              value={p.desc}
+              onChange={(e) => updatePlayer(i, { desc: e.target.value })}
+              placeholder="Com'è fatto il mazzo, strategia, note"
+              className={`${INPUT} mb-2`}
+            />
+
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <ManaPips colors={p.colors} onToggle={(c) => toggleColor(i, c)} />
+
+              <div className="flex items-center gap-2.5">
+                <label className="flex cursor-pointer items-center gap-1.5 whitespace-nowrap text-[13px] text-zaff-muted">
+                  <input
+                    type="checkbox"
+                    checked={p.winner}
+                    onChange={() => toggleWinner(i)}
+                    className="mtg-switch-input absolute h-0 w-0 opacity-0"
+                  />
+                  <span className="mtg-switch" />
                   Vincitore
                 </label>
 
-                <input
-                  type="number"
-                  inputMode="numeric"
+                <LifeStepper
                   value={p.life}
-                  onChange={(e) => updatePlayer(i, { life: e.target.value })}
+                  onChange={(next) => updatePlayer(i, { life: next })}
                   placeholder="PV"
-                  className="w-16 rounded-lg border border-zaff-border bg-zaff-bg px-2 py-1 text-zaff-text placeholder:text-zaff-muted focus:outline-none focus:ring-2 focus:ring-zaff-primary"
+                  className="w-[104px]"
                 />
               </div>
             </div>
-          ))}
-        </div>
+          </div>
+        ))}
+      </div>
 
-        <button
-          type="button"
-          onClick={addPlayer}
-          className="mb-4 w-full rounded-lg border border-zaff-border px-4 py-2 text-sm font-semibold text-zaff-primary transition-colors hover:bg-zaff-bg"
-        >
-          + Aggiungi giocatore
-        </button>
+      <button type="button" onClick={addPlayer} className={BTN_LINK}>
+        + Aggiungi giocatore
+      </button>
 
-        <label className="mb-1 block text-sm font-semibold text-zaff-text" htmlFor="startLife">
+      <div className="mt-3.5">
+        <label className={LABEL} htmlFor="startLife">
           Punti vita iniziali
         </label>
-        <input
-          id="startLife"
-          type="number"
-          min={1}
-          value={startLife}
-          onChange={(e) => setStartLife(Math.max(1, parseInt(e.target.value, 10) || 1))}
-          className="mb-2 w-32 rounded-lg border border-zaff-border bg-zaff-bg px-3 py-2 text-zaff-text focus:outline-none focus:ring-2 focus:ring-zaff-primary"
+        <LifeStepper
+          value={String(startLife)}
+          onChange={(next) => setStartLife(Math.max(1, parseInt(next, 10) || 1))}
+          className="max-w-[140px]"
         />
+      </div>
 
-        <button
-          type="button"
-          onClick={handleOpenLifeCounter}
-          className="mb-4 w-full rounded-lg border border-zaff-border px-4 py-2 text-sm font-semibold text-zaff-primary transition-colors hover:bg-zaff-bg"
-        >
-          ▶ Conta i punti vita
-        </button>
+      <button
+        type="button"
+        onClick={handleOpenLifeCounter}
+        className="mt-4 flex w-full items-center justify-center gap-2.5 rounded-lg bg-gradient-to-r from-zaff-primary to-zaff-accent px-4 py-3.5 font-serif text-lg font-bold tracking-wide text-zaff-bg transition hover:brightness-110 active:brightness-95"
+      >
+        <span className="text-xl leading-none">▶</span> Avvia partita
+      </button>
 
-        <label className="mb-1 block text-sm font-semibold text-zaff-text" htmlFor="notes">
+      <div className="mt-4">
+        <label className={LABEL} htmlFor="notes">
           Appunti
         </label>
         <textarea
@@ -448,33 +467,29 @@ export default function GameForm({ editingGame, onBack, onSaved }: GameFormProps
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           placeholder="Combo assurde, alleanze tradite, mulligan sfortunati…"
-          className="mb-4 w-full rounded-lg border border-zaff-border bg-zaff-bg px-3 py-2 text-zaff-text placeholder:text-zaff-muted focus:outline-none focus:ring-2 focus:ring-zaff-primary"
+          className={`${INPUT} min-h-[70px] resize-y`}
         />
+      </div>
 
-        <button
-          type="button"
-          onClick={handleSaveClick}
-          disabled={saving}
-          className="w-full rounded-lg bg-zaff-primary px-4 py-3 font-semibold text-white transition-colors hover:bg-zaff-primary-hover disabled:opacity-60"
-        >
+      <div className="mt-2.5 flex flex-wrap items-center gap-2.5">
+        <button type="button" onClick={handleSaveClick} disabled={saving} className={BTN_PRIMARY}>
           {editingGame ? 'Salva modifiche' : 'Salva partita'}
         </button>
-
-        {message && <p className="mt-3 text-center text-sm text-green-400">{message}</p>}
-        {error && (
-          <p className="mt-3 text-center text-sm text-red-400" role="alert">
-            {error}
-          </p>
-        )}
-
-        <button
-          type="button"
-          onClick={onBack}
-          className="mt-3 w-full rounded-lg border border-zaff-border px-4 py-3 font-semibold text-zaff-text transition-colors hover:bg-zaff-bg"
-        >
-          Torna indietro
+        <button type="button" onClick={onBack} className={BTN_GHOST}>
+          Annulla
         </button>
       </div>
-    </div>
+
+      {message && <p className="mt-3 text-sm text-green-400">{message}</p>}
+      {error && (
+        <p className="mt-3 text-sm text-red-400" role="alert">
+          {error}
+        </p>
+      )}
+
+      <p className={`mt-2.5 ${MINI}`}>
+        I pallini sotto ogni nome sono i colori del mazzo: bianco, blu, nero, rosso, verde.
+      </p>
+    </>
   );
 }

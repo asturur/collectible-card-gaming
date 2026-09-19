@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { canEdit, supabase, TABLE_DECKS } from '../../services/supabase';
+import Modal from './Modal';
+import { ManaIcons, ManaPips } from './ManaIcon';
+import { BTN_DANGER_LINK, BTN_LINK } from './ui';
 
 interface DeckListProps {
   userId: string;
-  onBack: () => void;
   onCreate: () => void;
   onEdit: (id: string) => void;
   onImportFile: (name: string, cards: DeckCard[]) => void;
@@ -55,8 +57,24 @@ function sourceLabel(source: string): string | null {
   return null;
 }
 
-/** Lista mazzi salvati + dettaglio, con creazione/modifica/cancellazione (Step 5). */
-export default function DeckList({ userId, onBack, onCreate, onEdit, onImportFile }: DeckListProps) {
+/** Pillola "Homebrew"/"Precon" accanto al nome del mazzo (.badge-source). */
+function SourceBadge({ source }: { source: string }) {
+  const label = sourceLabel(source);
+  if (!label) return null;
+  return (
+    <span
+      className={`shrink-0 rounded-full border px-2 py-px text-[11px] ${
+        source === 'brew' ? 'border-green-400 text-green-400' : 'border-cyan-400 text-cyan-400'
+      }`}
+    >
+      {label}
+    </span>
+  );
+}
+
+/** Lista mazzi salvati + dettaglio, con creazione/modifica/cancellazione (Step 5).
+ *  Va mostrata dentro un `Modal`; il dettaglio mazzo si apre come riquadro sopra. */
+export default function DeckList({ userId, onCreate, onEdit, onImportFile }: DeckListProps) {
   const [decks, setDecks] = useState<Deck[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -120,116 +138,89 @@ export default function DeckList({ userId, onBack, onCreate, onEdit, onImportFil
 
   const selectedDeck = decks.find((d) => d.id === selectedId) ?? null;
 
-  if (selectedDeck) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-zaff-bg px-4 py-10">
-        <div className="w-full max-w-md rounded-2xl border border-zaff-border bg-zaff-surface p-8 shadow-xl">
-          <h1 className="mb-1 text-center text-2xl font-bold tracking-tight text-zaff-primary">{selectedDeck.name}</h1>
-          <p className="mb-6 text-center text-sm text-zaff-muted">
-            {sourceLabel(selectedDeck.source) && <span className="mr-2">{sourceLabel(selectedDeck.source)}</span>}
+  return (
+    <>
+      <div className="mb-3">
+        {loading ? (
+          <p className="text-zaff-muted">Caricamento…</p>
+        ) : decks.length === 0 ? (
+          <p className="text-sm text-zaff-muted">Ancora nessun mazzo salvato.</p>
+        ) : (
+          <ul>
+            {decks.map((d) => (
+              <li key={d.id} className="flex items-center justify-between gap-2.5 border-b border-zaff-border py-2 last:border-b-0">
+                <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden">
+                  <span className="truncate text-[15px] text-zaff-text" title={d.name}>
+                    {d.name}
+                  </span>
+                  <SourceBadge source={d.source} />
+                  <small className="shrink-0 text-[13px] text-zaff-muted">({deckTotal(d)} carte)</small>
+                  <ManaIcons colors={d.colors} className="shrink-0 text-[17px]" />
+                </div>
+                <div className="flex shrink-0 gap-1.5 whitespace-nowrap">
+                  {canEdit(d.createdBy, userId) ? (
+                    <>
+                      <button type="button" onClick={() => onEdit(d.id)} className={BTN_LINK}>
+                        Modifica
+                      </button>
+                      <button type="button" onClick={() => handleDelete(d.id)} className={BTN_DANGER_LINK}>
+                        Cancella
+                      </button>
+                    </>
+                  ) : (
+                    <button type="button" onClick={() => setSelectedId(d.id)} className={BTN_LINK}>
+                      Visualizza
+                    </button>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        <button type="button" onClick={onCreate} className={BTN_LINK}>
+          + Crea nuovo mazzo
+        </button>
+        <button type="button" onClick={() => fileInputRef.current?.click()} className={BTN_LINK}>
+          📄 Importa mazzo (file ManaBox)
+        </button>
+      </div>
+      <input ref={fileInputRef} type="file" accept=".txt" hidden onChange={handleFileChange} />
+
+      {error && (
+        <p className="mt-3 text-sm text-red-400" role="alert">
+          {error}
+        </p>
+      )}
+
+      {selectedDeck && (
+        <Modal level={2} title={selectedDeck.name} onClose={() => setSelectedId(null)}>
+          <p className="mb-2.5 flex items-center gap-2 text-xs text-zaff-muted">
+            <SourceBadge source={selectedDeck.source} />
             {deckTotal(selectedDeck)} carte
           </p>
 
+          {selectedDeck.colors.length > 0 && (
+            <div className="mb-2.5">
+              <ManaPips colors={selectedDeck.colors} />
+            </div>
+          )}
+
           {selectedDeck.cards.length === 0 ? (
-            <p className="text-center text-sm text-zaff-muted">Nessuna carta.</p>
+            <p className="text-sm text-zaff-muted">Nessuna carta.</p>
           ) : (
-            <ul className="max-h-96 divide-y divide-zaff-border overflow-y-auto">
+            <ul className="max-h-[50vh] overflow-y-auto">
               {selectedDeck.cards.map((c) => (
-                <li key={c.name} className="py-2 text-sm text-zaff-text">
+                <li key={c.name} className="border-b border-zaff-border py-1.5 text-sm text-zaff-text last:border-b-0">
                   {c.qty}× {c.name}
                 </li>
               ))}
             </ul>
           )}
-
-          <button
-            type="button"
-            onClick={() => setSelectedId(null)}
-            className="mt-6 w-full rounded-lg border border-zaff-border px-4 py-3 font-semibold text-zaff-text transition-colors hover:bg-zaff-bg"
-          >
-            Torna alla lista
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-zaff-bg px-4 py-10">
-      <div className="w-full max-w-md rounded-2xl border border-zaff-border bg-zaff-surface p-8 shadow-xl">
-        <h1 className="mb-2 text-center text-2xl font-bold tracking-tight text-zaff-primary">Mazzi salvati</h1>
-
-        <button
-          type="button"
-          onClick={onCreate}
-          className="mb-2 w-full rounded-lg border border-zaff-border px-4 py-2 text-sm font-semibold text-zaff-primary transition-colors hover:bg-zaff-bg"
-        >
-          + Crea nuovo mazzo
-        </button>
-
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          className="mb-4 w-full rounded-lg border border-zaff-border px-4 py-2 text-sm font-semibold text-zaff-text transition-colors hover:bg-zaff-bg"
-        >
-          📄 Importa mazzo (file ManaBox)
-        </button>
-        <input ref={fileInputRef} type="file" accept=".txt" hidden onChange={handleFileChange} />
-
-        {loading ? (
-          <p className="text-center text-zaff-muted">Caricamento…</p>
-        ) : decks.length === 0 ? (
-          <p className="text-center text-sm text-zaff-muted">Ancora nessun mazzo salvato.</p>
-        ) : (
-          <ul className="divide-y divide-zaff-border">
-            {decks.map((d) => (
-              <li key={d.id} className="flex items-center justify-between gap-2 py-2">
-                <span className="min-w-0 flex-1 truncate text-zaff-text" title={d.name}>
-                  {d.name}
-                  {sourceLabel(d.source) && (
-                    <span className="ml-2 rounded-full border border-zaff-border px-2 py-0.5 text-xs text-zaff-muted">
-                      {sourceLabel(d.source)}
-                    </span>
-                  )}
-                  <span className="ml-2 text-xs text-zaff-muted">({deckTotal(d)} carte)</span>
-                </span>
-                {canEdit(d.createdBy, userId) ? (
-                  <div className="flex shrink-0 gap-3">
-                    <button type="button" onClick={() => onEdit(d.id)} className="text-sm text-zaff-primary hover:underline">
-                      Modifica
-                    </button>
-                    <button type="button" onClick={() => handleDelete(d.id)} className="text-sm text-red-400 hover:underline">
-                      Cancella
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setSelectedId(d.id)}
-                    className="shrink-0 text-sm text-zaff-primary hover:underline"
-                  >
-                    Visualizza
-                  </button>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-
-        {error && (
-          <p className="mt-3 text-center text-sm text-red-400" role="alert">
-            {error}
-          </p>
-        )}
-
-        <button
-          type="button"
-          onClick={onBack}
-          className="mt-6 w-full rounded-lg border border-zaff-border px-4 py-3 font-semibold text-zaff-text transition-colors hover:bg-zaff-bg"
-        >
-          Torna indietro
-        </button>
-      </div>
-    </div>
+        </Modal>
+      )}
+    </>
   );
 }

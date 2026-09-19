@@ -25,6 +25,9 @@ export function canEdit(createdBy: string | null | undefined, currentUserId: str
   return !createdBy || createdBy === currentUserId;
 }
 
+/** Supabase rifiuta due canali con lo stesso nome: ogni sottoscrizione ne chiede uno suo. */
+let channelSeq = 0;
+
 /**
  * Sottoscrive un canale Realtime alle modifiche di una tabella e richiama
  * `onChange` per ogni evento (insert/update/delete), così più dispositivi
@@ -32,8 +35,9 @@ export function canEdit(createdBy: string | null | undefined, currentUserId: str
  */
 export function subscribeToTable(table: string, onChange: () => void): () => void {
   if (!supabase) return () => {};
+  channelSeq += 1;
   const channel = supabase
-    .channel(table + '-live')
+    .channel(table + '-live-' + channelSeq)
     .on('postgres_changes', { event: '*', schema: 'public', table }, onChange)
     .subscribe();
   return () => {

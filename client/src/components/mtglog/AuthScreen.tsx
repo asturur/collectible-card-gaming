@@ -1,14 +1,18 @@
 import { useState, type FormEvent } from 'react';
 import { supabase } from '../../services/supabase';
+import { BTN_LINK, BTN_PRIMARY, INPUT } from './ui';
+import { navLinkProps } from '../../router';
 
 type AuthMode = 'signin' | 'signup';
 
 interface AuthScreenProps {
-  onBack: () => void;
+  /** Porta alla piattaforma di gioco ZAFF (/zaff). */
+  onOpenZaff: () => void;
 }
 
-/** Login/registrazione con Supabase Auth (email + password). */
-export default function AuthScreen({ onBack }: AuthScreenProps) {
+/** Login/registrazione con Supabase Auth (email + password): il riquadro
+ *  centrato che nell'app originale copriva la pagina finché non entravi. */
+export default function AuthScreen({ onOpenZaff }: AuthScreenProps) {
   const [mode, setMode] = useState<AuthMode>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -61,12 +65,12 @@ export default function AuthScreen({ onBack }: AuthScreenProps) {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zaff-bg px-4">
-      <div className="w-full max-w-md rounded-2xl border border-zaff-border bg-zaff-surface p-8 shadow-xl">
-        <h1 className="mb-2 text-center text-3xl font-bold tracking-tight text-zaff-primary">
-          Registro Partite
-        </h1>
-        <p className="mb-8 text-center text-zaff-muted">Accedi con il tuo account per continuare</p>
+    <div className="flex min-h-screen items-center justify-center bg-zaff-bg px-5">
+      <div className="w-full max-w-[320px] rounded-lg border border-zaff-border bg-zaff-surface px-6 py-7 text-center">
+        <h1 className="mb-1.5 font-serif text-xl text-zaff-text">Registro partite</h1>
+        <p className="mb-4 text-sm text-zaff-muted">
+          {mode === 'signin' ? 'Accedi con il tuo account per continuare' : 'Crea un account per iniziare'}
+        </p>
 
         <form onSubmit={handleSubmit}>
           <input
@@ -76,7 +80,7 @@ export default function AuthScreen({ onBack }: AuthScreenProps) {
             placeholder="Email"
             autoComplete="username"
             required
-            className="mb-3 w-full rounded-lg border border-zaff-border bg-zaff-bg px-4 py-3 text-zaff-text placeholder:text-zaff-muted focus:outline-none focus:ring-2 focus:ring-zaff-primary"
+            className={`${INPUT} mb-2.5 text-center`}
           />
           <input
             type="password"
@@ -85,39 +89,30 @@ export default function AuthScreen({ onBack }: AuthScreenProps) {
             placeholder="Password"
             autoComplete="current-password"
             required
-            className="mb-3 w-full rounded-lg border border-zaff-border bg-zaff-bg px-4 py-3 text-zaff-text placeholder:text-zaff-muted focus:outline-none focus:ring-2 focus:ring-zaff-primary"
+            className={`${INPUT} mb-2.5 text-center`}
           />
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-lg bg-zaff-primary px-4 py-3 font-semibold text-white transition-colors hover:bg-zaff-primary-hover focus:outline-none focus:ring-2 focus:ring-zaff-primary focus:ring-offset-2 focus:ring-offset-zaff-surface disabled:opacity-60"
-          >
+          <button type="submit" disabled={loading} className={`${BTN_PRIMARY} w-full py-2.5`}>
             {mode === 'signin' ? 'Accedi' : 'Crea account'}
           </button>
         </form>
 
-        <button
-          type="button"
-          onClick={toggleMode}
-          className="mt-3 w-full rounded-lg border border-zaff-border px-4 py-3 text-sm text-zaff-text transition-colors hover:bg-zaff-bg"
-        >
+        <button type="button" onClick={toggleMode} className={`${BTN_LINK} mt-2 w-full`}>
           {mode === 'signin' ? 'Non hai un account? Registrati' : 'Hai già un account? Accedi'}
         </button>
 
         {error && (
-          <p className="mt-3 text-center text-sm text-red-400" role="alert">
+          <p className="mt-2 min-h-[18px] text-[13px] text-red-400" role="alert">
             {error}
           </p>
         )}
-        {message && <p className="mt-3 text-center text-sm text-green-400">{message}</p>}
+        {message && <p className="mt-2 text-[13px] text-green-400">{message}</p>}
 
-        <button
-          type="button"
-          onClick={onBack}
-          className="mt-6 w-full text-center text-sm text-zaff-muted transition-colors hover:text-zaff-primary"
+        <a
+          {...navLinkProps('zaff', onOpenZaff)}
+          className="mt-4 block w-full text-center text-xs text-zaff-muted transition hover:text-zaff-gold"
         >
-          Torna indietro
-        </button>
+          Vai a ZAFF, la piattaforma di gioco →
+        </a>
       </div>
     </div>
   );
