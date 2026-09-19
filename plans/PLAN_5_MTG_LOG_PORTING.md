@@ -140,9 +140,21 @@ File originale di riferimento: `../registro-partite-mtg.html` (2120 righe).
   che riporta i punti vita nei campi del form (per nome), "Annulla" per uscire
   senza modifiche. Build e test verificati.
 
-- [ ] **Step 13 — Rifiniture finali**
+- [x] **Step 13 — Rifiniture finali**
   Verifica permessi (`created_by` / RLS) su tutte le entità, gestione dati legacy
   senza proprietario, test finale di parità funzionale con l'originale.
+  Fatto: verificato che tutte le entità (partite/mazzi/giocatori/gruppi) usano in
+  modo coerente `canEdit()` su `created_by`, con lo stesso comportamento
+  dell'originale per i dati legacy senza proprietario (modificabili da chiunque).
+  Nessuna `.insert()` imposta esplicitamente `created_by` lato client — comportamento
+  identico all'originale, che si affida a un default/trigger lato Postgres
+  (`auth.uid()`) sulla tabella; non verificabile da qui perché richiede accesso
+  alla dashboard Supabase dell'utente (RLS/default da controllare manualmente
+  una volta, non è un problema introdotto dal porting). Ripasso finale dei
+  componenti (`MtgLog.tsx`, roster, mazzi, partite, statistiche, contatore vita):
+  nessun TODO residuo, propagazione rinomina giocatori/gruppi confermata sulle
+  partite salvate, commento header di `MtgLog.tsx` aggiornato. Build e test
+  verificati. Porting completo (Step 0–13).
 
 ## Note
 

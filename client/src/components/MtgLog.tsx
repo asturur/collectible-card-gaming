@@ -17,9 +17,9 @@ interface MtgLogProps {
 type MtgLogView = 'home' | 'players' | 'groups' | 'decks' | 'deckEditor' | 'newGame' | 'games' | 'stats';
 
 /**
- * Registro Partite MTG — porting in corso (vedi plans/PLAN_5_MTG_LOG_PORTING.md).
- * Step 1: autenticazione. Le funzionalità del registro vengono aggiunte
- * negli step successivi.
+ * Registro Partite MTG (vedi plans/PLAN_5_MTG_LOG_PORTING.md): autenticazione,
+ * rubriche giocatori/gruppi, mazzi (editor + import), partite (form + storico +
+ * export immagine), statistiche/classifica, contatore punti vita a tutto schermo.
  */
 export default function MtgLog({ onBack }: MtgLogProps) {
   const [session, setSession] = useState<Session | null | 'loading'>('loading');
