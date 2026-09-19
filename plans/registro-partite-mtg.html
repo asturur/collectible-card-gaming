@@ -1,0 +1,2120 @@
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Registro partite — Magic</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/mana-font@latest/css/mana.min.css" rel="stylesheet" type="text/css">
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<style>
+  :root{
+    --paper:#14121A;
+    --card:#1E1B26;
+    --ink:#F4F1FA;
+    --ink-soft:#9089A8;
+    --rule:#332D40;
+    --gold:#F5C451;
+    --violet:#8B5CF6;
+    --cyan:#22D3EE;
+    --highlight:#EC4899;
+    --w:#D8C48C; --u:#3E7FC1; --b:#8F7FB0; --r:#C1503C; --g:#3E9160; --c:#9A8F7C;
+    --radius:10px;
+    --brew:#5FBD6B;
+    --precon:#4FC3D9;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font:16px/1.5 "Inter",-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  h1,h2,h3,.serif{
+    font-family:"Cinzel",Georgia,serif;
+    font-weight:600;
+    letter-spacing:.02em;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:28px 20px 80px}
+
+  /* --- testata con classifica --- */
+  header{border-bottom:2px solid var(--ink);padding-bottom:18px;margin-bottom:28px}
+  h1{font-size:26px;margin:0 0 2px;letter-spacing:.01em}
+  header p{margin:0;color:var(--ink-soft);font-size:14px}
+  .standings{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .grouptabs{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+  .gtab{
+    font:inherit;font-size:13px;padding:6px 12px;border:1px solid var(--rule);
+    background:var(--card);color:var(--ink-soft);cursor:pointer;border-radius:var(--radius);
+  }
+  .gtab[aria-pressed=true]{background:var(--ink);color:var(--card);border-color:var(--ink)}
+
+  .piewrap{display:flex;gap:20px;align-items:center;margin-top:18px;flex-wrap:wrap}
+  .piewrap[hidden]{display:none}
+  .piewrap svg{flex-shrink:0}
+  .pl-legend{font-size:14px;color:var(--ink-soft);display:flex;flex-direction:column;gap:5px}
+  .pl-dot{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+  .pl-row{color:var(--ink)}
+  .st{
+    background:var(--card);border:1px solid var(--rule);border-radius:var(--radius);
+    padding:8px 12px;min-width:150px;
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+  }
+  .st.lead{border-color:var(--highlight)}
+  .st b{display:block;font-size:15px;font-family:"Cinzel",Georgia,serif}
+  .st span{font-size:13px;color:var(--ink-soft);font-variant-numeric:tabular-nums}
+  .st-pie{flex-shrink:0}
+  .st-pie-wrap{display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0}
+  .st-pie-label{font-size:13px;color:var(--ink-soft)}
+  .st-empty{color:var(--ink-soft);font-size:14px;margin-top:16px}
+
+  .cols{display:grid;grid-template-columns:minmax(0,440px) minmax(0,1fr);gap:34px;align-items:start}
+  @media(max-width:880px){.cols{grid-template-columns:1fr;gap:40px}}
+
+  h2{font-size:19px;margin:0 0 14px;padding-bottom:6px;border-bottom:1px solid var(--rule)}
+
+  label.f{display:block;font-size:13px;color:var(--ink-soft);margin-bottom:4px}
+  input[type=text],input[type=date],input[type=number],textarea,select{
+    width:100%;padding:8px 10px;border:1px solid var(--rule);background:var(--card);
+    color:var(--ink);font:inherit;border-radius:var(--radius);
+  }
+  select.p-name{font-family:"Cinzel",Georgia,serif;font-size:16px}
+  input:focus-visible,textarea:focus-visible,button:focus-visible{
+    outline:2px solid var(--u);outline-offset:1px
+  }
+  textarea{resize:vertical;min-height:70px}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .field{margin-bottom:14px}
+
+  .player{border:1px solid var(--rule);background:var(--card);padding:12px;margin-bottom:12px;border-radius:var(--radius)}
+  .player.won{border-color:var(--highlight)}
+  .prow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px}
+  .player > input{width:100%;margin-bottom:8px}
+  .prow .p-name{flex:1 1 140px;min-width:0;font-family:"Cinzel",Georgia,serif;font-size:16px}
+  .prow.bottom{justify-content:space-between;margin-bottom:0}
+  .tail{display:flex;gap:10px;align-items:center}
+  .p-life{
+    width:44px;text-align:center;font-variant-numeric:tabular-nums;
+    border-left:none;border-right:none;border-radius:0;padding:8px 2px;
+  }
+  .p-life::-webkit-outer-spin-button,.p-life::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  .p-life{-moz-appearance:textfield}
+  .life-stepper{display:flex;border:1px solid var(--rule);border-radius:var(--radius);overflow:hidden}
+  .life-btn{
+    background:var(--paper);border:none;color:var(--ink);width:30px;font-size:16px;
+    cursor:pointer;line-height:1;font-family:inherit;
+  }
+  .life-btn:hover{background:var(--gold);color:#14121A}
+  .life-btn:active{filter:brightness(.9)}
+  .start-game-btn{
+    width:100%;background:linear-gradient(90deg, var(--violet), var(--cyan));color:#14121A;border:none;margin-top:16px;
+    font-size:18px;font-weight:700;padding:14px;border-radius:var(--radius);
+    display:flex;align-items:center;justify-content:center;gap:9px;cursor:pointer;
+    font-family:"Cinzel",Georgia,serif;letter-spacing:.03em;
+  }
+  .start-game-btn:hover{filter:brightness(1.08)}
+  .start-game-btn:active{filter:brightness(.92)}
+  .play-icon{font-size:20px;line-height:1}
+  .win{display:flex;align-items:center;gap:6px;font-size:13px;white-space:nowrap;color:var(--ink-soft);cursor:pointer}
+  .win input{position:absolute;opacity:0;width:0;height:0}
+  .switch{
+    position:relative;display:inline-block;width:36px;height:20px;flex-shrink:0;
+    background:var(--rule);border-radius:20px;transition:background .2s;
+  }
+  .switch::before{
+    content:'';position:absolute;width:16px;height:16px;left:2px;top:2px;
+    background:#fff;border-radius:50%;transition:transform .2s;box-shadow:0 1px 2px rgba(0,0,0,.4);
+  }
+  .win input:checked + .switch{background:var(--highlight)}
+  .win input:checked + .switch::before{transform:translateX(16px)}
+  .kill{border:1px solid var(--rule);background:transparent;color:var(--ink-soft);
+    width:28px;height:28px;cursor:pointer;font-size:16px;line-height:1;border-radius:var(--radius)}
+  .kill:hover{border-color:var(--r);color:var(--r)}
+  .pips{display:flex;gap:6px}
+  .pip{
+    width:32px;height:32px;border:none;background:none;padding:0;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;border-radius:50%;
+    opacity:.35;filter:grayscale(70%);transition:opacity .15s,filter .15s,box-shadow .15s;
+  }
+  .pip .ms{font-size:22px}
+  .pip[aria-pressed=true]{opacity:1;filter:none;box-shadow:0 0 0 2px var(--gold)}
+  .mini{font-size:12px;color:var(--ink-soft);margin:6px 0 0}
+
+  .btn{font:inherit;padding:9px 16px;border-radius:var(--radius);cursor:pointer;border:1px solid var(--ink)}
+  .btn.primary{
+    background:linear-gradient(90deg, var(--violet), var(--cyan));
+    color:#14121A;border:none;font-weight:600;
+  }
+  .btn.primary:hover{filter:brightness(1.08)}
+  .btn.primary:active{filter:brightness(.92)}
+  .btn.ghost{background:transparent;border-color:var(--rule);color:var(--ink-soft)}
+  .btn.link{
+    background:var(--paper);border:1px solid var(--rule);color:var(--ink);
+    padding:6px 13px;font-size:14px;border-radius:var(--radius);text-decoration:none;
+  }
+  .btn.link:hover{border-color:var(--gold);color:var(--gold)}
+  .actions{display:flex;gap:10px;align-items:center;margin-top:6px}
+
+  /* --- elenco partite --- */
+  .game{background:var(--card);border:1px solid var(--rule);padding:16px;margin-bottom:16px;border-radius:var(--radius)}
+  .ghead{display:flex;justify-content:space-between;gap:12px;align-items:baseline;flex-wrap:wrap}
+  .gdate{font-family:"Cinzel",Georgia,serif;font-size:17px}
+  .gfmt{font-size:13px;color:var(--ink-soft)}
+  table{width:100%;border-collapse:collapse;margin-top:12px}
+  td{padding:7px 4px;border-bottom:1px solid var(--rule);vertical-align:top;font-size:14px}
+  tr:last-child td{border-bottom:none}
+  tr.won td{background:rgba(245,196,81,.08)}
+  td.nm{font-family:"Cinzel",Georgia,serif;font-size:14px;width:34%}
+  td.nm .crown{color:var(--gold);font-size:12px;display:block}
+  td.nm .taunt{color:var(--ink-soft);font-size:12px;font-style:italic;display:block;opacity:.75}
+  td.pv{text-align:right;width:62px;font-variant-numeric:tabular-nums;font-size:16px}
+  .deck{color:var(--ink)}
+  .deck small{display:block;color:var(--ink-soft);margin-top:2px}
+  .tag{font-size:17px;margin-right:3px;vertical-align:-3px}
+  .notes{margin:12px 0 0;padding:10px 12px;background:var(--paper);font-size:14px;white-space:pre-wrap}
+  .gfoot{display:flex;gap:14px;margin-top:12px}
+  .empty{border:1px dashed var(--rule);padding:26px;text-align:center;color:var(--ink-soft);border-radius:var(--radius)}
+
+  .game-row{
+    display:flex;align-items:center;gap:14px;padding:12px 14px;margin-bottom:8px;
+    background:var(--card);border:1px solid var(--rule);border-radius:var(--radius);
+    cursor:pointer;transition:border-color .15s;
+  }
+  .game-row:hover{border-color:var(--violet)}
+  .gr-date{
+    font-family:"Cinzel",Georgia,serif;font-size:14px;color:var(--ink-soft);flex-shrink:0;
+    white-space:nowrap;padding-right:12px;border-right:1px solid var(--rule);
+  }
+  .gr-players{display:flex;flex-wrap:wrap;gap:6px 14px;flex:1;min-width:0}
+  .gr-player{font-size:14px;white-space:nowrap}
+  .gr-player.won{color:var(--highlight);font-weight:600}
+  .gr-player .ms{font-size:13px;margin-left:2px}
+
+  .share-card{padding:6px 2px}
+  .share-brand{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft);margin:0 0 2px}
+  .gd-row{
+    display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--rule);
+  }
+  .gd-row:last-child{border-bottom:none}
+  .gd-row.won{background:rgba(236,72,153,.06)}
+  .gd-name{flex:1;min-width:0;font-family:"Cinzel",Georgia,serif;font-size:15px}
+  .gd-name .crown{color:var(--gold);font-size:12px;display:block}
+  .gd-name .taunt{color:var(--ink-soft);font-size:12px;font-style:italic;display:block;opacity:.75}
+  .gd-deck{
+    flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:3px;
+    font-size:13px;color:var(--ink-soft);text-align:right;max-width:210px;
+  }
+  .gd-deck-icons{white-space:nowrap;line-height:1}
+  .gd-deck-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:210px}
+  .gd-life{flex-shrink:0;width:44px;text-align:right;font-variant-numeric:tabular-nums;font-size:17px}
+  .warn{background:#3A1F1B;border:1px solid var(--r);color:#F0C9BE;padding:10px 12px;font-size:14px;margin-bottom:16px;border-radius:var(--radius)}
+  .ok{background:#1E3324;border:1px solid var(--g);color:#C9E8D2;padding:10px 12px;font-size:14px;margin-bottom:16px;border-radius:var(--radius)}
+
+  #lock{
+    position:fixed;inset:0;background:var(--paper);
+    display:flex;align-items:center;justify-content:center;padding:20px;z-index:10;
+  }
+  #lock .box{
+    background:var(--card);border:1px solid var(--rule);padding:28px 26px;
+    max-width:320px;width:100%;text-align:center;border-radius:var(--radius);
+  }
+  #lock h1{font-size:20px;margin:0 0 6px}
+  #lock p{color:var(--ink-soft);font-size:14px;margin:0 0 16px}
+  #lock input{margin-bottom:10px;text-align:center}
+  #lock .btn{width:100%}
+  #lock .err{color:var(--r);font-size:13px;min-height:18px;margin-top:8px}
+
+  .headrow{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+  .headrow .btn{flex-shrink:0}
+  .headbtns{display:flex;flex-direction:column;gap:2px;align-items:flex-end}
+  .hb-row{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+  .hb-account{align-items:center;gap:12px}
+  .hb-sep{
+    width:100%;height:1px;margin:8px 0;
+    background:linear-gradient(90deg, transparent, var(--violet), var(--gold), var(--cyan), transparent);
+    opacity:.6;
+  }
+  .whoami{color:var(--ink-soft)}
+
+  .modal-overlay{
+    position:fixed;inset:0;background:rgba(5,4,3,.7);z-index:20;
+    display:flex;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto;
+  }
+  .modal-overlay[hidden]{display:none}
+
+  .lc-overlay{
+    position:fixed;inset:0;background:var(--paper);z-index:30;
+    display:flex;flex-direction:column;padding:12px;
+  }
+  .lc-overlay[hidden]{display:none}
+  .lc-top{display:flex;justify-content:space-between;gap:10px;margin-bottom:10px;flex-shrink:0}
+  .lc-grid{flex:1;display:grid;gap:10px;min-height:0}
+  .lc-card{
+    position:relative;background:var(--card);border:1px solid var(--rule);border-radius:var(--radius);
+    min-height:0;overflow:hidden;
+  }
+  .lc-quads{position:absolute;inset:0;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr}
+  .lc-q{
+    background:none;border:none;color:var(--ink-soft);cursor:pointer;font-family:"Cinzel",Georgia,serif;
+    font-size:clamp(16px,3vw,24px);display:flex;align-items:center;justify-content:center;
+    transition:background .1s,color .1s;-webkit-tap-highlight-color:transparent;
+  }
+  .lc-q:active{background:rgba(245,196,81,.28);color:var(--gold)}
+  .lc-q-tl{border-right:1px solid var(--rule);border-bottom:1px solid var(--rule)}
+  .lc-q-tr{border-bottom:1px solid var(--rule)}
+  .lc-q-bl{border-right:1px solid var(--rule)}
+  .lc-center{
+    position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    text-align:center;pointer-events:none;
+  }
+  .lc-name{font-family:"Cinzel",Georgia,serif;font-size:clamp(13px,2vw,17px);color:var(--ink-soft);margin-bottom:2px}
+  .lc-num{font-family:"Cinzel",Georgia,serif;font-size:clamp(34px,8vw,72px);line-height:1;font-variant-numeric:tabular-nums}
+  .modal-box{
+    position:relative;background:var(--card);border:1px solid var(--rule);border-radius:var(--radius);
+    padding:26px;max-width:560px;width:100%;
+  }
+  .modal-box.wide{max-width:680px}
+  .modal-close{
+    position:absolute;top:14px;right:14px;background:none;border:none;color:var(--ink-soft);
+    font-size:22px;line-height:1;cursor:pointer;padding:4px 8px;
+  }
+  .modal-close:hover{color:var(--r)}
+
+  .statsbar{display:flex;align-items:center;gap:10px;margin:14px 0;flex-wrap:wrap}
+  .statssummary{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+  .sumcard{
+    flex:1;min-width:140px;background:var(--paper);border:1px solid var(--rule);
+    border-radius:var(--radius);padding:10px 14px;
+  }
+  .sumcard.brew{border-color:var(--brew)}
+  .sumcard.precon{border-color:var(--precon)}
+  .sumcard b{display:block;font-family:"Cinzel",Georgia,serif;font-size:14px;margin-bottom:2px}
+  .sumcard span{font-size:13px;color:var(--ink-soft)}
+  .badge-source{
+    font-size:11px;color:var(--ink-soft);border:1px solid var(--rule);border-radius:20px;
+    padding:1px 8px;margin-left:8px;white-space:nowrap;vertical-align:1px;
+  }
+  .badge-source.brew{color:var(--brew);border-color:var(--brew)}
+  .badge-source.precon{color:var(--precon);border-color:var(--precon)}
+  .statsbar label{margin:0;white-space:nowrap}
+  .statsbar select{width:auto}
+  .deckstat{padding:10px 0;border-bottom:1px solid var(--rule)}
+  .deckstat:last-child{border-bottom:none}
+  .ds-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:15px}
+  .ds-head b{font-family:"Cinzel",Georgia,serif;font-size:15px}
+  .ds-nums{color:var(--ink-soft);font-size:13px;white-space:nowrap}
+  .ds-bar{height:7px;background:var(--paper);border-radius:5px;margin-top:6px;overflow:hidden}
+  .ds-fill{height:100%;background:var(--gold);border-radius:5px}
+  .decklist{margin-bottom:10px}
+  .deckrow{
+    display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:nowrap;
+    padding:7px 0;border-bottom:1px solid var(--rule);font-size:15px;
+  }
+  .deckrow small{color:var(--ink-soft);font-size:13px}
+  .deckrow-left{display:flex;align-items:center;gap:6px;min-width:0;flex:1;overflow:hidden}
+  .deckrow-left .deckrow-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .deckrow-left .badge-source, .deckrow-left small, .deckrow-left i.ms{flex-shrink:0}
+  .deckrow-actions{display:flex;gap:6px;flex-shrink:0;white-space:nowrap}
+  .deckrow-actions .btn.link{padding:5px 10px;font-size:13px}
+  .suggest{
+    position:absolute;left:0;right:0;top:100%;z-index:5;
+    background:var(--card);border:1px solid var(--rule);max-height:220px;overflow-y:auto;border-radius:var(--radius);
+  }
+  .sugg{padding:7px 10px;cursor:pointer;font-size:14px}
+  .sugg:hover{background:var(--paper)}
+  .card-total-box{
+    display:flex;justify-content:space-between;align-items:center;
+    background:var(--card);border:1px solid var(--violet);border-radius:var(--radius);
+    padding:12px 16px;margin:14px 0 6px;
+  }
+  .card-total-box span{font-size:14px;color:var(--ink-soft)}
+  .card-total-box b{
+    font-family:"Cinzel",Georgia,serif;font-size:26px;
+    background:linear-gradient(90deg, var(--violet), var(--cyan));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .deckdraft{margin:10px 0}
+  .draftrow{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:5px 0;border-bottom:1px solid var(--rule);font-size:14px;
+  }
+  .deckrow2{justify-content:space-between}
+  .deckrow2 .p-deck-select, .deckrow2 .p-deck-manual{flex:1;min-width:0}
+  .deck-toggle{font-size:12px;white-space:nowrap;flex-shrink:0}
+
+  .preconbox{
+    border:1px solid var(--rule);border-radius:var(--radius);padding:12px;
+    margin:2px 0 14px;background:var(--paper);
+  }
+  .preconresults{max-height:260px;overflow-y:auto;margin-top:8px}
+  .preconrow{
+    display:flex;justify-content:space-between;align-items:baseline;gap:10px;
+    padding:7px 4px;border-bottom:1px solid var(--rule);cursor:pointer;font-size:14px;
+  }
+  .preconrow:hover{background:var(--card)}
+  .preconrow small{color:var(--ink-soft);font-size:12px;white-space:nowrap}
+</style>
+
+<div id="lock">
+  <div class="box">
+    <h1>Registro partite</h1>
+    <p id="authIntro">Accedi con il tuo account per continuare</p>
+    <form id="authForm" autocomplete="on">
+      <input type="email" id="authEmail" name="email" placeholder="Email" autocomplete="username" required>
+      <input type="password" id="authPw" name="password" placeholder="Password" autocomplete="current-password" required>
+      <button type="submit" class="btn primary" id="authGo">Accedi</button>
+    </form>
+    <button class="btn link" id="authToggleMode" style="width:100%;margin-top:8px">Non hai un account? Registrati</button>
+    <div class="err" id="authErr"></div>
+    <div class="err" id="authMsg" style="color:var(--g)"></div>
+  </div>
+</div>
+
+<div class="wrap" id="app" hidden>
+  <header>
+    <div class="headrow">
+      <div>
+        <h1>Registro partite di Magic</h1>
+        <p>Chi gioca, con che mazzo, come è finita. Condiviso con tutto il gruppo.</p>
+      </div>
+      <div class="headbtns">
+        <div class="hb-row hb-account">
+          <span id="whoAmI" class="mini whoami"></span>
+          <button class="btn ghost" id="logoutBtn">Esci</button>
+        </div>
+        <div class="hb-sep"></div>
+        <div class="hb-row">
+          <button class="btn primary" id="openNewGame">➕ Nuova partita</button>
+          <button class="btn primary" id="openHistory">📜 Partite salvate</button>
+          <button class="btn primary" id="openDeckStats">📊 Statistiche mazzi</button>
+        </div>
+        <div class="hb-sep"></div>
+        <div class="hb-row">
+          <button class="btn primary" id="openPlayersManager">👤 Gestisci giocatori</button>
+          <button class="btn primary" id="openGroupsManager">🏷️ Gestisci gruppi</button>
+          <button class="btn primary" id="openDeckManager">
+            <svg width="14" height="19" viewBox="0 0 14 19" style="vertical-align:-4px;margin-right:5px" aria-hidden="true">
+              <rect x="0.5" y="0.5" width="13" height="18" rx="2.2" fill="#0B0B0C" stroke="#0B0B0C"/>
+              <rect x="1.8" y="1.8" width="10.4" height="15.4" rx="1.4" fill="#3B2A6B"/>
+              <ellipse cx="7" cy="9.5" rx="3.6" ry="5.2" fill="#CBB994"/>
+            </svg>
+            Gestisci mazzi
+          </button>
+        </div>
+      </div>
+    </div>
+    <div id="setupWarn" class="warn" hidden>
+      Il registro non è ancora collegato a un database, quindi nessuno può salvare partite.
+      Segui i passaggi di configurazione e inserisci URL e chiave nella cima del codice.
+    </div>
+    <div id="groupTabs" class="grouptabs"></div>
+    <div id="standings" class="standings"></div>
+    <div id="stEmpty" class="st-empty"></div>
+    <div id="pieChart" class="piewrap" hidden></div>
+  </header>
+
+  <div id="deckStatsModal" class="modal-overlay" hidden>
+    <div class="modal-box wide">
+      <button class="modal-close" id="closeDeckStats" title="Chiudi">&times;</button>
+      <h2>Statistiche mazzi</h2>
+      <p class="mini">Percentuale di vittoria di ogni mazzo, su tutte le partite di tutti i gruppi.</p>
+
+      <div id="deckStatsSummary" class="statssummary"></div>
+
+      <div class="statsbar">
+        <div id="sourceFilter" class="grouptabs"></div>
+        <div style="flex:1"></div>
+        <label class="f" for="deckStatsSort">Ordina per</label>
+        <select id="deckStatsSort">
+          <option value="pct">Percentuale di vittoria</option>
+          <option value="games">Partite giocate</option>
+          <option value="name">Nome del mazzo</option>
+        </select>
+      </div>
+      <div id="deckStatsList"></div>
+    </div>
+  </div>
+
+  <div id="textPromptModal" class="modal-overlay" style="z-index:26" hidden>
+    <div class="modal-box" style="max-width:360px">
+      <h2 id="textPromptTitle">Testo</h2>
+      <input type="text" id="textPromptInput">
+      <div class="actions" style="margin-top:14px">
+        <button class="btn primary" id="textPromptOk">OK</button>
+        <button class="btn ghost" id="textPromptCancel">Annulla</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="lifeCounterModal" class="lc-overlay" hidden>
+    <div class="lc-top">
+      <button class="btn ghost" id="lcCancel">Annulla</button>
+      <button class="btn ghost" id="lcHighRoll">🎲 High Roll</button>
+      <button class="btn primary" id="lcFinish">Fine partita</button>
+    </div>
+    <div id="lcGrid" class="lc-grid"></div>
+  </div>
+
+  <div id="highRollModal" class="modal-overlay" style="z-index:40" hidden>
+    <div class="modal-box" style="max-width:360px">
+      <h2>🎲 High Roll</h2>
+      <p class="mini">Tiro 1–20: il numero più alto inizia.</p>
+      <div id="highRollResults" class="decklist"></div>
+      <div class="actions" style="margin-top:14px">
+        <button class="btn ghost" id="reRollHighRoll">Tira di nuovo</button>
+        <button class="btn primary" id="closeHighRoll">Chiudi</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="playersModal" class="modal-overlay" hidden>
+    <div class="modal-box">
+      <button class="modal-close" id="closePlayersManager" title="Chiudi">&times;</button>
+      <h2>Giocatori</h2>
+      <p class="mini">Rinomina o cancella i nomi in elenco. Le partite già salvate mantengono comunque il nome che avevano.</p>
+      <div id="playersList" class="decklist"></div>
+    </div>
+  </div>
+
+  <div id="groupsModal" class="modal-overlay" hidden>
+    <div class="modal-box">
+      <button class="modal-close" id="closeGroupsManager" title="Chiudi">&times;</button>
+      <h2>Gruppi</h2>
+      <p class="mini">Rinomina o cancella i gruppi in elenco. Le partite già salvate mantengono comunque il gruppo che avevano.</p>
+      <div id="groupsManageList" class="decklist"></div>
+    </div>
+  </div>
+
+  <div id="deckViewModal" class="modal-overlay" style="z-index:25" hidden>
+    <div class="modal-box">
+      <button class="modal-close" id="closeDeckView" title="Chiudi">&times;</button>
+      <h2 id="deckViewName">Nome mazzo</h2>
+      <p class="mini" id="deckViewMeta"></p>
+      <div id="deckViewColors" class="pips" style="margin-bottom:10px"></div>
+      <div id="deckViewCards" class="deckdraft"></div>
+      <button class="btn ghost" id="downloadDeckView" style="margin-top:10px">⬇️ Scarica lista (ManaBox)</button>
+    </div>
+  </div>
+
+  <div id="deckModal" class="modal-overlay" hidden>
+
+    <div class="modal-box">
+      <button class="modal-close" id="closeDeckManager" title="Chiudi">&times;</button>
+      <h2>Mazzi salvati</h2>
+      <div id="deckList" class="decklist"></div>
+      <button class="btn link" id="newDeckToggle">+ Crea nuovo mazzo</button>
+      <button class="btn link" id="importDeckBtn">📄 Importa mazzo (file ManaBox)</button>
+      <input type="file" id="importDeckFile" accept=".txt" hidden>
+
+      <div id="deckForm" hidden>
+        <div class="field">
+          <label class="f" for="deckName">Nome mazzo</label>
+          <input type="text" id="deckName" placeholder="es. Mono nero aggro by Ale">
+        </div>
+        <div class="field">
+          <label class="f" for="deckSource">Origine mazzo</label>
+          <select id="deckSource">
+            <option value="">Non specificato</option>
+            <option value="brew">Homebrew (fatto in casa)</option>
+            <option value="precon">Precon (di fabbrica)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="f">Colori del mazzo</label>
+          <div class="pips" id="deckColorPips">
+            <button class="pip" data-c="W" aria-pressed="false" title="W"><i class="ms ms-w ms-cost"></i></button>
+            <button class="pip" data-c="U" aria-pressed="false" title="U"><i class="ms ms-u ms-cost"></i></button>
+            <button class="pip" data-c="B" aria-pressed="false" title="B"><i class="ms ms-b ms-cost"></i></button>
+            <button class="pip" data-c="R" aria-pressed="false" title="R"><i class="ms ms-r ms-cost"></i></button>
+            <button class="pip" data-c="G" aria-pressed="false" title="G"><i class="ms ms-g ms-cost"></i></button>
+          </div>
+          <p class="mini">Si accendono da soli quando aggiungi terre base; puoi correggerli a mano in ogni momento.</p>
+        </div>
+
+        <button class="btn link" id="preconToggle">Importa un mazzo precon Commander…</button>
+        <div id="preconBox" class="preconbox" hidden>
+          <input type="text" id="preconSearch" autocomplete="off" placeholder="Cerca il nome del precon (es. Elven Empire)…">
+          <div id="preconStatus" class="mini"></div>
+          <div id="preconResults" class="preconresults"></div>
+        </div>
+
+        <div class="field" style="position:relative">
+          <label class="f" for="cardSearch">Cerca carta</label>
+          <input type="text" id="cardSearch" autocomplete="off" placeholder="Scrivi il nome della carta…">
+          <div id="cardSuggest" class="suggest" hidden></div>
+        </div>
+        <div class="two field">
+          <div>
+            <label class="f" for="cardQty">Copie</label>
+            <input type="number" id="cardQty" value="1" min="1" max="99">
+          </div>
+          <div style="display:flex;align-items:flex-end">
+            <button class="btn ghost" id="addCardToDeck" style="width:100%">Aggiungi al mazzo</button>
+          </div>
+        </div>
+        <div id="deckCardTotalBox" class="card-total-box">
+          <span>Totale carte</span>
+          <b id="deckCardTotal">0</b>
+        </div>
+        <div id="deckDraft" class="deckdraft"></div>
+        <button type="button" class="btn ghost" id="downloadDeckDraft">⬇️ Scarica lista (ManaBox)</button>
+        <div class="actions">
+          <button class="btn primary" id="saveDeck">Salva mazzo</button>
+          <button class="btn ghost" id="cancelDeck">Annulla</button>
+        </div>
+        <p class="mini">I nomi delle carte arrivano da <a href="https://scryfall.com" target="_blank" rel="noopener">Scryfall</a>; i mazzi precon da un archivio pubblico della community Magic.</p>
+      </div>
+    </div>
+  </div>
+
+  <div id="newGameModal" class="modal-overlay" hidden>
+    <div class="modal-box wide">
+      <button class="modal-close" id="closeNewGame" title="Chiudi">&times;</button>
+      <h2 id="formTitle">Nuova partita</h2>
+      <div id="alert"></div>
+
+      <div class="field">
+        <label class="f" for="group">Gruppo</label>
+        <select id="group"></select>
+      </div>
+
+      <div class="two field">
+        <div>
+          <label class="f" for="date">Data</label>
+          <input type="date" id="date">
+        </div>
+        <div>
+          <label class="f" for="fmt">Formato</label>
+          <input type="text" id="fmt" list="fmts" placeholder="Commander">
+          <datalist id="fmts">
+            <option>Commander</option><option>Standard</option><option>Modern</option>
+            <option>Pauper</option><option>Draft</option><option>Two-Headed Giant</option>
+            <option>Amichevole</option>
+          </datalist>
+        </div>
+      </div>
+
+      <label class="f">Giocatori</label>
+      <div id="players"></div>
+      <button class="btn link" id="addPlayer">+ Aggiungi giocatore</button>
+
+      <div class="field" style="margin-top:14px">
+        <label class="f" for="startLife">Punti vita iniziali</label>
+        <div class="life-stepper" style="max-width:140px">
+          <button type="button" class="life-btn" data-step="-1">&minus;</button>
+          <input type="number" id="startLife" value="20" min="1" class="p-life">
+          <button type="button" class="life-btn" data-step="1">+</button>
+        </div>
+      </div>
+
+      <button type="button" class="start-game-btn" id="openLifeCounter">
+        <span class="play-icon">▶</span> Avvia partita
+      </button>
+
+      <div class="field" style="margin-top:18px">
+        <label class="f" for="notes">Appunti</label>
+        <textarea id="notes" placeholder="Combo assurde, alleanze tradite, mulligan sfortunati…"></textarea>
+      </div>
+
+      <div class="actions">
+        <button class="btn primary" id="save">Salva partita</button>
+        <button class="btn ghost" id="cancel" hidden>Annulla modifiche</button>
+      </div>
+      <p class="mini">I pallini sotto ogni nome sono i colori del mazzo: bianco, blu, nero, rosso, verde.</p>
+    </div>
+  </div>
+
+  <div id="historyModal" class="modal-overlay" hidden>
+    <div class="modal-box wide">
+      <button class="modal-close" id="closeHistory" title="Chiudi">&times;</button>
+      <h2>Partite salvate <span id="count" class="gfmt"></span></h2>
+      <div id="list"></div>
+    </div>
+  </div>
+
+  <div id="gameDetailModal" class="modal-overlay" style="z-index:25" hidden>
+    <div class="modal-box wide">
+      <button class="modal-close" id="closeGameDetail" title="Chiudi">&times;</button>
+      <div id="shareCard" class="share-card">
+        <p class="share-brand">Registro partite di Magic</p>
+        <h2 id="gdDate"></h2>
+        <p class="mini" id="gdMeta"></p>
+        <div id="gdPlayers"></div>
+        <p class="notes" id="gdNotes" hidden></p>
+      </div>
+      <div class="actions" style="margin-top:14px">
+        <button class="btn primary" id="exportGameImage">🖼️ Esporta risultati</button>
+        <span id="gdEditActions"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ====================================================================
+   CONFIGURAZIONE — inserisci qui i due valori del tuo progetto Supabase
+   (Impostazioni progetto → API). Senza questi due valori il registro
+   resta visibile ma nessuno può salvare partite.
+   ==================================================================== */
+const SUPABASE_URL = 'https://iyhjfmjgkbhsloqslsbk.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_M9a1Tz1lW899oKtdcp8YfA_DhL5P9oR';
+const TABLE = 'partite';
+const TABLE_PLAYERS = 'giocatori';
+const TABLE_DECKS = 'mazzi';
+const TABLE_GROUPS = 'gruppi';
+/* ==================================================================== */
+
+let currentUserId = null;
+let currentUserEmail = '';
+
+const COLORS = ['W','U','B','R','G'];
+const COLOR_VAR = {W:'var(--w)',U:'var(--u)',B:'var(--b)',R:'var(--r)',G:'var(--g)',C:'var(--c)'};
+let games = [];
+let editingId = null;
+let roster = [];
+let rosterOwner = new Map();
+let groupsRoster = [];
+let decks = [];
+let deckDraft = [];
+let deckColors = new Set();
+let editingDeckId = null;
+let pickedCardName = '';
+
+const configured = !SUPABASE_URL.startsWith('INCOLLA') && !SUPABASE_ANON_KEY.startsWith('INCOLLA');
+const db = configured ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+if (!configured) document.getElementById('setupWarn').hidden = false;
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function alertMsg(text){
+  $('#alert').innerHTML = text ? '<div class="warn">' + esc(text) + '</div>' : '';
+}
+
+/* Aggancia i pulsanti − / + di ogni stepper trovato dentro "root" all'input
+   che gli sta a fianco nello stesso .life-stepper. Riusabile sia per i PV
+   di ogni giocatore sia per il campo "Punti vita iniziali". */
+function wireLifeStepper(root){
+  root.querySelectorAll('.life-btn').forEach(b => {
+    b.onclick = () => {
+      const input = b.closest('.life-stepper').querySelector('input');
+      const cur = input.value === '' ? 0 : Number(input.value);
+      input.value = cur + Number(b.dataset.step);
+    };
+  });
+}
+
+/* Sostituisce window.prompt(): su alcuni browser mobili (Safari su iPhone in
+   particolare) il prompt nativo è poco affidabile se scatta subito dopo la
+   chiusura di un menu a tendina. Questa versione, scritta con l'HTML del
+   sito, funziona in modo identico ovunque. */
+function askText(title, defaultValue){
+  return new Promise(resolve => {
+    $('#textPromptTitle').textContent = title;
+    const input = $('#textPromptInput');
+    input.value = defaultValue || '';
+    $('#textPromptModal').hidden = false;
+    setTimeout(() => input.focus(), 50);
+    const finish = (result) => {
+      $('#textPromptModal').hidden = true;
+      input.onkeydown = null;
+      resolve(result);
+    };
+    $('#textPromptOk').onclick = () => finish(input.value);
+    $('#textPromptCancel').onclick = () => finish(null);
+    input.onkeydown = e => {
+      if (e.key === 'Enter') finish(input.value);
+      if (e.key === 'Escape') finish(null);
+    };
+  });
+}
+
+/* ---------- storage: ogni partita è una riga condivisa su Supabase ---------- */
+async function load(){
+  if (!configured) { games = []; render(); return; }
+  const { data, error } = await db.from(TABLE).select('*')
+    .order('date', { ascending: false })
+    .order('id', { ascending: false });
+  if (error){ alertMsg('Non riesco a leggere il registro condiviso: ' + error.message); return; }
+  games = (data || []).map(row => ({
+    id: row.id, date: row.date, format: row.format, notes: row.notes, players: row.players || [],
+    group: row.gruppo || 'Generale', created_by: row.created_by || null, created_at: row.created_at || ''
+  }));
+  render();
+}
+
+async function loadRoster(){
+  if (!configured) return;
+  const { data, error } = await db.from(TABLE_PLAYERS).select('name, created_by').order('name');
+  if (error) return;
+  roster = (data || []).map(r => r.name);
+  rosterOwner = new Map((data || []).map(r => [r.name, r.created_by || null]));
+  refreshAllNameSelects();
+  renderPlayersList();
+}
+
+async function addRosterName(name){
+  name = name.trim();
+  if (!name || !configured) return name;
+  if (roster.includes(name)) return name; // esiste già, nessuna scrittura necessaria
+  const { error } = await db.from(TABLE_PLAYERS).insert({ name });
+  if (error && error.code !== '23505'){ // 23505 = qualcun altro l'ha aggiunto nel frattempo, va bene comunque
+    alertMsg('Non sono riuscito ad aggiungere il giocatore: ' + error.message);
+    return name;
+  }
+  await loadRoster();
+  return name;
+}
+
+async function renamePlayerEverywhere(oldName, newName){
+  newName = newName.trim();
+  if (!newName || newName === oldName) return null;
+
+  // 1) aggiorna (o fonde con) il roster condiviso
+  if (roster.includes(newName)){
+    const { error } = await db.from(TABLE_PLAYERS).delete().eq('name', oldName);
+    if (error) return error;
+  } else {
+    const { error } = await db.from(TABLE_PLAYERS).update({ name: newName }).eq('name', oldName);
+    if (error) return error;
+  }
+
+  // 2) aggiorna ogni partita salvata che contiene quel nome
+  const affected = games.filter(g => g.players.some(p => p.name === oldName));
+  for (const g of affected){
+    const updatedPlayers = g.players.map(p => p.name === oldName ? { ...p, name: newName } : p);
+    const { error } = await db.from(TABLE).update({ players: updatedPlayers }).eq('id', g.id);
+    if (error) return error;
+  }
+
+  await loadRoster();
+  await load();
+  return null;
+}
+
+async function renamePlayerFlow(oldName){
+  const typed = await askText('Nuovo nome per "' + oldName + '" (verrà aggiornato in tutte le partite già salvate)', oldName);
+  if (typed === null) return;
+  const newName = typed.trim();
+  if (!newName || newName === oldName) return;
+  const error = await renamePlayerEverywhere(oldName, newName);
+  if (error) return alertMsg('Rinomina non riuscita: ' + error.message);
+  document.querySelectorAll('.p-name').forEach(s => {
+    const wasOld = s.value === oldName;
+    s.innerHTML = nameOptions(wasOld ? newName : (s.value === '__new__' ? '' : s.value));
+    refreshRenameButton(s.closest('.player'));
+  });
+  renderPlayersList();
+}
+
+async function handleRenamePlayer(sel){
+  const oldName = sel.value;
+  if (!oldName || oldName === '__new__') return;
+  await renamePlayerFlow(oldName);
+}
+
+async function deletePlayerFromRoster(name){
+  if (!confirm('Cancellare "' + name + '" dall\u2019elenco giocatori? Le partite già salvate continueranno a mostrare il suo nome.')) return;
+  const { error } = await db.from(TABLE_PLAYERS).delete().eq('name', name);
+  if (error) return alertMsg('Cancellazione non riuscita: ' + error.message);
+  await loadRoster();
+  renderPlayersList();
+}
+
+function renderPlayersList(){
+  $('#playersList').innerHTML = roster.length
+    ? roster.map(name =>
+        '<div class="deckrow"><div class="deckrow-left">' +
+          '<span class="deckrow-name" title="' + esc(name) + '">' + esc(name) + '</span>' +
+        '</div>' +
+        (canEdit(rosterOwner.get(name))
+          ? '<div class="deckrow-actions"><button class="btn link" data-renameplayer="' + esc(name) + '">Rinomina</button>' +
+            '<button class="btn link" data-delplayer="' + esc(name) + '">Cancella</button></div>'
+          : '') +
+        '</div>').join('')
+    : '<p class="mini">Ancora nessun giocatore in elenco.</p>';
+  $('#playersList').querySelectorAll('[data-renameplayer]').forEach(b =>
+    b.onclick = () => renamePlayerFlow(b.dataset.renameplayer));
+  $('#playersList').querySelectorAll('[data-delplayer]').forEach(b =>
+    b.onclick = () => deletePlayerFromRoster(b.dataset.delplayer));
+}
+
+let groupsOwner = new Map();
+
+async function loadGroupsRoster(){
+  if (!configured) return;
+  const { data, error } = await db.from(TABLE_GROUPS).select('name, created_by').order('name');
+  if (error) return;
+  groupsRoster = (data || []).map(r => r.name);
+  groupsOwner = new Map((data || []).map(r => [r.name, r.created_by || null]));
+  const cur = $('#group').value === '__newgroup__' ? '' : $('#group').value;
+  $('#group').innerHTML = groupOptions(cur);
+  renderGroupsManageList();
+}
+
+async function addGroupToRoster(name){
+  name = name.trim();
+  if (!name || !configured) return name;
+  if (groupsRoster.includes(name)) return name; // esiste già, nessuna scrittura necessaria
+  const { error } = await db.from(TABLE_GROUPS).insert({ name });
+  if (error && error.code !== '23505'){ // 23505 = qualcun altro l'ha aggiunto nel frattempo, va bene comunque
+    alertMsg('Non sono riuscito ad aggiungere il gruppo: ' + error.message);
+    return name;
+  }
+  await loadGroupsRoster();
+  return name;
+}
+
+async function renameGroupEverywhere(oldName, newName){
+  newName = newName.trim();
+  if (!newName || newName === oldName) return null;
+
+  if (groupsRoster.includes(newName)){
+    const { error } = await db.from(TABLE_GROUPS).delete().eq('name', oldName);
+    if (error) return error;
+  } else {
+    const { error } = await db.from(TABLE_GROUPS).update({ name: newName }).eq('name', oldName);
+    if (error) return error;
+  }
+
+  const affected = games.filter(g => g.group === oldName);
+  for (const g of affected){
+    const { error } = await db.from(TABLE).update({ gruppo: newName }).eq('id', g.id);
+    if (error) return error;
+  }
+
+  await loadGroupsRoster();
+  await load();
+  return null;
+}
+
+async function renameGroupFlow(oldName){
+  const typed = await askText('Nuovo nome per il gruppo "' + oldName + '" (aggiornerà tutte le partite già salvate)', oldName);
+  if (typed === null) return;
+  const newName = typed.trim();
+  if (!newName || newName === oldName) return;
+  const error = await renameGroupEverywhere(oldName, newName);
+  if (error) return alertMsg('Rinomina gruppo non riuscita: ' + error.message);
+}
+
+async function deleteGroupFromRoster(name){
+  if (!confirm('Cancellare il gruppo "' + name + '" dall\u2019elenco? Le partite già salvate restano assegnate a quel nome comunque.')) return;
+  const { error } = await db.from(TABLE_GROUPS).delete().eq('name', name);
+  if (error) return alertMsg('Cancellazione gruppo non riuscita: ' + error.message);
+  await loadGroupsRoster();
+}
+
+function renderGroupsManageList(){
+  $('#groupsManageList').innerHTML = groupsRoster.length
+    ? groupsRoster.map(name =>
+        '<div class="deckrow"><div class="deckrow-left">' +
+          '<span class="deckrow-name" title="' + esc(name) + '">' + esc(name) + '</span>' +
+        '</div>' +
+        (canEdit(groupsOwner.get(name))
+          ? '<div class="deckrow-actions"><button class="btn link" data-renamegroup="' + esc(name) + '">Rinomina</button>' +
+            '<button class="btn link" data-delgroup="' + esc(name) + '">Cancella</button></div>'
+          : '') +
+        '</div>').join('')
+    : '<p class="mini">Ancora nessun gruppo in elenco.</p>';
+  $('#groupsManageList').querySelectorAll('[data-renamegroup]').forEach(b =>
+    b.onclick = () => renameGroupFlow(b.dataset.renamegroup));
+  $('#groupsManageList').querySelectorAll('[data-delgroup]').forEach(b =>
+    b.onclick = () => deleteGroupFromRoster(b.dataset.delgroup));
+}
+
+function groupOptions(current){
+  const set = new Set(groupsRoster);
+  if (current) set.add(current);
+  const sorted = [...set].sort((a,b) => a.localeCompare(b));
+  return '<option value="">Generale</option>' +
+    sorted.map(n => '<option value="' + esc(n) + '"' + (n === current ? ' selected' : '') + '>' + esc(n) + '</option>').join('') +
+    '<option value="__newgroup__">+ Nuovo gruppo…</option>';
+}
+
+async function handleGroupChange(sel){
+  if (sel.value !== '__newgroup__') return;
+  const typed = ((await askText('Nome del nuovo gruppo (es. Colleghi, Alessandro e Davide)')) || '').trim();
+  sel.value = '';
+  if (!typed) return;
+  await addGroupToRoster(typed);
+  sel.value = typed;
+}
+
+function deckTotal(d){ return (d.cards || []).reduce((s,c) => s + c.qty, 0); }
+
+const BASIC_LAND_COLOR = { plains: 'W', island: 'U', swamp: 'B', mountain: 'R', forest: 'G' };
+
+/* Guarda una lista di nomi carta e restituisce i colori delle terre base
+   trovate (funziona anche con "Snow-Covered Swamp" ecc., basta che il nome
+   contenga la parola della terra base). */
+function detectLandColors(cardNames){
+  const found = new Set();
+  cardNames.forEach(name => {
+    const low = name.toLowerCase();
+    Object.keys(BASIC_LAND_COLOR).forEach(land => {
+      if (low.includes(land)) found.add(BASIC_LAND_COLOR[land]);
+    });
+  });
+  return found;
+}
+
+/* Accende (mai spegne) i colori rilevati automaticamente, poi ridisegna i pallini. */
+function autoDetectDeckColors(cardNames){
+  detectLandColors(cardNames).forEach(c => deckColors.add(c));
+  renderDeckColorPips();
+}
+
+function renderDeckColorPips(){
+  document.querySelectorAll('#deckColorPips .pip').forEach(b => {
+    b.setAttribute('aria-pressed', deckColors.has(b.dataset.c) ? 'true' : 'false');
+  });
+}
+
+document.querySelectorAll('#deckColorPips .pip').forEach(b => b.onclick = () => {
+  if (deckColors.has(b.dataset.c)) deckColors.delete(b.dataset.c); else deckColors.add(b.dataset.c);
+  renderDeckColorPips();
+});
+
+
+async function loadDecks(){
+  if (!configured) return;
+  const { data, error } = await db.from(TABLE_DECKS).select('*').order('name');
+  if (error) return;
+  decks = (data || []).map(r => ({
+    id: r.id, name: r.name, cards: r.cards || [], source: r.source || '',
+    colors: r.colors || [], created_by: r.created_by || null
+  }));
+  renderDeckList();
+  refreshAllDeckSelects();
+}
+
+async function saveDeckToDb(name, cards, source, colors, id){
+  if (id){
+    const { error } = await db.from(TABLE_DECKS).update({ name, cards, source, colors }).eq('id', id);
+    if (!error) await loadDecks();
+    return error;
+  }
+  const row = { id: 'm' + Date.now() + Math.random().toString(36).slice(2,7), name, cards, source, colors };
+  const { error } = await db.from(TABLE_DECKS).insert(row);
+  if (!error) await loadDecks();
+  return error;
+}
+
+async function deleteDeckFromDb(id){
+  const { error } = await db.from(TABLE_DECKS).delete().eq('id', id);
+  if (!error) await loadDecks();
+  return error;
+}
+
+function sourceBadge(source){
+  if (source === 'precon') return '<span class="badge-source precon">Precon</span>';
+  if (source === 'brew') return '<span class="badge-source brew">Homebrew</span>';
+  return '';
+}
+
+function canEdit(created_by){
+  return !created_by || created_by === currentUserId;
+}
+
+function renderDeckList(){
+  $('#deckList').innerHTML = decks.length
+    ? decks.map(d =>
+        '<div class="deckrow"><div class="deckrow-left">' +
+          '<span class="deckrow-name" title="' + esc(d.name) + '">' + esc(d.name) + '</span>' +
+          sourceBadge(d.source) + ' <small>(' + deckTotal(d) + ' carte)</small> ' +
+          (d.colors || []).map(c => '<i class="ms ms-' + c.toLowerCase() + ' ms-cost tag"></i>').join('') +
+        '</div>' +
+        (canEdit(d.created_by)
+          ? '<div class="deckrow-actions"><button class="btn link" data-editdeck="' + d.id + '">Modifica</button>' +
+            '<button class="btn link" data-deldeck="' + d.id + '">Cancella</button></div>'
+          : '<div class="deckrow-actions"><button class="btn link" data-viewdeck="' + d.id + '">Visualizza</button></div>') +
+        '</div>').join('')
+    : '<p class="mini">Ancora nessun mazzo salvato.</p>';
+  $('#deckList').querySelectorAll('[data-deldeck]').forEach(b => b.onclick = async () => {
+    if (!confirm('Cancellare questo mazzo? Le partite che lo usano già continueranno a mostrarne solo il nome.')) return;
+    const error = await deleteDeckFromDb(b.dataset.deldeck);
+    if (error) alertMsg('Cancellazione mazzo non riuscita: ' + error.message);
+  });
+  $('#deckList').querySelectorAll('[data-editdeck]').forEach(b => b.onclick = () => editDeck(b.dataset.editdeck));
+  $('#deckList').querySelectorAll('[data-viewdeck]').forEach(b => b.onclick = () => viewDeck(b.dataset.viewdeck));
+}
+
+function viewDeck(id){
+  const d = decks.find(x => x.id === id);
+  if (!d) return;
+  $('#deckViewName').textContent = d.name;
+  $('#deckViewMeta').innerHTML = sourceBadge(d.source) + ' <span style="margin-left:6px">' + deckTotal(d) + ' carte</span>';
+  $('#deckViewColors').innerHTML = (d.colors || []).length
+    ? d.colors.map(c => '<span class="pip" aria-pressed="true"><i class="ms ms-' + c.toLowerCase() + ' ms-cost"></i></span>').join('')
+    : '';
+  $('#deckViewCards').innerHTML = d.cards.length
+    ? d.cards.map(c => '<div class="draftrow"><span>' + c.qty + '× ' + esc(c.name) + '</span></div>').join('')
+    : '<p class="mini">Nessuna carta.</p>';
+  $('#deckViewModal').hidden = false;
+  $('#downloadDeckView').onclick = () => downloadTextFile(safeFileName(d.name) + '.txt', cardsToManaboxText(d.cards));
+}
+
+$('#closeDeckView').onclick = () => { $('#deckViewModal').hidden = true; };
+$('#deckViewModal').addEventListener('click', e => {
+  if (e.target.id === 'deckViewModal') $('#deckViewModal').hidden = true;
+});
+
+function editDeck(id){
+  const d = decks.find(x => x.id === id);
+  if (!d) return;
+  editingDeckId = id;
+  $('#deckName').value = d.name;
+  $('#deckSource').value = d.source || '';
+  deckDraft = d.cards.map(c => ({ ...c }));
+  deckColors = new Set(d.colors || []);
+  renderDeckDraft();
+  renderDeckColorPips();
+  $('#deckForm').hidden = false;
+  $('#saveDeck').textContent = 'Salva modifiche';
+  $('#deckModal').hidden = false;
+  $('#deckName').focus();
+}
+
+async function searchCards(query){
+  try{
+    const res = await fetch('https://api.scryfall.com/cards/autocomplete?q=' + encodeURIComponent(query));
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.data || [];
+  }catch(e){ return []; }
+}
+
+function renderDeckDraft(){
+  $('#deckDraft').innerHTML = deckDraft.length
+    ? deckDraft.map((c,i) =>
+        '<div class="draftrow"><span>' + c.qty + '× ' + esc(c.name) + '</span>' +
+        '<button class="kill" data-rmcard="' + i + '" title="Togli carta">&times;</button></div>').join('')
+    : '<p class="mini">Nessuna carta ancora aggiunta.</p>';
+  $('#deckDraft').querySelectorAll('[data-rmcard]').forEach(b => b.onclick = () => {
+    deckDraft.splice(Number(b.dataset.rmcard), 1);
+    renderDeckDraft();
+  });
+  $('#deckCardTotal').textContent = deckDraft.reduce((s,c) => s + c.qty, 0);
+}
+
+let preconData = null;
+let preconLoading = false;
+
+async function loadPreconData(){
+  if (preconData) return preconData;
+  if (preconLoading) return null;
+  preconLoading = true;
+  $('#preconStatus').textContent = 'Carico l\u2019elenco dei mazzi precon (solo la prima volta)…';
+  try{
+    const cached = localStorage.getItem('mtg:precon-cache');
+    if (cached){
+      preconData = JSON.parse(cached);
+      $('#preconStatus').textContent = '';
+      preconLoading = false;
+      return preconData;
+    }
+  }catch(e){}
+  try{
+    const res = await fetch('https://raw.githubusercontent.com/taw/magic-preconstructed-decks-data/master/decks_v2.json');
+    const all = await res.json();
+    preconData = all.filter(d =>
+      (d.type || '').toLowerCase().includes('commander') ||
+      (d.category || '').toLowerCase().includes('commander') ||
+      (d.commander && d.commander.length > 0)
+    );
+    try{ localStorage.setItem('mtg:precon-cache', JSON.stringify(preconData)); }catch(e){}
+    $('#preconStatus').textContent = '';
+  }catch(e){
+    $('#preconStatus').textContent = 'Non sono riuscito a scaricare l\u2019elenco dei precon. Riprova più tardi.';
+  }
+  preconLoading = false;
+  return preconData;
+}
+
+let preconMatches = [];
+function renderPreconResults(query){
+  if (!preconData) return;
+  const q = query.trim().toLowerCase();
+  preconMatches = q.length < 2 ? [] : preconData.filter(d =>
+    d.name.toLowerCase().includes(q) || (d.set_name || '').toLowerCase().includes(q)
+  ).slice(0, 25);
+  $('#preconResults').innerHTML = preconMatches.length
+    ? preconMatches.map((d,i) =>
+        '<div class="preconrow" data-precon="' + i + '"><span>' + esc(d.name) + '</span><small>' + esc(d.set_name || '') + '</small></div>').join('')
+    : (q.length >= 2 ? '<p class="mini">Nessun mazzo trovato.</p>' : '');
+  $('#preconResults').querySelectorAll('[data-precon]').forEach(el => el.onclick = () => {
+    importPrecon(preconMatches[Number(el.dataset.precon)]);
+  });
+}
+
+function importPrecon(deck){
+  const merged = {};
+  const addAll = list => (list || []).forEach(c => {
+    const key = c.name.toLowerCase();
+    merged[key] = merged[key] || { name: c.name, qty: 0 };
+    merged[key].qty += c.count || 1;
+  });
+  addAll(deck.commander);
+  addAll(deck.cards);
+  deckDraft = Object.values(merged);
+  $('#deckName').value = deck.name;
+  $('#deckSource').value = 'precon';
+  deckColors = new Set();
+  autoDetectDeckColors(deckDraft.map(c => c.name));
+  renderDeckDraft();
+  $('#preconBox').hidden = true;
+  $('#preconSearch').value = '';
+  $('#preconResults').innerHTML = '';
+}
+
+$('#preconToggle').onclick = async () => {
+  $('#preconBox').hidden = !$('#preconBox').hidden;
+  if (!$('#preconBox').hidden){
+    $('#preconSearch').focus();
+    if (!preconData) await loadPreconData();
+  }
+};
+
+$('#preconSearch').addEventListener('input', () => renderPreconResults($('#preconSearch').value));
+
+let cardSearchTimer = null;
+$('#cardSearch').addEventListener('input', () => {
+  pickedCardName = '';
+  clearTimeout(cardSearchTimer);
+  const q = $('#cardSearch').value.trim();
+  if (q.length < 2){ $('#cardSuggest').hidden = true; return; }
+  cardSearchTimer = setTimeout(async () => {
+    const names = await searchCards(q);
+    if (!names.length){ $('#cardSuggest').hidden = true; return; }
+    $('#cardSuggest').innerHTML = names.map(n => '<div class="sugg" data-n="' + esc(n) + '">' + esc(n) + '</div>').join('');
+    $('#cardSuggest').hidden = false;
+    $('#cardSuggest').querySelectorAll('.sugg').forEach(el => el.onclick = () => {
+      $('#cardSearch').value = el.dataset.n;
+      pickedCardName = el.dataset.n;
+      $('#cardSuggest').hidden = true;
+    });
+  }, 250);
+});
+document.addEventListener('click', e => {
+  if (!e.target.closest('.cardsearch') && !e.target.closest('[style*="position:relative"]')) $('#cardSuggest').hidden = true;
+});
+
+$('#addCardToDeck').onclick = () => {
+  const name = pickedCardName || $('#cardSearch').value.trim();
+  if (!name) return;
+  const qty = Math.max(1, parseInt($('#cardQty').value, 10) || 1);
+  const existing = deckDraft.find(c => c.name.toLowerCase() === name.toLowerCase());
+  if (existing) existing.qty += qty; else deckDraft.push({ name, qty });
+  autoDetectDeckColors([name]);
+  $('#cardSearch').value = '';
+  $('#cardQty').value = 1;
+  pickedCardName = '';
+  $('#cardSuggest').hidden = true;
+  renderDeckDraft();
+  $('#cardSearch').focus();
+};
+
+$('#openNewGame').onclick = () => { resetForm(); $('#newGameModal').hidden = false; };
+$('#closeNewGame').onclick = () => { $('#newGameModal').hidden = true; };
+$('#newGameModal').addEventListener('click', e => {
+  if (e.target.id === 'newGameModal') $('#newGameModal').hidden = true;
+});
+
+$('#openHistory').onclick = () => { $('#historyModal').hidden = false; };
+$('#closeHistory').onclick = () => { $('#historyModal').hidden = true; };
+$('#historyModal').addEventListener('click', e => {
+  if (e.target.id === 'historyModal') $('#historyModal').hidden = true;
+});
+
+$('#openDeckManager').onclick = () => { $('#deckModal').hidden = false; };
+$('#openPlayersManager').onclick = () => { renderPlayersList(); $('#playersModal').hidden = false; };
+$('#openGroupsManager').onclick = () => { renderGroupsManageList(); $('#groupsModal').hidden = false; };
+$('#closeGroupsManager').onclick = () => { $('#groupsModal').hidden = true; };
+$('#groupsModal').addEventListener('click', e => {
+  if (e.target.id === 'groupsModal') $('#groupsModal').hidden = true;
+});
+$('#closePlayersManager').onclick = () => { $('#playersModal').hidden = true; };
+$('#playersModal').addEventListener('click', e => {
+  if (e.target.id === 'playersModal') $('#playersModal').hidden = true;
+});
+$('#closeDeckManager').onclick = () => { $('#deckModal').hidden = true; };
+$('#deckModal').addEventListener('click', e => {
+  if (e.target.id === 'deckModal') $('#deckModal').hidden = true;
+});
+
+$('#newDeckToggle').onclick = () => {
+  $('#deckForm').hidden = !$('#deckForm').hidden;
+  if (!$('#deckForm').hidden){
+    deckColors = new Set();
+    renderDeckColorPips();
+    $('#deckName').focus();
+  }
+};
+
+/* Legge un file di testo esportato da ManaBox: ogni riga è
+   "<copie> <nome carta> [(espansione) numero]" — espansione e numero
+   sono facoltativi e comunque ignorati, ci interessano solo nome e copie. */
+/* Converte un elenco di carte {name, qty} nel formato testuale ManaBox
+   (una riga per carta: "<copie> <nome>"). Espansione e numero non li
+   conosciamo (non li importiamo), quindi restano fuori: ManaBox li
+   accetta comunque come facoltativi in importazione. */
+function cardsToManaboxText(cards){
+  return cards.map(c => c.qty + ' ' + c.name).join('\n');
+}
+
+function downloadTextFile(filename, text){
+  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function safeFileName(name){
+  return (name || 'mazzo').replace(/[\\/:*?"<>|]/g, '_').trim() || 'mazzo';
+}
+
+function parseManaboxText(text){
+  const merged = {};
+  text.split(/\r?\n/).forEach(line => {
+    line = line.trim();
+    if (!line) return;
+    const m = line.match(/^(\d+)\s+(.+)$/);
+    if (!m) return;
+    const qty = parseInt(m[1], 10);
+    let rest = m[2].trim();
+    const setMatch = rest.match(/^(.*)\s+\([^)]+\)\s+\S+$/);
+    const name = (setMatch ? setMatch[1] : rest).trim();
+    if (!name || !qty) return;
+    const key = name.toLowerCase();
+    merged[key] = merged[key] || { name, qty: 0 };
+    merged[key].qty += qty;
+  });
+  return Object.values(merged);
+}
+
+$('#importDeckBtn').onclick = () => $('#importDeckFile').click();
+
+$('#importDeckFile').onchange = (e) => {
+  const file = e.target.files[0];
+  e.target.value = ''; // permette di ricaricare lo stesso file una seconda volta se serve
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const parsed = parseManaboxText(String(reader.result));
+    if (!parsed.length){
+      alertMsg('Non sono riuscito a leggere nessuna carta da questo file: controlla il formato.');
+      return;
+    }
+    deckDraft = parsed;
+    $('#deckName').value = file.name.replace(/\.[^/.]+$/, '');
+    editingDeckId = null;
+    deckColors = new Set();
+    autoDetectDeckColors(parsed.map(c => c.name));
+    $('#saveDeck').textContent = 'Salva mazzo';
+    renderDeckDraft();
+    $('#deckForm').hidden = false;
+    $('#deckName').focus();
+  };
+  reader.readAsText(file, 'utf-8');
+};
+
+$('#cancelDeck').onclick = () => {
+  $('#deckName').value = '';
+  $('#deckSource').value = '';
+  deckDraft = [];
+  deckColors = new Set();
+  editingDeckId = null;
+  $('#saveDeck').textContent = 'Salva mazzo';
+  renderDeckDraft();
+  renderDeckColorPips();
+  $('#deckForm').hidden = true;
+  $('#preconBox').hidden = true;
+  $('#preconSearch').value = '';
+};
+
+$('#downloadDeckDraft').onclick = () => {
+  if (!deckDraft.length) return alertMsg('Aggiungi almeno una carta prima di scaricare la lista.');
+  const name = $('#deckName').value.trim() || 'mazzo';
+  downloadTextFile(safeFileName(name) + '.txt', cardsToManaboxText(deckDraft));
+};
+
+$('#saveDeck').onclick = async () => {
+  const name = $('#deckName').value.trim();
+  const source = $('#deckSource').value;
+  if (!configured) return alertMsg('Il registro non è ancora collegato a un database.');
+  if (!name) return alertMsg('Dai un nome al mazzo prima di salvarlo.');
+  if (!deckDraft.length) return alertMsg('Aggiungi almeno una carta al mazzo.');
+  const error = await saveDeckToDb(name, deckDraft, source, [...deckColors], editingDeckId);
+  if (error) return alertMsg('Salvataggio mazzo non riuscito: ' + error.message);
+  $('#deckName').value = '';
+  $('#deckSource').value = '';
+  deckDraft = [];
+  deckColors = new Set();
+  editingDeckId = null;
+  $('#saveDeck').textContent = 'Salva mazzo';
+  renderDeckDraft();
+  renderDeckColorPips();
+  $('#deckForm').hidden = true;
+};
+
+async function saveGame(g, id){
+  const row = { date: g.date, format: g.format, notes: g.notes, players: g.players, gruppo: g.group };
+  if (id){
+    const { error } = await db.from(TABLE).update(row).eq('id', id);
+    return error;
+  }
+  row.id = 'g' + Date.now() + Math.random().toString(36).slice(2,7);
+  const { error } = await db.from(TABLE).insert(row);
+  return error;
+}
+
+async function deleteGame(id){
+  const { error } = await db.from(TABLE).delete().eq('id', id);
+  return error;
+}
+
+/* si aggiorna da sé se un amico salva una partita, o aggiunge un giocatore, mentre sei sulla pagina */
+function watchLive(){
+  if (!configured) return;
+  db.channel('partite-live')
+    .on('postgres_changes', { event: '*', schema: 'public', table: TABLE }, load)
+    .subscribe();
+  db.channel('giocatori-live')
+    .on('postgres_changes', { event: '*', schema: 'public', table: TABLE_PLAYERS }, loadRoster)
+    .subscribe();
+  db.channel('mazzi-live')
+    .on('postgres_changes', { event: '*', schema: 'public', table: TABLE_DECKS }, loadDecks)
+    .subscribe();
+  db.channel('gruppi-live')
+    .on('postgres_changes', { event: '*', schema: 'public', table: TABLE_GROUPS }, loadGroupsRoster)
+    .subscribe();
+}
+
+
+/* ---------- form: righe giocatore ---------- */
+function nameOptions(current){
+  const set = new Set(roster);
+  if (current) set.add(current);
+  const sorted = [...set].sort((a,b) => a.localeCompare(b));
+  return '<option value="">— scegli chi ha giocato —</option>' +
+    sorted.map(n => '<option value="' + esc(n) + '"' + (n === current ? ' selected' : '') + '>' + esc(n) + '</option>').join('') +
+    '<option value="__new__">+ Nuovo giocatore…</option>';
+}
+
+function refreshRenameButton(div){
+  const sel = div.querySelector('.p-name');
+  const btn = div.querySelector('.kill[data-act="rename"]');
+  if (!btn) return;
+  const name = sel.value;
+  const canRename = name && name !== '__new__' && canEdit(rosterOwner.get(name));
+  btn.hidden = !canRename;
+}
+
+function refreshAllNameSelects(){
+  document.querySelectorAll('.p-name').forEach(sel => {
+    const cur = sel.value === '__new__' ? '' : sel.value;
+    sel.innerHTML = nameOptions(cur);
+    refreshRenameButton(sel.closest('.player'));
+  });
+}
+
+async function handleNameChange(sel){
+  if (sel.value !== '__new__') return;
+  const typed = ((await askText('Nome del nuovo giocatore')) || '').trim();
+  sel.value = '';
+  if (!typed) return;
+  await addRosterName(typed);
+  refreshAllNameSelects();
+  sel.value = typed;
+}
+
+function deckOptions(current){
+  const names = decks.map(d => d.name).sort((a,b) => a.localeCompare(b));
+  return '<option value="">— nessun mazzo —</option>' +
+    names.map(n => '<option value="' + esc(n) + '"' + (n === current ? ' selected' : '') + '>' + esc(n) + '</option>').join('') +
+    '<option value="__newdeck__">+ Crea un nuovo mazzo…</option>';
+}
+
+function refreshAllDeckSelects(){
+  document.querySelectorAll('.p-deck-select').forEach(sel => {
+    const cur = sel.value === '__newdeck__' ? '' : sel.value;
+    sel.innerHTML = deckOptions(cur);
+  });
+}
+
+function isSavedDeck(name){ return decks.some(d => d.name === name); }
+
+function playerRow(p = {}){
+  const div = document.createElement('div');
+  div.className = 'player' + (p.winner ? ' won' : '');
+  div.innerHTML =
+    '<div class="prow">' +
+      '<select class="p-name">' + nameOptions(p.name || '') + '</select>' +
+      '<button class="kill" data-act="rename" title="Rinomina questo giocatore ovunque">✎</button>' +
+      '<button class="kill" data-act="remove" title="Togli giocatore">&times;</button>' +
+    '</div>' +
+    '<div class="prow deckrow2">' +
+      '<select class="p-deck-select">' + deckOptions('') + '</select>' +
+      '<input type="text" class="p-deck-manual" placeholder="Nome mazzo libero" hidden>' +
+      '<button type="button" class="btn link deck-toggle">Scrivi a mano</button>' +
+    '</div>' +
+    '<input type="text" class="p-desc" placeholder="Com\u2019è fatto il mazzo, strategia, note">' +
+    '<div class="prow bottom">' +
+      '<div class="pips">' + COLORS.map(c =>
+        '<button class="pip" data-c="' + c + '" aria-pressed="false" title="' + c + '"><i class="ms ms-' + c.toLowerCase() + ' ms-cost"></i></button>').join('') +
+      '</div>' +
+      '<div class="tail">' +
+        '<label class="win"><input type="checkbox" class="p-win"><span class="switch"></span> Vincitore</label>' +
+        '<div class="life-stepper">' +
+          '<button type="button" class="life-btn" data-step="-1">&minus;</button>' +
+          '<input type="number" inputmode="numeric" class="p-life" placeholder="PV">' +
+          '<button type="button" class="life-btn" data-step="1">+</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+
+  div.querySelector('.p-name').onchange = async () => {
+    await handleNameChange(div.querySelector('.p-name'));
+    refreshRenameButton(div);
+  };
+
+  const deckSel = div.querySelector('.p-deck-select');
+  const deckManual = div.querySelector('.p-deck-manual');
+  const deckToggle = div.querySelector('.deck-toggle');
+  const wantsManual = !!p.deck && !isSavedDeck(p.deck);
+  if (wantsManual){
+    deckSel.hidden = true;
+    deckManual.hidden = false;
+    deckManual.value = p.deck;
+    deckToggle.textContent = 'Scegli dai mazzi salvati';
+  } else {
+    deckSel.innerHTML = deckOptions(p.deck || '');
+  }
+  deckToggle.onclick = () => {
+    if (deckSel.hidden){
+      deckManual.hidden = true;
+      deckSel.hidden = false;
+      deckSel.value = '';
+      deckToggle.textContent = 'Scrivi a mano';
+    } else {
+      deckSel.hidden = true;
+      deckManual.hidden = false;
+      deckManual.value = '';
+      deckManual.focus();
+      deckToggle.textContent = 'Scegli dai mazzi salvati';
+    }
+  };
+  deckSel.onchange = () => {
+    if (deckSel.value === '__newdeck__'){
+      deckSel.value = '';
+      $('#deckModal').hidden = false;
+      $('#deckForm').hidden = false;
+      $('#deckName').focus();
+    } else if (deckSel.value){
+      const chosen = decks.find(d => d.name === deckSel.value);
+      if (chosen && chosen.colors && chosen.colors.length){
+        div.querySelectorAll('.pips .pip').forEach(b => {
+          b.setAttribute('aria-pressed', chosen.colors.includes(b.dataset.c) ? 'true' : 'false');
+        });
+      }
+    }
+  };
+
+  div.querySelector('.p-desc').value = p.desc || '';
+  div.querySelector('.p-life').value = (p.life ?? '') === '' ? '' : p.life;
+  const win = div.querySelector('.p-win');
+  win.checked = !!p.winner;
+  win.onchange = () => {
+    if (win.checked){
+      $('#players').querySelectorAll('.p-win').forEach(cb => {
+        if (cb !== win){
+          cb.checked = false;
+          cb.closest('.player').classList.remove('won');
+        }
+      });
+    }
+    div.classList.toggle('won', win.checked);
+  };
+  (p.colors || []).forEach(c => {
+    const b = div.querySelector('.pip[data-c="' + c + '"]');
+    if (b) b.setAttribute('aria-pressed','true');
+  });
+  div.querySelectorAll('.pip').forEach(b => b.onclick = () =>
+    b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') === 'true' ? 'false' : 'true'));
+  wireLifeStepper(div);
+  div.querySelector('.kill[data-act="remove"]').onclick = () => {
+    if ($('#players').children.length > 1) div.remove();
+  };
+  div.querySelector('.kill[data-act="rename"]').onclick = () => handleRenamePlayer(div.querySelector('.p-name'));
+  refreshRenameButton(div);
+  return div;
+}
+
+function resetForm(){
+  editingId = null;
+  $('#formTitle').textContent = 'Nuova partita';
+  $('#save').textContent = 'Salva partita';
+  $('#cancel').hidden = true;
+  $('#date').value = new Date().toISOString().slice(0,10);
+  $('#group').innerHTML = groupOptions((currentGroupFilter && currentGroupFilter !== 'all') ? currentGroupFilter : '');
+  $('#fmt').value = '';
+  $('#notes').value = '';
+  $('#players').innerHTML = '';
+  $('#players').append(playerRow(), playerRow());
+  alertMsg('');
+}
+
+function readForm(){
+  const players = [...$('#players').children].map((d, i) => {
+    const rawName = d.querySelector('.p-name').value;
+    const deckManual = d.querySelector('.p-deck-manual');
+    const deckSel = d.querySelector('.p-deck-select');
+    const deckVal = !deckManual.hidden
+      ? deckManual.value.trim()
+      : (deckSel.value === '__newdeck__' ? '' : deckSel.value);
+    return {
+      name: (rawName === '__new__' ? '' : rawName).trim(),
+      deck: deckVal,
+      desc: d.querySelector('.p-desc').value.trim(),
+      life: d.querySelector('.p-life').value === '' ? null : Number(d.querySelector('.p-life').value),
+      winner: d.querySelector('.p-win').checked,
+      colors: [...d.querySelectorAll('.pip[aria-pressed=true]')].map(b => b.dataset.c),
+      seat: i + 1
+    };
+  })
+  // tengo ogni riga in cui c'è qualcosa; se manca solo il nome, lo metto io
+  .filter(p => p.name || p.deck || p.desc || p.life !== null || p.colors.length)
+  .map(p => ({ ...p, name: p.name || 'Giocatore ' + p.seat }));
+  return {
+    date: $('#date').value, format: $('#fmt').value.trim(), notes: $('#notes').value.trim(),
+    group: (($('#group').value === '__newgroup__' ? '' : $('#group').value).trim()) || 'Generale', players
+  };
+}
+
+$('#group').onchange = () => handleGroupChange($('#group'));
+
+/* ---------- contatore punti vita a tutto schermo ---------- */
+let lcPlayers = [];
+
+function lcGridColumns(n){
+  if (n <= 1) return 1;
+  if (n === 2) return 1; // due giocatori: uno sopra l'altro, riquadri più grandi
+  return Math.ceil(Math.sqrt(n));
+}
+
+function renderLifeGrid(){
+  const n = lcPlayers.length;
+  const cols = lcGridColumns(n);
+  const rows = Math.ceil(n / cols);
+  $('#lcGrid').style.gridTemplateColumns = 'repeat(' + cols + ', 1fr)';
+  $('#lcGrid').style.gridTemplateRows = 'repeat(' + rows + ', 1fr)';
+  $('#lcGrid').innerHTML = lcPlayers.map((p, i) =>
+    '<div class="lc-card">' +
+      '<div class="lc-quads">' +
+        '<button class="lc-q lc-q-tl" data-lc="' + i + '" data-d="-5">&minus;5</button>' +
+        '<button class="lc-q lc-q-tr" data-lc="' + i + '" data-d="5">+5</button>' +
+        '<button class="lc-q lc-q-bl" data-lc="' + i + '" data-d="-1">&minus;1</button>' +
+        '<button class="lc-q lc-q-br" data-lc="' + i + '" data-d="1">+1</button>' +
+      '</div>' +
+      '<div class="lc-center">' +
+        '<div class="lc-name">' + esc(p.name) + '</div>' +
+        '<div class="lc-num" id="lcNum' + i + '">' + p.life + '</div>' +
+      '</div>' +
+    '</div>').join('');
+  $('#lcGrid').querySelectorAll('.lc-q').forEach(b => b.onclick = () => {
+    const i = Number(b.dataset.lc);
+    lcPlayers[i].life += Number(b.dataset.d);
+    $('#lcNum' + i).textContent = lcPlayers[i].life;
+  });
+}
+
+wireLifeStepper($('#startLife').closest('.field'));
+
+$('#openLifeCounter').onclick = () => {
+  const startLife = Number($('#startLife').value) || 20;
+  lcPlayers = [...$('#players').children].map(d => {
+    const sel = d.querySelector('.p-name');
+    const raw = sel.value;
+    return (raw && raw !== '__new__') ? raw : null;
+  }).filter(Boolean).map(name => ({ name, life: startLife }));
+  if (!lcPlayers.length){
+    alertMsg('Scegli almeno un giocatore prima di avviare il conteggio.');
+    return;
+  }
+  renderLifeGrid();
+  $('#lifeCounterModal').hidden = false;
+};
+
+$('#lcCancel').onclick = () => { $('#lifeCounterModal').hidden = true; };
+
+function rollHighRoll(){
+  const n = lcPlayers.length;
+  const maxVal = Math.max(20, n); // se per assurdo siete più di 20, allargo il range
+  const pool = Array.from({ length: maxVal }, (_, i) => i + 1);
+  for (let i = pool.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  const rolls = lcPlayers.map((p, i) => ({ name: p.name, roll: pool[i] }));
+  const top = Math.max(...rolls.map(r => r.roll));
+  rolls.sort((a,b) => b.roll - a.roll);
+  $('#highRollResults').innerHTML = rolls.map(r =>
+    '<div class="deckrow"><span>' + esc(r.name) + (r.roll === top ? ' 🏆' : '') + '</span><span>' + r.roll + '</span></div>'
+  ).join('');
+}
+
+$('#lcHighRoll').onclick = () => { rollHighRoll(); $('#highRollModal').hidden = false; };
+$('#reRollHighRoll').onclick = rollHighRoll;
+$('#closeHighRoll').onclick = () => { $('#highRollModal').hidden = true; };
+
+$('#lcFinish').onclick = () => {
+  [...$('#players').children].forEach(d => {
+    const sel = d.querySelector('.p-name');
+    const match = lcPlayers.find(p => p.name === sel.value);
+    if (match) d.querySelector('.p-life').value = match.life;
+  });
+  $('#lifeCounterModal').hidden = true;
+};
+
+$('#addPlayer').onclick = () => {
+  const row = playerRow();
+  $('#players').append(row);
+  row.querySelector('.p-name').focus();
+};
+
+$('#save').onclick = async () => {
+  if (!configured) return alertMsg('Il registro non è ancora collegato a un database: vedi l\u2019avviso in alto.');
+  const g = readForm();
+  if (g.players.length < 1) return alertMsg('Compila almeno un giocatore prima di salvare.');
+  if (!g.date) return alertMsg('Metti la data della partita.');
+  const wasEdit = !!editingId;
+  $('#save').disabled = true;
+  const error = await saveGame(g, editingId);
+  $('#save').disabled = false;
+  if (error) return alertMsg('Salvataggio non riuscito: ' + error.message);
+  resetForm();
+  await load();
+  $('#alert').innerHTML = '<div class="ok">' +
+    (wasEdit ? 'Modifiche salvate' : 'Partita salvata') +
+    ': ' + g.players.length + ' giocatori nel registro.</div>';
+};
+
+$('#cancel').onclick = () => { resetForm(); render(); $('#newGameModal').hidden = true; };
+
+function edit(id){
+  const g = games.find(x => x.id === id);
+  if (!g) return;
+  editingId = id;
+  $('#formTitle').textContent = 'Modifica partita';
+  $('#save').textContent = 'Salva modifiche';
+  $('#cancel').hidden = false;
+  $('#date').value = g.date;
+  $('#group').innerHTML = groupOptions(g.group === 'Generale' ? '' : (g.group || ''));
+  $('#fmt').value = g.format || '';
+  $('#notes').value = g.notes || '';
+  $('#players').innerHTML = '';
+  g.players.forEach(p => $('#players').append(playerRow(p)));
+  $('#historyModal').hidden = true;
+  $('#newGameModal').hidden = false;
+}
+
+async function remove(id){
+  if (!confirm('Cancellare questa partita dal registro? La vedranno cancellata anche gli altri.')) return;
+  const error = await deleteGame(id);
+  if (error) return alertMsg('Cancellazione non riuscita: ' + error.message);
+  if (editingId === id) resetForm();
+  await load();
+}
+
+/* ---------- render ---------- */
+function dateLabel(iso){
+  if (!iso) return 'Senza data';
+  const [y,m,d] = iso.split('-');
+  return d + '/' + m + '/' + y;
+}
+
+let currentGroupFilter = 'all';
+
+function renderGroupTabs(){
+  const groups = [...new Set(games.map(g => g.group))].sort((a,b) => a.localeCompare(b));
+  if (currentGroupFilter !== 'all' && !groups.includes(currentGroupFilter)) currentGroupFilter = 'all';
+  if (groups.length < 2){
+    $('#groupTabs').innerHTML = '';
+    currentGroupFilter = 'all';
+    return;
+  }
+  const tabs = ['all', ...groups];
+  $('#groupTabs').innerHTML = tabs.map(g =>
+    '<button class="gtab" data-g="' + esc(g) + '" aria-pressed="' + (g === currentGroupFilter) + '">' +
+      (g === 'all' ? 'Tutti i gruppi' : esc(g)) +
+    '</button>').join('');
+  $('#groupTabs').querySelectorAll('.gtab').forEach(b => b.onclick = () => {
+    currentGroupFilter = b.dataset.g;
+    render();
+  });
+}
+
+function visibleGames(){
+  return currentGroupFilter === 'all' ? games : games.filter(g => g.group === currentGroupFilter);
+}
+
+function computeTally(list){
+  const tally = {};
+  list.forEach(g => g.players.forEach(p => {
+    tally[p.name] = tally[p.name] || { g:0, w:0 };
+    tally[p.name].g++;
+    if (p.winner) tally[p.name].w++;
+  }));
+  return Object.entries(tally).map(([name,t]) => ({ name, g:t.g, w:t.w }))
+    .sort((a,b) => b.w - a.w || b.g - a.g);
+}
+
+function computeDeckStats(){
+  // volutamente su TUTTE le partite (non visibleGames()): le statistiche
+  // di un mazzo non dipendono dal gruppo con cui è stato giocato.
+  const sourceByName = new Map(decks.map(d => [d.name, d.source || '']));
+  const tally = {};
+  games.forEach(g => g.players.forEach(p => {
+    const deck = (p.deck || '').trim();
+    if (!deck) return;
+    tally[deck] = tally[deck] || { g:0, w:0 };
+    tally[deck].g++;
+    if (p.winner) tally[deck].w++;
+  }));
+  return Object.entries(tally).map(([deck,t]) => ({
+    deck, g:t.g, w:t.w, pct: t.g ? Math.round(t.w / t.g * 100) : 0,
+    source: sourceByName.get(deck) || ''
+  }));
+}
+
+let deckStatsFilter = 'all';
+
+function renderStatsSummary(all){
+  const groups = { brew: { g:0, w:0, n:0 }, precon: { g:0, w:0, n:0 }, '': { g:0, w:0, n:0 } };
+  all.forEach(r => {
+    const key = groups[r.source] !== undefined ? r.source : '';
+    groups[key].g += r.g; groups[key].w += r.w; groups[key].n++;
+  });
+  const card = (label, key) => {
+    const s = groups[key];
+    if (!s.n) return '';
+    const pct = s.g ? Math.round(s.w / s.g * 100) : 0;
+    const cls = key ? ' ' + key : '';
+    return '<div class="sumcard' + cls + '"><b>' + label + '</b><span>' + s.n + ' mazzi · ' + s.g + ' partite · ' + pct + '% vittorie</span></div>';
+  };
+  $('#deckStatsSummary').innerHTML =
+    card('Homebrew', 'brew') + card('Precon', 'precon') + card('Non classificato', '');
+}
+
+function renderSourceFilter(){
+  const opts = [['all','Tutti'], ['brew','Homebrew'], ['precon','Precon'], ['unclassified','Non classificato']];
+  $('#sourceFilter').innerHTML = opts.map(([v,label]) =>
+    '<button class="gtab" data-sf="' + v + '" aria-pressed="' + (v === deckStatsFilter) + '">' + label + '</button>').join('');
+  $('#sourceFilter').querySelectorAll('.gtab').forEach(b => b.onclick = () => {
+    deckStatsFilter = b.dataset.sf;
+    renderDeckStats();
+  });
+}
+
+function renderDeckStats(){
+  const all = computeDeckStats();
+  renderStatsSummary(all);
+  renderSourceFilter();
+
+  const filtered = all.filter(r => {
+    if (deckStatsFilter === 'all') return true;
+    if (deckStatsFilter === 'unclassified') return !r.source;
+    return r.source === deckStatsFilter;
+  });
+
+  const sortBy = $('#deckStatsSort').value;
+  const rows = filtered.sort((a,b) => {
+    if (sortBy === 'games') return b.g - a.g || b.pct - a.pct;
+    if (sortBy === 'name') return a.deck.localeCompare(b.deck);
+    return b.pct - a.pct || b.g - a.g;
+  });
+  $('#deckStatsList').innerHTML = rows.length ? rows.map(r =>
+    '<div class="deckstat">' +
+      '<div class="ds-head"><b>' + esc(r.deck) + sourceBadge(r.source) + '</b>' +
+        '<span class="ds-nums">' + r.g + ' partite · ' + r.w + ' vittorie · ' + r.pct + '%</span></div>' +
+      '<div class="ds-bar"><div class="ds-fill" style="width:' + r.pct + '%"></div></div>' +
+    '</div>').join('')
+    : '<p class="mini">Nessun mazzo in questa categoria.</p>';
+}
+
+$('#openDeckStats').onclick = () => { renderDeckStats(); $('#deckStatsModal').hidden = false; };
+$('#closeDeckStats').onclick = () => { $('#deckStatsModal').hidden = true; };
+$('#deckStatsModal').addEventListener('click', e => {
+  if (e.target.id === 'deckStatsModal') $('#deckStatsModal').hidden = true;
+});
+$('#deckStatsSort').onchange = renderDeckStats;
+
+function pctColor(pct, min, max){
+  const t = max === min ? 1 : (pct - min) / (max - min);
+  const hue = Math.round(t * 120); // 0 = rosso, 120 = verde
+  return 'hsl(' + hue + ', 65%, 45%)';
+}
+
+function renderStandings(){
+  const rows = computeTally(visibleGames());
+  const top = rows.length ? rows[0].w : 0;
+  const pcts = rows.map(t => t.g ? (t.w / t.g * 100) : 0);
+  const minPct = pcts.length ? Math.min(...pcts) : 0;
+  const maxPct = pcts.length ? Math.max(...pcts) : 0;
+  $('#standings').innerHTML = rows.map((t,i) => {
+    const pct = pcts[i];
+    const color = pctColor(pct, minPct, maxPct);
+    const slice = pct > 0 ? '<path d="' + pieSlicePath(15,15,13,0,Math.min(pct*3.6,359.9)) + '" fill="' + color + '"></path>' : '';
+    return '<div class="st' + (t.w === top && top > 0 ? ' lead' : '') + '">' +
+      '<div class="st-info"><b>' + esc(t.name) + '</b><span>' + t.w + ' vinte su ' + t.g + '</span></div>' +
+      '<div class="st-pie-wrap">' +
+        '<svg class="st-pie" viewBox="0 0 30 30" width="30" height="30">' +
+          '<circle cx="15" cy="15" r="13" fill="none" stroke="' + color + '" stroke-width="2"></circle>' +
+          slice +
+        '</svg>' +
+        '<span class="st-pie-label">Win rate</span>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+  $('#stEmpty').textContent = rows.length ? '' : 'Ancora nessuna partita qui: la classifica compare da qui.';
+}
+
+const PIE_COLORS = ['#9E7A31','#2C6FA8','#AF3A2C','#2E7A4E','#4B3F57','#8B857A','#6B4E9E','#C9762E'];
+
+const WINNER_TAGS = [
+  'King', 'Top Player', 'Bomber', 'King Slayer', 'Leggenda', 'Fenomeno',
+  'Il Boss', 'Sua Maestà', 'MVP', 'Il Cecchino', 'Highlander', 'Spaccatutto',
+  'Il Macellaio', 'Divinità del Mana', 'Sultano del Tavolo', 'Il Terminator',
+  'Archenemy', 'Il Pilota del Topdeck', 'Signore del Mana', 'God Hand',
+  'Il Combo Killer', 'Wincondition Vivente', 'Draft God', 'Il Boardwipe',
+  "L'Intoccabile", 'Numero Uno', 'Il Sicario del Tavolo', 'Player of the Year',
+  'Il Genio del Board State', 'Matto di Topdeck'
+];
+
+const LOSER_TAGS = [
+  'Pippa', 'Pippa al sugo', 'NPC', 'Forte forte', 'Bersaglio mobile',
+  'Carne da mazzo', 'Ultimo della classe', 'Il sacrificio rituale',
+  'Tappezzeria', 'Panchinaro', 'Fantasma del tavolo', 'Il fusibile',
+  'Vittima collaterale', 'Comparsa', 'Statista (de che)',
+  'Mana Screwato', 'Il Mulligan Perenne', 'Topdeck Sfortunato', 'Il Brick',
+  'Board Wiped', 'Sacco da Boxe', "L'Aggro Bait", 'Chump Blocker',
+  'Il Fodder', 'Terra Ferma', 'Il Draw-Go', 'Ultimo Piazzato',
+  'Skill Issue', 'Git Gud', 'Il Sagoma'
+];
+
+function randomFrom(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
+
+function pieSlicePath(cx, cy, r, startDeg, endDeg){
+  const toXY = deg => {
+    const rad = (deg - 90) * Math.PI / 180;
+    return [cx + r * Math.cos(rad), cy + r * Math.sin(rad)];
+  };
+  const [x1,y1] = toXY(startDeg), [x2,y2] = toXY(endDeg);
+  const big = (endDeg - startDeg) > 180 ? 1 : 0;
+  if (endDeg - startDeg >= 359.9){
+    return 'M ' + (cx-r) + ',' + cy + ' A ' + r + ',' + r + ' 0 1,1 ' + (cx+r) + ',' + cy +
+           ' A ' + r + ',' + r + ' 0 1,1 ' + (cx-r) + ',' + cy + ' Z';
+  }
+  return 'M ' + cx + ',' + cy + ' L ' + x1 + ',' + y1 + ' A ' + r + ',' + r + ' 0 ' + big + ',1 ' + x2 + ',' + y2 + ' Z';
+}
+
+function renderPie(){
+  const box = $('#pieChart');
+  if (currentGroupFilter === 'all'){ box.hidden = true; return; }
+  const rows = computeTally(visibleGames());
+  const totalWins = rows.reduce((s,t) => s + t.w, 0);
+  if (!totalWins){ box.hidden = true; return; }
+  box.hidden = false;
+  let angle = 0;
+  const slices = rows.filter(t => t.w > 0).map((t,i) => {
+    const share = t.w / totalWins * 360;
+    const path = pieSlicePath(70, 70, 68, angle, angle + share);
+    angle += share;
+    return '<path d="' + path + '" fill="' + PIE_COLORS[i % PIE_COLORS.length] + '"></path>';
+  }).join('');
+  const legend = rows.filter(t => t.w > 0).map((t,i) =>
+    '<div class="pl-row">' +
+      '<span class="pl-dot" style="background:' + PIE_COLORS[i % PIE_COLORS.length] + '"></span>' +
+      esc(t.name) + ' — ' + Math.round(t.w / totalWins * 100) + '% (' + t.w + '/' + totalWins + ')' +
+    '</div>').join('');
+  box.innerHTML =
+    '<svg viewBox="0 0 140 140" width="140" height="140">' + slices + '</svg>' +
+    '<div class="pl-legend">' + legend + '</div>';
+}
+
+function renderList(){
+  const shown = visibleGames();
+  $('#count').textContent = shown.length ? '(' + shown.length + ')' : '';
+  if (!shown.length){
+    $('#list').innerHTML = '<div class="empty">Nessuna partita qui: aprila da "Nuova partita" in cima alla pagina.</div>';
+    return;
+  }
+  const sorted = [...shown].sort((a,b) =>
+    (b.date || '').localeCompare(a.date || '') || (b.id || '').localeCompare(a.id || ''));
+  $('#list').innerHTML = sorted.map(g =>
+    '<div class="game-row" data-gameid="' + g.id + '">' +
+      '<span class="gr-date">' + dateLabel(g.date) + '</span>' +
+      '<span class="gr-players">' +
+        g.players.map(p =>
+          '<span class="gr-player' + (p.winner ? ' won' : '') + '">' +
+            (p.winner ? '🏆 ' : '') + esc(p.name) + ' ' +
+            (p.colors || []).map(c => '<i class="ms ms-' + c.toLowerCase() + ' ms-cost"></i>').join('') +
+          '</span>').join('') +
+      '</span>' +
+    '</div>').join('');
+  $('#list').querySelectorAll('[data-gameid]').forEach(el => el.onclick = () => renderGameDetail(el.dataset.gameid));
+}
+
+function renderGameDetail(id){
+  const g = games.find(x => x.id === id);
+  if (!g) return;
+  const winners = g.players.filter(p => p.winner).map(p => p.name);
+  const hasWinner = winners.length > 0;
+  $('#gdDate').textContent = dateLabel(g.date);
+  $('#gdMeta').textContent = (g.format || 'formato non indicato') + ' · ' + g.players.length + ' giocatori · gruppo: ' + g.group;
+  $('#gdPlayers').innerHTML = g.players.map(p =>
+    '<div class="gd-row' + (p.winner ? ' won' : '') + '">' +
+      '<div class="gd-name">' + esc(p.name) +
+        (p.winner
+          ? '<span class="crown">vincitore — ' + esc(randomFrom(WINNER_TAGS)) + '</span>'
+          : (hasWinner ? '<span class="taunt">' + esc(randomFrom(LOSER_TAGS)) + '</span>' : '')) +
+      '</div>' +
+      '<div class="gd-deck" title="' + esc(p.deck || '') + '">' +
+        '<div class="gd-deck-icons">' + (p.colors || []).map(c => '<i class="ms ms-' + c.toLowerCase() + ' ms-cost tag"></i>').join('') + '</div>' +
+        '<div class="gd-deck-name">' + esc(p.deck || '—') + '</div>' +
+      '</div>' +
+      '<div class="gd-life">' + (p.life === null || p.life === undefined ? '–' : p.life) + '</div>' +
+    '</div>').join('');
+  if (g.notes){ $('#gdNotes').hidden = false; $('#gdNotes').textContent = g.notes; }
+  else { $('#gdNotes').hidden = true; }
+  $('#gdEditActions').innerHTML = canEdit(g.created_by)
+    ? '<button class="btn link" id="gdEditBtn">Modifica</button> <button class="btn link" id="gdDelBtn">Cancella</button>'
+    : '';
+  if (canEdit(g.created_by)){
+    $('#gdEditBtn').onclick = () => { $('#gameDetailModal').hidden = true; edit(id); };
+    $('#gdDelBtn').onclick = () => { remove(id); $('#gameDetailModal').hidden = true; };
+  }
+  $('#exportGameImage').onclick = () => exportGameImage(g);
+  $('#gameDetailModal').hidden = false;
+}
+
+function idTimeSuffix(id){
+  const m = String(id).match(/^g(\d{13})/);
+  if (!m) return '';
+  const d = new Date(Number(m[1]));
+  const pad = n => String(n).padStart(2, '0');
+  return pad(d.getHours()) + '-' + pad(d.getMinutes()) + '-' + pad(d.getSeconds());
+}
+
+function exportGameImage(g){
+  if (typeof html2canvas === 'undefined'){
+    return alertMsg('Impossibile generare l\u2019immagine: la libreria non si è caricata (controlla la connessione e riprova).');
+  }
+  html2canvas($('#shareCard'), { backgroundColor: '#1E1B26', scale: 2 }).then(canvas => {
+    canvas.toBlob(blob => {
+      if (!blob) return;
+      const time = idTimeSuffix(g.id);
+      const fileName = 'partita_' + (g.date || 'magic') + (time ? '_' + time : '') + '.png';
+      const file = new File([blob], fileName, { type: 'image/png' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })){
+        navigator.share({ files: [file], title: 'Partita di Magic', text: 'Risultato della partita del ' + dateLabel(g.date) }).catch(() => {});
+      } else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = fileName;
+        document.body.appendChild(a); a.click(); a.remove();
+        URL.revokeObjectURL(url);
+      }
+    });
+  });
+}
+
+$('#closeGameDetail').onclick = () => { $('#gameDetailModal').hidden = true; };
+$('#gameDetailModal').addEventListener('click', e => {
+  if (e.target.id === 'gameDetailModal') $('#gameDetailModal').hidden = true;
+});
+
+function render(){ renderGroupTabs(); renderStandings(); renderPie(); renderList(); }
+
+/* ---------- accesso con account personale ---------- */
+let authMode = 'signin';
+
+function setAuthMode(mode){
+  authMode = mode;
+  document.getElementById('authGo').textContent = mode === 'signin' ? 'Accedi' : 'Crea account';
+  document.getElementById('authToggleMode').textContent = mode === 'signin'
+    ? 'Non hai un account? Registrati'
+    : 'Hai già un account? Accedi';
+  document.getElementById('authErr').textContent = '';
+  document.getElementById('authMsg').textContent = '';
+}
+
+function startApp(){
+  document.getElementById('lock').remove();
+  document.getElementById('app').hidden = false;
+  $('#whoAmI').textContent = 'Accesso come ' + currentUserEmail;
+  resetForm();
+  loadRoster();
+  loadDecks();
+  loadGroupsRoster();
+  load();
+  watchLive();
+}
+
+function onAuthed(session){
+  currentUserId = session.user.id;
+  currentUserEmail = session.user.email;
+  startApp();
+}
+
+async function doAuth(){
+  const email = document.getElementById('authEmail').value.trim();
+  const pw = document.getElementById('authPw').value;
+  const errBox = document.getElementById('authErr');
+  const msgBox = document.getElementById('authMsg');
+  errBox.textContent = '';
+  msgBox.textContent = '';
+  if (!email || !pw){ errBox.textContent = 'Inserisci email e password.'; return; }
+  if (authMode === 'signin'){
+    const { data, error } = await db.auth.signInWithPassword({ email, password: pw });
+    if (error) return errBox.textContent = 'Accesso non riuscito: ' + error.message;
+    onAuthed(data.session);
+  } else {
+    const { data, error } = await db.auth.signUp({ email, password: pw });
+    if (error) return errBox.textContent = 'Registrazione non riuscita: ' + error.message;
+    if (data.session){
+      onAuthed(data.session);
+    } else {
+      msgBox.textContent = 'Account creato. Controlla la tua email per confermarlo, poi accedi.';
+      setAuthMode('signin');
+    }
+  }
+}
+
+document.getElementById('authForm').addEventListener('submit', e => { e.preventDefault(); doAuth(); });
+document.getElementById('authToggleMode').onclick = () => setAuthMode(authMode === 'signin' ? 'signup' : 'signin');
+
+$('#logoutBtn').onclick = async () => {
+  if (!configured) return;
+  await db.auth.signOut();
+  location.reload();
+};
+
+(async () => {
+  if (!configured){
+    document.getElementById('authIntro').textContent = 'Il registro non è ancora collegato al database: configuralo nel codice.';
+    return;
+  }
+  const { data } = await db.auth.getSession();
+  if (data.session){
+    onAuthed(data.session);
+  } else {
+    document.getElementById('authEmail').focus();
+  }
+})();
+</script>
