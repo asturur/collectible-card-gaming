@@ -73,9 +73,17 @@ File originale di riferimento: `../registro-partite-mtg.html` (2120 righe).
   il mazzo scelto (comandante + carte, origine "precon", colori auto-rilevati).
   Build e test verificati.
 
-- [ ] **Step 7 — Form "Nuova Partita"**
+- [x] **Step 7 — Form "Nuova Partita"**
   Giocatori dinamici, select mazzo/nome, punti vita, vincitore (switch), note.
   Solo UI, senza salvataggio.
+  Fatto: `client/src/components/mtglog/GameForm.tsx`, raggiungibile da
+  "▶ Nuova partita" nella home del registro. Gruppo/data/formato, righe
+  giocatore dinamiche (+ Aggiungi/togli giocatore) con nome (datalist dalla
+  rubrica), mazzo (select dai mazzi salvati o testo libero, colori
+  precompilati dal mazzo scelto), descrizione, pallini colore, switch
+  vincitore (un solo vincitore alla volta) e punti vita, più punti vita
+  iniziali e appunti generali. Il bottone "Salva partita" mostra solo un
+  messaggio: il salvataggio arriva nello Step 8. Build e test verificati.
 
 - [ ] **Step 8 — Salvataggio partite + realtime**
   Collegare il form al DB (CRUD partite) + sincronizzazione multi-dispositivo

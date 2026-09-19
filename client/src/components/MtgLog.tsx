@@ -6,12 +6,13 @@ import PlayersRoster from './mtglog/PlayersRoster';
 import GroupsRoster from './mtglog/GroupsRoster';
 import DeckList from './mtglog/DeckList';
 import DeckEditor from './mtglog/DeckEditor';
+import GameForm from './mtglog/GameForm';
 
 interface MtgLogProps {
   onBack: () => void;
 }
 
-type MtgLogView = 'home' | 'players' | 'groups' | 'decks' | 'deckEditor';
+type MtgLogView = 'home' | 'players' | 'groups' | 'decks' | 'deckEditor' | 'newGame';
 
 /**
  * Registro Partite MTG — porting in corso (vedi plans/PLAN_5_MTG_LOG_PORTING.md).
@@ -115,6 +116,10 @@ export default function MtgLog({ onBack }: MtgLogProps) {
     );
   }
 
+  if (view === 'newGame') {
+    return <GameForm onBack={() => setView('home')} />;
+  }
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-zaff-bg px-4">
       <div className="w-full max-w-md rounded-2xl border border-zaff-border bg-zaff-surface p-8 shadow-xl">
@@ -122,6 +127,14 @@ export default function MtgLog({ onBack }: MtgLogProps) {
           Registro Partite
         </h1>
         <p className="mb-8 text-center text-zaff-muted">Accesso come {session.user.email}</p>
+
+        <button
+          type="button"
+          onClick={() => setView('newGame')}
+          className="mb-3 w-full rounded-lg bg-zaff-primary px-4 py-3 font-semibold text-white transition-colors hover:bg-zaff-primary-hover"
+        >
+          ▶ Nuova partita
+        </button>
 
         <button
           type="button"
