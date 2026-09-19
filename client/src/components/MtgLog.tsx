@@ -2,10 +2,13 @@ import { useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { isSupabaseConfigured, supabase } from '../services/supabase';
 import AuthScreen from './mtglog/AuthScreen';
+import PlayersRoster from './mtglog/PlayersRoster';
 
 interface MtgLogProps {
   onBack: () => void;
 }
+
+type MtgLogView = 'home' | 'players';
 
 /**
  * Registro Partite MTG — porting in corso (vedi plans/PLAN_5_MTG_LOG_PORTING.md).
@@ -14,6 +17,7 @@ interface MtgLogProps {
  */
 export default function MtgLog({ onBack }: MtgLogProps) {
   const [session, setSession] = useState<Session | null | 'loading'>('loading');
+  const [view, setView] = useState<MtgLogView>('home');
 
   useEffect(() => {
     if (!isSupabaseConfigured || !supabase) {
@@ -61,6 +65,10 @@ export default function MtgLog({ onBack }: MtgLogProps) {
     return <AuthScreen onBack={onBack} />;
   }
 
+  if (view === 'players') {
+    return <PlayersRoster userId={session.user.id} onBack={() => setView('home')} />;
+  }
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-zaff-bg px-4">
       <div className="w-full max-w-md rounded-2xl border border-zaff-border bg-zaff-surface p-8 shadow-xl">
@@ -71,8 +79,16 @@ export default function MtgLog({ onBack }: MtgLogProps) {
 
         <button
           type="button"
+          onClick={() => setView('players')}
+          className="w-full rounded-lg bg-zaff-primary px-4 py-3 font-semibold text-white transition-colors hover:bg-zaff-primary-hover"
+        >
+          👤 Gestisci giocatori
+        </button>
+
+        <button
+          type="button"
           onClick={() => supabase?.auth.signOut()}
-          className="w-full rounded-lg border border-zaff-border px-4 py-3 font-semibold text-zaff-text transition-colors hover:bg-zaff-bg"
+          className="mt-3 w-full rounded-lg border border-zaff-border px-4 py-3 font-semibold text-zaff-text transition-colors hover:bg-zaff-bg"
         >
           Esci
         </button>

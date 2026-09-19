@@ -13,3 +13,14 @@ export const isSupabaseConfigured = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 
 export const supabase =
   SUPABASE_URL && SUPABASE_ANON_KEY ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+
+// Table names in the shared Supabase project (see registro-partite-mtg.html)
+export const TABLE_GAMES = 'partite';
+export const TABLE_PLAYERS = 'giocatori';
+export const TABLE_DECKS = 'mazzi';
+export const TABLE_GROUPS = 'gruppi';
+
+/** A row is editable by its owner; legacy rows without an owner are editable by anyone. */
+export function canEdit(createdBy: string | null | undefined, currentUserId: string | undefined): boolean {
+  return !createdBy || createdBy === currentUserId;
+}

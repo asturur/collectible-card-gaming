@@ -28,8 +28,13 @@ File originale di riferimento: `../registro-partite-mtg.html` (2120 righe).
   `supabase.auth.getSession()` + `onAuthStateChange`, mostra login o schermata
   autenticata con logout. Build e test verificati.
 
-- [ ] **Step 2 — Rubrica giocatori**
+- [x] **Step 2 — Rubrica giocatori**
   Lista, aggiungi, rinomina (con propagazione ovunque), elimina.
+  Fatto: `client/src/components/mtglog/PlayersRoster.tsx`, raggiungibile da
+  "Gestisci giocatori" nella home del registro. Costanti tabelle (`partite`,
+  `giocatori`, `mazzi`, `gruppi`) e `canEdit()` centralizzate in `services/supabase.ts`.
+  Rinomina inline (invece del prompt nativo dell'originale) con propagazione
+  sulle partite salvate. Build e test verificati.
 
 - [ ] **Step 3 — Rubrica gruppi**
   Stesso pattern dei giocatori + tab filtro per gruppo.
