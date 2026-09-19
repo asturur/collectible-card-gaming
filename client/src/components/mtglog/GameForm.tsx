@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { supabase, TABLE_DECKS, TABLE_GROUPS, TABLE_PLAYERS } from '../../services/supabase';
+import { subscribeToTable, supabase, TABLE_DECKS, TABLE_GAMES, TABLE_GROUPS, TABLE_PLAYERS } from '../../services/supabase';
 
 interface GameFormProps {
   onBack: () => void;
@@ -52,22 +52,39 @@ export default function GameForm({ onBack }: GameFormProps) {
   const [startLife, setStartLife] = useState(20);
   const [players, setPlayers] = useState<PlayerRow[]>([emptyPlayerRow(), emptyPlayerRow()]);
   const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  async function loadOptions() {
+    if (!supabase) return;
+    const [groupsRes, playersRes, decksRes] = await Promise.all([
+      supabase.from(TABLE_GROUPS).select('name').order('name'),
+      supabase.from(TABLE_PLAYERS).select('name').order('name'),
+      supabase.from(TABLE_DECKS).select('name, colors').order('name'),
+    ]);
+    setGroups((groupsRes.data ?? []).map((r) => r.name));
+    setPlayerNames((playersRes.data ?? []).map((r) => r.name));
+    setDecks((decksRes.data ?? []).map((r) => ({ name: r.name, colors: r.colors ?? [] })));
+  }
 
   useEffect(() => {
     if (!supabase) {
       setLoading(false);
       return;
     }
-    Promise.all([
-      supabase.from(TABLE_GROUPS).select('name').order('name'),
-      supabase.from(TABLE_PLAYERS).select('name').order('name'),
-      supabase.from(TABLE_DECKS).select('name, colors').order('name'),
-    ]).then(([groupsRes, playersRes, decksRes]) => {
-      setGroups((groupsRes.data ?? []).map((r) => r.name));
-      setPlayerNames((playersRes.data ?? []).map((r) => r.name));
-      setDecks((decksRes.data ?? []).map((r) => ({ name: r.name, colors: r.colors ?? [] })));
-      setLoading(false);
-    });
+    loadOptions().finally(() => setLoading(false));
+
+    // Se un altro dispositivo aggiunge/rinomina giocatori, mazzi o gruppi
+    // mentre questo form è aperto, le liste si aggiornano da sole.
+    const unsubGroups = subscribeToTable(TABLE_GROUPS, loadOptions);
+    const unsubPlayers = subscribeToTable(TABLE_PLAYERS, loadOptions);
+    const unsubDecks = subscribeToTable(TABLE_DECKS, loadOptions);
+    return () => {
+      unsubGroups();
+      unsubPlayers();
+      unsubDecks();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function updatePlayer(index: number, patch: Partial<PlayerRow>) {
@@ -103,8 +120,53 @@ export default function GameForm({ onBack }: GameFormProps) {
     updatePlayer(index, { deckSelect: value, colors: chosen ? new Set(chosen.colors) : players[index].colors });
   }
 
-  function handleSaveClick() {
-    setMessage('Il salvataggio delle partite sarà disponibile nel prossimo step.');
+  async function handleSaveClick() {
+    setMessage('');
+    setError('');
+    if (!supabase) {
+      setError('Supabase non configurato.');
+      return;
+    }
+
+    const readPlayers = players
+      .map((p, i) => {
+        const deckVal = p.deckMode === 'manual' ? p.deckManual.trim() : p.deckSelect;
+        return {
+          name: p.name.trim(),
+          deck: deckVal,
+          desc: p.desc.trim(),
+          life: p.life === '' ? null : Number(p.life),
+          winner: p.winner,
+          colors: [...p.colors],
+          seat: i + 1,
+        };
+      })
+      .filter((p) => p.name || p.deck || p.desc || p.life !== null || p.colors.length)
+      .map((p) => ({ ...p, name: p.name || 'Giocatore ' + p.seat }));
+
+    const row = {
+      id: 'g' + Date.now() + Math.random().toString(36).slice(2, 7),
+      date,
+      format: format.trim(),
+      notes: notes.trim(),
+      players: readPlayers,
+      gruppo: group.trim() || 'Generale',
+    };
+
+    setSaving(true);
+    const { error: insertError } = await supabase.from(TABLE_GAMES).insert(row);
+    setSaving(false);
+    if (insertError) {
+      setError('Salvataggio partita non riuscito: ' + insertError.message);
+      return;
+    }
+
+    setMessage('Partita salvata.');
+    setGroup('');
+    setDate(new Date().toISOString().slice(0, 10));
+    setFormat('');
+    setNotes('');
+    setPlayers([emptyPlayerRow(), emptyPlayerRow()]);
   }
 
   if (loading) {
@@ -318,12 +380,18 @@ export default function GameForm({ onBack }: GameFormProps) {
         <button
           type="button"
           onClick={handleSaveClick}
-          className="w-full rounded-lg bg-zaff-primary px-4 py-3 font-semibold text-white transition-colors hover:bg-zaff-primary-hover"
+          disabled={saving}
+          className="w-full rounded-lg bg-zaff-primary px-4 py-3 font-semibold text-white transition-colors hover:bg-zaff-primary-hover disabled:opacity-60"
         >
           Salva partita
         </button>
 
-        {message && <p className="mt-3 text-center text-sm text-zaff-muted">{message}</p>}
+        {message && <p className="mt-3 text-center text-sm text-green-400">{message}</p>}
+        {error && (
+          <p className="mt-3 text-center text-sm text-red-400" role="alert">
+            {error}
+          </p>
+        )}
 
         <button
           type="button"

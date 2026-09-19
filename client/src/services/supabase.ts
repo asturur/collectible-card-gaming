@@ -24,3 +24,19 @@ export const TABLE_GROUPS = 'gruppi';
 export function canEdit(createdBy: string | null | undefined, currentUserId: string | undefined): boolean {
   return !createdBy || createdBy === currentUserId;
 }
+
+/**
+ * Sottoscrive un canale Realtime alle modifiche di una tabella e richiama
+ * `onChange` per ogni evento (insert/update/delete), così più dispositivi
+ * restano sincronizzati. Restituisce una funzione di cleanup.
+ */
+export function subscribeToTable(table: string, onChange: () => void): () => void {
+  if (!supabase) return () => {};
+  const channel = supabase
+    .channel(table + '-live')
+    .on('postgres_changes', { event: '*', schema: 'public', table }, onChange)
+    .subscribe();
+  return () => {
+    supabase?.removeChannel(channel);
+  };
+}

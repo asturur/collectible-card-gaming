@@ -85,9 +85,18 @@ File originale di riferimento: `../registro-partite-mtg.html` (2120 righe).
   iniziali e appunti generali. Il bottone "Salva partita" mostra solo un
   messaggio: il salvataggio arriva nello Step 8. Build e test verificati.
 
-- [ ] **Step 8 — Salvataggio partite + realtime**
+- [x] **Step 8 — Salvataggio partite + realtime**
   Collegare il form al DB (CRUD partite) + sincronizzazione multi-dispositivo
   (Supabase Realtime, `postgres_changes`).
+  Fatto: `subscribeToTable()` aggiunta in `services/supabase.ts` (helper
+  Realtime generico, canale `<tabella>-live` su `postgres_changes`).
+  `GameForm.tsx` salva davvero la partita su `partite` (insert, id generato
+  come nell'originale) e usa `subscribeToTable` per tenere aggiornate le
+  select di giocatori/mazzi/gruppi se cambiano da un altro dispositivo
+  mentre il form è aperto. Modifica/cancellazione partite (update/delete)
+  rimandate allo Step 9 insieme alla lista da cui si aprono. Build e test
+  verificati (verifica salvataggio da controllare lato utente su Supabase,
+  la lista arriva nello Step 9).
 
 - [ ] **Step 9 — Lista/dettaglio partite**
   Storico partite, filtro per gruppo, appellativi scherzosi random per vincitore/perdenti.
