@@ -3,12 +3,13 @@ import type { Session } from '@supabase/supabase-js';
 import { isSupabaseConfigured, supabase } from '../services/supabase';
 import AuthScreen from './mtglog/AuthScreen';
 import PlayersRoster from './mtglog/PlayersRoster';
+import GroupsRoster from './mtglog/GroupsRoster';
 
 interface MtgLogProps {
   onBack: () => void;
 }
 
-type MtgLogView = 'home' | 'players';
+type MtgLogView = 'home' | 'players' | 'groups';
 
 /**
  * Registro Partite MTG — porting in corso (vedi plans/PLAN_5_MTG_LOG_PORTING.md).
@@ -69,6 +70,10 @@ export default function MtgLog({ onBack }: MtgLogProps) {
     return <PlayersRoster userId={session.user.id} onBack={() => setView('home')} />;
   }
 
+  if (view === 'groups') {
+    return <GroupsRoster userId={session.user.id} onBack={() => setView('home')} />;
+  }
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-zaff-bg px-4">
       <div className="w-full max-w-md rounded-2xl border border-zaff-border bg-zaff-surface p-8 shadow-xl">
@@ -83,6 +88,14 @@ export default function MtgLog({ onBack }: MtgLogProps) {
           className="w-full rounded-lg bg-zaff-primary px-4 py-3 font-semibold text-white transition-colors hover:bg-zaff-primary-hover"
         >
           👤 Gestisci giocatori
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setView('groups')}
+          className="mt-3 w-full rounded-lg bg-zaff-primary px-4 py-3 font-semibold text-white transition-colors hover:bg-zaff-primary-hover"
+        >
+          🏷️ Gestisci gruppi
         </button>
 
         <button

@@ -36,8 +36,12 @@ File originale di riferimento: `../registro-partite-mtg.html` (2120 righe).
   Rinomina inline (invece del prompt nativo dell'originale) con propagazione
   sulle partite salvate. Build e test verificati.
 
-- [ ] **Step 3 — Rubrica gruppi**
+- [x] **Step 3 — Rubrica gruppi**
   Stesso pattern dei giocatori + tab filtro per gruppo.
+  Fatto: `client/src/components/mtglog/GroupsRoster.tsx`, raggiungibile da
+  "Gestisci gruppi" nella home del registro (stesso pattern di PlayersRoster).
+  Nota: il tab filtro per gruppo sulla lista partite è rimandato allo Step 9,
+  quando esisterà una lista partite da filtrare. Build e test verificati.
 
 - [ ] **Step 4 — Lista/visualizzazione mazzi**
   Solo lettura: lista mazzi salvati, dettaglio, badge Homebrew/Precon.
