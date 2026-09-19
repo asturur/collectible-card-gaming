@@ -8,12 +8,13 @@ import DeckList from './mtglog/DeckList';
 import DeckEditor from './mtglog/DeckEditor';
 import GameForm from './mtglog/GameForm';
 import GameList, { type Game } from './mtglog/GameList';
+import GameStats from './mtglog/GameStats';
 
 interface MtgLogProps {
   onBack: () => void;
 }
 
-type MtgLogView = 'home' | 'players' | 'groups' | 'decks' | 'deckEditor' | 'newGame' | 'games';
+type MtgLogView = 'home' | 'players' | 'groups' | 'decks' | 'deckEditor' | 'newGame' | 'games' | 'stats';
 
 /**
  * Registro Partite MTG — porting in corso (vedi plans/PLAN_5_MTG_LOG_PORTING.md).
@@ -131,6 +132,10 @@ export default function MtgLog({ onBack }: MtgLogProps) {
     );
   }
 
+  if (view === 'stats') {
+    return <GameStats onBack={() => setView('home')} />;
+  }
+
   if (view === 'newGame') {
     return (
       <GameForm
@@ -193,6 +198,14 @@ export default function MtgLog({ onBack }: MtgLogProps) {
           className="mt-3 w-full rounded-lg bg-zaff-primary px-4 py-3 font-semibold text-white transition-colors hover:bg-zaff-primary-hover"
         >
           🃏 Mazzi salvati
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setView('stats')}
+          className="mt-3 w-full rounded-lg bg-zaff-primary px-4 py-3 font-semibold text-white transition-colors hover:bg-zaff-primary-hover"
+        >
+          📊 Statistiche e classifica
         </button>
 
         <button

@@ -119,9 +119,16 @@ File originale di riferimento: `../registro-partite-mtg.html` (2120 righe).
   file (nome `partita_<data>_<ora>.png`, stesso schema dell'originale). Build e
   test verificati.
 
-- [ ] **Step 11 — Statistiche e classifica**
+- [x] **Step 11 — Statistiche e classifica**
   Percentuale vittorie per mazzo, distinzione Homebrew/Precon, classifica giocatori
   con mini grafici a torta.
+  Fatto: `client/src/components/mtglog/GameStats.tsx`, raggiungibile da "📊
+  Statistiche e classifica" nella home del registro. Tab filtro per gruppo (come
+  in GameList), classifica giocatori (vinte/giocate, mini donut win-rate colorato
+  rosso→verde), torta a spicchi con distribuzione vittorie quando un gruppo
+  specifico è selezionato, sezione statistiche mazzi (card riepilogo Homebrew/
+  Precon/Non classificato, filtro per origine, ordinamento per % vittorie/partite/
+  nome, barra di progresso per mazzo). Build e test verificati.
 
 - [ ] **Step 12 — Modalità "Conta i punti vita"**
   Schermo intero, stepper +/- a 4 zone d'angolo, funzione High Roll (d20).
