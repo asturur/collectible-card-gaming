@@ -93,6 +93,7 @@ export default function JoinScreen({ onJoin }: JoinScreenProps) {
         <p className="mb-8 text-center text-zaff-muted">
           Collectible Card Gaming Platform
         </p>
+        <p className="mb-8 text-center text-zaff-text">CIAO</p>
 
         <label
           htmlFor="server-address"
