@@ -18,7 +18,6 @@ export const supabase =
 export const TABLE_GAMES = 'partite';
 export const TABLE_PLAYERS = 'giocatori';
 export const TABLE_DECKS = 'mazzi';
-export const TABLE_GROUPS = 'gruppi';
 
 /** A row is editable by its owner; legacy rows without an owner are editable by anyone. */
 export function canEdit(createdBy: string | null | undefined, currentUserId: string | undefined): boolean {

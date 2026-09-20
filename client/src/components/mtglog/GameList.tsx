@@ -5,7 +5,6 @@ import { ManaIcons } from './ManaIcon';
 import { dateLabel, rowToGame } from './stats';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
-import FilterTabs from '../ui/FilterTabs';
 import { HEADING_SECTION, TEXT_MINI, TEXT_MUTED } from '../ui/styles';
 
 export interface GamePlayer {
@@ -66,14 +65,13 @@ function idTimeSuffix(id: string): string {
   return `${pad(d.getHours())}-${pad(d.getMinutes())}-${pad(d.getSeconds())}`;
 }
 
-/** Storico partite: lista + dettaglio, filtro per gruppo (se ce n'è più di uno),
- *  appellativi scherzosi random per vincitore/perdenti nel dettaglio.
+/** Storico partite: lista + dettaglio, appellativi scherzosi random per
+ *  vincitore/perdenti nel dettaglio.
  *  Va mostrata dentro un `Modal`; il dettaglio partita si apre come riquadro sopra. */
 export default function GameList({ userId, onEdit }: GameListProps) {
   const [games, setGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [groupFilter, setGroupFilter] = useState('all');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const shareCardRef = useRef<HTMLDivElement>(null);
@@ -103,13 +101,6 @@ export default function GameList({ userId, onEdit }: GameListProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const groups = useMemo(() => [...new Set(games.map((g) => g.group))].sort((a, b) => a.localeCompare(b)), [games]);
-
-  useEffect(() => {
-    if (groupFilter !== 'all' && !groups.includes(groupFilter)) setGroupFilter('all');
-  }, [groups, groupFilter]);
-
-  const visibleGames = groupFilter === 'all' ? games : games.filter((g) => g.group === groupFilter);
   const selectedGame = games.find((g) => g.id === selectedId) ?? null;
 
   const hasWinner = selectedGame ? selectedGame.players.some((p) => p.winner) : false;
@@ -165,24 +156,15 @@ export default function GameList({ userId, onEdit }: GameListProps) {
 
   return (
     <>
-      {groups.length >= 2 && (
-        <FilterTabs
-          className="mb-3"
-          value={groupFilter}
-          onChange={setGroupFilter}
-          options={[{ value: 'all', label: 'Tutti i gruppi' }, ...groups.map((g) => ({ value: g, label: g }))]}
-        />
-      )}
-
-      {visibleGames.length === 0 ? (
+      {games.length === 0 ? (
         <div className="rounded-lg border border-dashed border-zaff-border p-6 text-center text-sm text-zaff-muted">
           Nessuna partita qui: aprila da &quot;Nuova partita&quot; in cima alla pagina.
         </div>
       ) : (
         <>
-          <p className={`mb-2 ${TEXT_MINI}`}>{visibleGames.length} partite</p>
+          <p className={`mb-2 ${TEXT_MINI}`}>{games.length} partite</p>
           <ul>
-            {visibleGames.map((g) => (
+            {games.map((g) => (
               <li key={g.id}>
                 <button
                   type="button"
@@ -223,8 +205,7 @@ export default function GameList({ userId, onEdit }: GameListProps) {
             <p className="mb-0.5 text-[11px] uppercase tracking-[0.06em] text-zaff-muted">Registro partite di Magic</p>
             <h2 className={HEADING_SECTION}>{dateLabel(selectedGame.date)}</h2>
             <p className={`mb-3 ${TEXT_MINI}`}>
-              {selectedGame.format || 'formato non indicato'} · {selectedGame.players.length} giocatori · gruppo:{' '}
-              {selectedGame.group}
+              {selectedGame.format || 'formato non indicato'} · {selectedGame.players.length} giocatori
             </p>
 
             <div>

@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import { subscribeToTable, supabase, TABLE_DECKS, TABLE_GAMES, TABLE_GROUPS, TABLE_PLAYERS } from '../../services/supabase';
+import { subscribeToTable, supabase, TABLE_DECKS, TABLE_GAMES, TABLE_PLAYERS } from '../../services/supabase';
 import type { Game } from './GameList';
 import LifeCounter from './LifeCounter';
 import { ManaPips } from './ManaIcon';
 import Button from '../ui/Button';
 import NumberStepper from '../ui/NumberStepper';
-import { SelectField, TextAreaField, TextField } from '../ui/Field';
+import { TextAreaField, TextField } from '../ui/Field';
 import { cx, FIELD_CONTROL_SM, FIELD_LABEL, TEXT_MINI, TEXT_MUTED } from '../ui/styles';
 
 interface GameFormProps {
@@ -49,12 +49,10 @@ function emptyPlayerRow(): PlayerRow {
  *  punti vita, vincitore, note. Salva (insert) o aggiorna (update) su `partite`.
  *  Va mostrato dentro un `Modal` (titolo e chiusura li mette il riquadro). */
 export default function GameForm({ editingGame, onBack, onSaved }: GameFormProps) {
-  const [groups, setGroups] = useState<string[]>([]);
   const [playerNames, setPlayerNames] = useState<string[]>([]);
   const [decks, setDecks] = useState<DeckOption[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [group, setGroup] = useState('');
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [format, setFormat] = useState('');
   const [notes, setNotes] = useState('');
@@ -67,12 +65,10 @@ export default function GameForm({ editingGame, onBack, onSaved }: GameFormProps
 
   async function loadOptions(): Promise<DeckOption[]> {
     if (!supabase) return [];
-    const [groupsRes, playersRes, decksRes] = await Promise.all([
-      supabase.from(TABLE_GROUPS).select('name').order('name'),
+    const [playersRes, decksRes] = await Promise.all([
       supabase.from(TABLE_PLAYERS).select('name').order('name'),
       supabase.from(TABLE_DECKS).select('name, colors').order('name'),
     ]);
-    setGroups((groupsRes.data ?? []).map((r) => r.name));
     setPlayerNames((playersRes.data ?? []).map((r) => r.name));
     const deckList = (decksRes.data ?? []).map((r) => ({ name: r.name, colors: r.colors ?? [] }));
     setDecks(deckList);
@@ -89,7 +85,6 @@ export default function GameForm({ editingGame, onBack, onSaved }: GameFormProps
         setDate(editingGame.date);
         setFormat(editingGame.format);
         setNotes(editingGame.notes);
-        setGroup(editingGame.group === 'Generale' ? '' : editingGame.group);
         setPlayers(
           editingGame.players.map((p) => {
             const manual = Boolean(p.deck) && !deckList.some((d) => d.name === p.deck);
@@ -109,13 +104,11 @@ export default function GameForm({ editingGame, onBack, onSaved }: GameFormProps
       setLoading(false);
     });
 
-    // Se un altro dispositivo aggiunge/rinomina giocatori, mazzi o gruppi
+    // Se un altro dispositivo aggiunge/rinomina giocatori o mazzi
     // mentre questo form è aperto, le liste si aggiornano da sole.
-    const unsubGroups = subscribeToTable(TABLE_GROUPS, loadOptions);
     const unsubPlayers = subscribeToTable(TABLE_PLAYERS, loadOptions);
     const unsubDecks = subscribeToTable(TABLE_DECKS, loadOptions);
     return () => {
-      unsubGroups();
       unsubPlayers();
       unsubDecks();
     };
@@ -199,7 +192,6 @@ export default function GameForm({ editingGame, onBack, onSaved }: GameFormProps
       format: format.trim(),
       notes: notes.trim(),
       players: readPlayers,
-      gruppo: group.trim() || 'Generale',
     };
 
     setSaving(true);
@@ -220,7 +212,6 @@ export default function GameForm({ editingGame, onBack, onSaved }: GameFormProps
     }
 
     setMessage('Partita salvata.');
-    setGroup('');
     setDate(new Date().toISOString().slice(0, 10));
     setFormat('');
     setNotes('');
@@ -244,15 +235,6 @@ export default function GameForm({ editingGame, onBack, onSaved }: GameFormProps
 
   return (
     <>
-      <SelectField id="group" label="Gruppo" density="compact" value={group} onChange={(e) => setGroup(e.target.value)}>
-        <option value="">Generale</option>
-        {groups.map((g) => (
-          <option key={g} value={g}>
-            {g}
-          </option>
-        ))}
-      </SelectField>
-
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <TextField
           id="date"

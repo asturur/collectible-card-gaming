@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { isSupabaseConfigured, subscribeToTable, supabase, TABLE_GAMES } from '../services/supabase';
 import AuthScreen from './mtglog/AuthScreen';
 import PlayersRoster from './mtglog/PlayersRoster';
-import GroupsRoster from './mtglog/GroupsRoster';
 import DeckList from './mtglog/DeckList';
 import DeckEditor from './mtglog/DeckEditor';
 import GameForm from './mtglog/GameForm';
@@ -13,7 +12,6 @@ import Standings from './mtglog/Standings';
 import { computeTally, rowToGame } from './mtglog/stats';
 import Modal from './ui/Modal';
 import Button, { ButtonLink } from './ui/Button';
-import FilterTabs from './ui/FilterTabs';
 import { cx, HEADING_PAGE, PANEL, TEXT_MUTED } from './ui/styles';
 import { navLinkProps } from '../router';
 
@@ -22,7 +20,7 @@ interface MtgLogProps {
   onOpenZaff: () => void;
 }
 
-type MtgLogModal = null | 'players' | 'groups' | 'decks' | 'newGame' | 'games' | 'stats';
+type MtgLogModal = null | 'players' | 'decks' | 'newGame' | 'games' | 'stats';
 
 /** Icona "mazzo di carte" del bottone Gestisci mazzi, come nell'app originale. */
 function DeckIcon() {
@@ -52,7 +50,6 @@ export default function MtgLog({ onOpenZaff }: MtgLogProps) {
   >(null);
   const [editingGame, setEditingGame] = useState<Game | null>(null);
   const [games, setGames] = useState<Game[]>([]);
-  const [groupFilter, setGroupFilter] = useState('all');
 
   useEffect(() => {
     if (!isSupabaseConfigured || !supabase) {
@@ -83,12 +80,6 @@ export default function MtgLog({ onOpenZaff }: MtgLogProps) {
     loadGames();
     return subscribeToTable(TABLE_GAMES, loadGames);
   }, [loggedIn]);
-
-  const groups = useMemo(() => [...new Set(games.map((g) => g.group))].sort((a, b) => a.localeCompare(b)), [games]);
-
-  useEffect(() => {
-    if (groupFilter !== 'all' && !groups.includes(groupFilter)) setGroupFilter('all');
-  }, [groups, groupFilter]);
 
   if (!isSupabaseConfigured) {
     return (
@@ -124,8 +115,7 @@ export default function MtgLog({ onOpenZaff }: MtgLogProps) {
   }
 
   const userId = session.user.id;
-  const visibleGames = groupFilter === 'all' ? games : games.filter((g) => g.group === groupFilter);
-  const standings = computeTally(visibleGames);
+  const standings = computeTally(games);
 
   function closeModal() {
     setOpenModal(null);
@@ -174,7 +164,6 @@ export default function MtgLog({ onOpenZaff }: MtgLogProps) {
 
               <div className="flex flex-wrap gap-2.5 sm:justify-end">
                 <Button onClick={() => setOpenModal('players')}>👤 Gestisci giocatori</Button>
-                <Button onClick={() => setOpenModal('groups')}>🏷️ Gestisci gruppi</Button>
                 <Button onClick={() => setOpenModal('decks')}>
                   <DeckIcon /> Gestisci mazzi
                 </Button>
@@ -182,19 +171,13 @@ export default function MtgLog({ onOpenZaff }: MtgLogProps) {
             </div>
           </div>
 
-          {groups.length >= 2 && (
-            <FilterTabs
-              className="mt-4"
-              value={groupFilter}
-              onChange={setGroupFilter}
-              options={[
-                { value: 'all', label: 'Tutti i gruppi' },
-                ...groups.map((g) => ({ value: g, label: g })),
-              ]}
-            />
-          )}
+          <div className="mt-4">
+            <span className="inline-block rounded-lg border border-zaff-text bg-zaff-text px-3 py-1.5 text-[13px] text-zaff-bg">
+              Tutte le partite
+            </span>
+          </div>
 
-          <Standings rows={standings} showPie={groupFilter !== 'all'} />
+          <Standings rows={standings} showPie />
         </header>
       </div>
 
@@ -227,7 +210,7 @@ export default function MtgLog({ onOpenZaff }: MtgLogProps) {
         <Modal
           wide
           title="Statistiche mazzi"
-          subtitle="Percentuale di vittoria di ogni mazzo, su tutte le partite di tutti i gruppi."
+          subtitle="Percentuale di vittoria di ogni mazzo, su tutte le partite."
           onClose={closeModal}
         >
           <GameStats />
@@ -241,16 +224,6 @@ export default function MtgLog({ onOpenZaff }: MtgLogProps) {
           onClose={closeModal}
         >
           <PlayersRoster userId={userId} />
-        </Modal>
-      )}
-
-      {openModal === 'groups' && (
-        <Modal
-          title="Gruppi"
-          subtitle="Rinomina o cancella i gruppi in elenco. Le partite già salvate mantengono comunque il gruppo che avevano."
-          onClose={closeModal}
-        >
-          <GroupsRoster userId={userId} />
         </Modal>
       )}
 
