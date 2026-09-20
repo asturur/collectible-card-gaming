@@ -64,6 +64,7 @@ export default function GameForm({ editingGame, onBack, onSaved }: GameFormProps
   const [lifeCounterOpen, setLifeCounterOpen] = useState(false);
   /** Indice della riga giocatore il cui elenco suggerimenti nomi è aperto (solo uno alla volta). */
   const [nameSuggestFor, setNameSuggestFor] = useState<number | null>(null);
+  const [formatSuggestOpen, setFormatSuggestOpen] = useState(false);
 
   async function loadOptions(): Promise<DeckOption[]> {
     if (!supabase) return [];
@@ -251,20 +252,48 @@ export default function GameForm({ editingGame, onBack, onSaved }: GameFormProps
           value={date}
           onChange={(e) => setDate(e.target.value)}
         />
-        <TextField
-          id="fmt"
-          label="Formato"
-          density="compact"
-          list="fmts"
-          value={format}
-          onChange={(e) => setFormat(e.target.value)}
-          placeholder="Commander"
-        />
-        <datalist id="fmts">
-          {FORMATS.map((f) => (
-            <option key={f} value={f} />
-          ))}
-        </datalist>
+        <div className="mb-4">
+          <label className={FIELD_LABEL} htmlFor="fmt">
+            Formato
+          </label>
+          <div className="relative">
+            <input
+              id="fmt"
+              type="text"
+              value={format}
+              onChange={(e) => setFormat(e.target.value)}
+              onFocus={() => setFormatSuggestOpen(true)}
+              onBlur={() => setFormatSuggestOpen(false)}
+              placeholder="Commander"
+              autoComplete="off"
+              className={FIELD_CONTROL_SM}
+            />
+            {formatSuggestOpen &&
+              (() => {
+                const q = format.trim().toLowerCase();
+                const matches = FORMATS.filter((f) => !q || f.toLowerCase().includes(q));
+                if (matches.length === 0) return null;
+                return (
+                  <div className="absolute inset-x-0 top-full z-10 mt-1 max-h-[220px] overflow-y-auto rounded-lg border border-zaff-border bg-zaff-surface shadow-lg">
+                    {matches.map((f) => (
+                      <button
+                        key={f}
+                        type="button"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          setFormat(f);
+                          setFormatSuggestOpen(false);
+                        }}
+                        className="block w-full px-2.5 py-1.5 text-left text-sm text-zaff-text transition hover:bg-zaff-bg"
+                      >
+                        {f}
+                      </button>
+                    ))}
+                  </div>
+                );
+              })()}
+          </div>
+        </div>
       </div>
 
       <span className={FIELD_LABEL}>Giocatori</span>
