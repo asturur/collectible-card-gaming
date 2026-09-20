@@ -4,6 +4,7 @@ import { navLinkProps } from '../../router';
 import Button from '../ui/Button';
 import CenteredPanel from '../ui/Panel';
 import { TextField } from '../ui/Field';
+import { LOGIN_BACKGROUND } from '../ui/styles';
 
 type AuthMode = 'signin' | 'signup';
 
@@ -68,6 +69,7 @@ export default function AuthScreen({ onOpenZaff }: AuthScreenProps) {
   return (
     <CenteredPanel
       onSubmit={handleSubmit}
+      background={LOGIN_BACKGROUND}
       title="Registro partite"
       subtitle={mode === 'signin' ? 'Accedi con il tuo account per continuare' : 'Crea un account per iniziare'}
     >

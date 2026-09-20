@@ -11,6 +11,9 @@ export function cx(...parts: (string | false | null | undefined)[]): string {
   return parts.filter(Boolean).join(' ');
 }
 
+/** Illustrazione di sfondo delle maschere di accesso (ZAFF e registro). */
+export const LOGIN_BACKGROUND = `${import.meta.env.BASE_URL}zabov.jpg`;
+
 /** Riquadro centrato a tutto schermo (maschere di accesso, scelta mazzo…). */
 export const PANEL = 'w-full rounded-2xl border border-zaff-border bg-zaff-surface p-8 shadow-xl';
 

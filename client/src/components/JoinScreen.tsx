@@ -3,6 +3,7 @@ import { navLinkProps } from '../router';
 import Button from './ui/Button';
 import CenteredPanel from './ui/Panel';
 import { TextField } from './ui/Field';
+import { LOGIN_BACKGROUND } from './ui/styles';
 
 const REPO_URL = 'https://github.com/asturur/collectible-card-gaming';
 const RELEASES_URL = `${REPO_URL}/releases`;
@@ -56,11 +57,7 @@ export default function JoinScreen({ onJoin, onOpenMtgLog }: JoinScreenProps) {
   }
 
   return (
-    <CenteredPanel
-      onSubmit={handleSubmit}
-      title={<span className="font-sans text-4xl font-bold tracking-tight text-zaff-primary">ZAFF</span>}
-      subtitle="Collectible Card Gaming Platform"
-    >
+    <>
       {/* Angolo "Fork me on GitHub": triangolo + octocat che saluta al passaggio del mouse */}
       <a
         href={REPO_URL}
@@ -84,6 +81,12 @@ export default function JoinScreen({ onJoin, onOpenMtgLog }: JoinScreenProps) {
         </svg>
       </a>
 
+      <CenteredPanel
+      onSubmit={handleSubmit}
+      background={LOGIN_BACKGROUND}
+      title={<span className="font-sans text-4xl font-bold tracking-tight text-zaff-primary">ZAFF</span>}
+      subtitle="Collectible Card Gaming Platform"
+    >
       <p className="mb-8 text-center text-zaff-text">CIAO</p>
 
       <TextField
@@ -132,6 +135,7 @@ export default function JoinScreen({ onJoin, onOpenMtgLog }: JoinScreenProps) {
       >
         ← Registro Partite MTG
       </a>
-    </CenteredPanel>
+      </CenteredPanel>
+    </>
   );
 }
