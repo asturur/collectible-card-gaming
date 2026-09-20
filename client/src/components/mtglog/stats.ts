@@ -49,6 +49,55 @@ export function dateLabel(iso: string): string {
   return `${d}/${m}/${y}`;
 }
 
+export interface MatchupPlayerRow {
+  name: string;
+  w: number;
+}
+
+export interface MatchupRow {
+  /** Chiave stabile per React/selezione: nomi ordinati e uniti da "|". */
+  key: string;
+  /** Etichetta da mostrare: nomi uniti da " vs ", nello stesso ordine della chiave. */
+  label: string;
+  games: number;
+  players: MatchupPlayerRow[];
+}
+
+/**
+ * Raggruppa le partite per combinazione esatta di giocatori che vi hanno preso
+ * parte (2 o più, l'ordine non conta), e calcola partite totali e vittorie per
+ * ciascuno. Una combinazione compare solo se è stata davvero giocata: niente
+ * voci a zero per accoppiamenti mai avvenuti.
+ */
+export function computeMatchups(list: Game[]): MatchupRow[] {
+  const byKey = new Map<string, { names: string[]; games: number; wins: Record<string, number> }>();
+
+  list.forEach((game) => {
+    const names = [...new Set(game.players.map((p) => p.name.trim()).filter(Boolean))].sort((a, b) =>
+      a.localeCompare(b)
+    );
+    if (names.length < 2) return;
+
+    const key = names.join('|');
+    const entry = byKey.get(key) ?? { names, games: 0, wins: {} };
+    entry.games += 1;
+    game.players.forEach((p) => {
+      const name = p.name.trim();
+      if (name && p.winner) entry.wins[name] = (entry.wins[name] ?? 0) + 1;
+    });
+    byKey.set(key, entry);
+  });
+
+  return [...byKey.values()]
+    .map((entry) => ({
+      key: entry.names.join('|'),
+      label: entry.names.join(' vs '),
+      games: entry.games,
+      players: entry.names.map((name) => ({ name, w: entry.wins[name] ?? 0 })),
+    }))
+    .sort((a, b) => b.games - a.games || a.label.localeCompare(b.label));
+}
+
 /** Riga di una partita letta da Supabase, normalizzata nel tipo `Game`. */
 export function rowToGame(row: Record<string, unknown>): Game {
   return {

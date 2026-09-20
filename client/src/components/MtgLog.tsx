@@ -9,6 +9,7 @@ import GameForm from './mtglog/GameForm';
 import GameList, { type Game } from './mtglog/GameList';
 import GameStats from './mtglog/GameStats';
 import Standings from './mtglog/Standings';
+import MatchupStats from './mtglog/MatchupStats';
 import { computeTally, rowToGame } from './mtglog/stats';
 import Modal from './ui/Modal';
 import Button, { ButtonLink } from './ui/Button';
@@ -35,8 +36,9 @@ function DeckIcon() {
 
 /**
  * Registro Partite MTG (vedi plans/PLAN_5_MTG_LOG_PORTING.md): autenticazione,
- * rubriche giocatori/gruppi, mazzi (editor + import), partite (form + storico +
- * export immagine), statistiche/classifica, contatore punti vita a tutto schermo.
+ * rubrica giocatori, mazzi (editor + import), partite (form + storico +
+ * export immagine), statistiche/classifica (generale e per sfida tra
+ * giocatori), contatore punti vita a tutto schermo.
  *
  * Impaginazione ripresa dall'app HTML originale: pagina larga con testata,
  * classifica sempre in vista e tutto il resto in riquadri sovrapposti.
@@ -178,6 +180,7 @@ export default function MtgLog({ onOpenZaff }: MtgLogProps) {
           </div>
 
           <Standings rows={standings} showPie />
+          <MatchupStats games={games} />
         </header>
       </div>
 
