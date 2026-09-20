@@ -231,6 +231,26 @@ Both halves of the app are built from these; prefer extending them over new one-
 Fonts: Cinzel (`font-serif`) is for headings only — always via `HEADING_*`. Everything
 else uses Inter (`font-sans`). Mana symbols come from mana-font via `mtglog/ManaIcon`.
 
+#### Working on the UI
+
+The app is converging on one design system. New UI work reaches for what already
+exists before inventing anything:
+
+1. **Use the kit.** A button is `Button`, a form control is a `Field`, a full-screen
+   mask is `CenteredPanel`, an overlay is `Modal`. Don't hand-roll the classes again.
+2. **Extend, don't fork.** If the kit is close but not quite right, add a variant,
+   a size or a prop to the shared component so every screen gets it — a new
+   one-off `className` on one screen is the thing to avoid.
+3. **Take colors, spacing and type from the tokens** in `styles.ts` and the Tailwind
+   `@theme` block in `index.css`, not from fresh hex values or ad-hoc sizes.
+
+When a request would break that — another button style, a different font, a new text
+color, a bespoke spacing scale — say so before building it. Explain that the app is
+moving toward a design system that holds together, and offer the consistent route:
+an existing variant, a new variant added to the shared component, or a token added
+to the theme. Then, if the user confirms they want the one-off anyway, build it —
+this is a nudge toward consistency, not a veto.
+
 #### Socket Layer
 
 - **`socket.ts`** — `WebSocketGameSocket` class: `connect()`, `sendAction()`, `sendUndo()`, `sendPing()`, `onMessage()`, `onStatusChange()`
