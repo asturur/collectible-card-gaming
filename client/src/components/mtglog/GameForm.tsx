@@ -62,6 +62,8 @@ export default function GameForm({ editingGame, onBack, onSaved }: GameFormProps
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [lifeCounterOpen, setLifeCounterOpen] = useState(false);
+  /** Indice della riga giocatore il cui elenco suggerimenti nomi è aperto (solo uno alla volta). */
+  const [nameSuggestFor, setNameSuggestFor] = useState<number | null>(null);
 
   async function loadOptions(): Promise<DeckOption[]> {
     if (!supabase) return [];
@@ -125,6 +127,11 @@ export default function GameForm({ editingGame, onBack, onSaved }: GameFormProps
 
   function removePlayer(index: number) {
     setPlayers((prev) => (prev.length > 1 ? prev.filter((_, i) => i !== index) : prev));
+  }
+
+  function selectPlayerName(index: number, name: string) {
+    updatePlayer(index, { name });
+    setNameSuggestFor(null);
   }
 
   function toggleWinner(index: number) {
@@ -268,19 +275,41 @@ export default function GameForm({ editingGame, onBack, onSaved }: GameFormProps
             className={`mb-3 rounded-lg border bg-zaff-bg p-3 ${p.winner ? 'border-zaff-highlight' : 'border-zaff-border'}`}
           >
             <div className="mb-2 flex flex-wrap items-center gap-2">
-              <input
-                type="text"
-                list={`playerNames-${i}`}
-                value={p.name}
-                onChange={(e) => updatePlayer(i, { name: e.target.value })}
-                placeholder={`Giocatore ${i + 1}`}
-                className={cx(FIELD_CONTROL_SM, 'min-w-0 flex-1')}
-              />
-              <datalist id={`playerNames-${i}`}>
-                {playerNames.map((n) => (
-                  <option key={n} value={n} />
-                ))}
-              </datalist>
+              <div className="relative min-w-0 flex-1">
+                <input
+                  type="text"
+                  value={p.name}
+                  onChange={(e) => updatePlayer(i, { name: e.target.value })}
+                  onFocus={() => setNameSuggestFor(i)}
+                  onBlur={() => setNameSuggestFor((cur) => (cur === i ? null : cur))}
+                  placeholder={`Giocatore ${i + 1}`}
+                  autoComplete="off"
+                  className={cx(FIELD_CONTROL_SM, 'w-full')}
+                />
+                {nameSuggestFor === i &&
+                  (() => {
+                    const q = p.name.trim().toLowerCase();
+                    const matches = playerNames.filter((n) => !q || n.toLowerCase().includes(q)).slice(0, 8);
+                    if (matches.length === 0) return null;
+                    return (
+                      <div className="absolute inset-x-0 top-full z-10 mt-1 max-h-[220px] overflow-y-auto rounded-lg border border-zaff-border bg-zaff-surface shadow-lg">
+                        {matches.map((n) => (
+                          <button
+                            key={n}
+                            type="button"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              selectPlayerName(i, n);
+                            }}
+                            className="block w-full px-2.5 py-1.5 text-left text-sm text-zaff-text transition hover:bg-zaff-bg"
+                          >
+                            {n}
+                          </button>
+                        ))}
+                      </div>
+                    );
+                  })()}
+              </div>
               {players.length > 1 && (
                 <button
                   type="button"
