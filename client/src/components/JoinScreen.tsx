@@ -1,11 +1,11 @@
-import { useState } from 'react';
-import { navLinkProps } from '../router';
-import Button from './ui/Button';
-import CenteredPanel from './ui/Panel';
-import { TextField } from './ui/Field';
-import { LOGIN_BACKGROUND } from './ui/styles';
+import { useState } from "react";
+import { navLinkProps } from "../router";
+import Button from "./ui/Button";
+import CenteredPanel from "./ui/Panel";
+import { TextField } from "./ui/Field";
+import { LOGIN_BACKGROUND } from "./ui/styles";
 
-const REPO_URL = 'https://github.com/asturur/collectible-card-gaming';
+const REPO_URL = "https://github.com/asturur/collectible-card-gaming";
 const RELEASES_URL = `${REPO_URL}/releases`;
 
 interface JoinScreenProps {
@@ -29,10 +29,10 @@ function GitHubIcon({ className }: { className?: string }) {
 }
 
 export default function JoinScreen({ onJoin, onOpenMtgLog }: JoinScreenProps) {
-  const [address, setAddress] = useState('localhost:8080');
-  const [playerName, setPlayerName] = useState('');
-  const [addressError, setAddressError] = useState('');
-  const [nameError, setNameError] = useState('');
+  const [address, setAddress] = useState("localhost:8080");
+  const [playerName, setPlayerName] = useState("");
+  const [addressError, setAddressError] = useState("");
+  const [nameError, setNameError] = useState("");
 
   function handleSubmit() {
     const trimmedAddress = address.trim();
@@ -40,16 +40,16 @@ export default function JoinScreen({ onJoin, onOpenMtgLog }: JoinScreenProps) {
 
     let hasError = false;
     if (!trimmedAddress) {
-      setAddressError('Server address is required');
+      setAddressError("Server address is required");
       hasError = true;
     } else {
-      setAddressError('');
+      setAddressError("");
     }
     if (!trimmedName) {
-      setNameError('Player name is required');
+      setNameError("Player name is required");
       hasError = true;
     } else {
-      setNameError('');
+      setNameError("");
     }
 
     if (hasError) return;
@@ -67,8 +67,17 @@ export default function JoinScreen({ onJoin, onOpenMtgLog }: JoinScreenProps) {
         aria-label="Fork me on GitHub"
         title="Fork me on GitHub"
       >
-        <svg width="80" height="80" viewBox="0 0 250 250" className="h-16 w-16 sm:h-20 sm:w-20" aria-hidden="true">
-          <path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z" className="fill-zaff-primary" />
+        <svg
+          width="80"
+          height="80"
+          viewBox="0 0 250 250"
+          className="h-16 w-16 sm:h-20 sm:w-20"
+          aria-hidden="true"
+        >
+          <path
+            d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"
+            className="fill-zaff-primary"
+          />
           <path
             d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2"
             fill="currentColor"
@@ -82,59 +91,63 @@ export default function JoinScreen({ onJoin, onOpenMtgLog }: JoinScreenProps) {
       </a>
 
       <CenteredPanel
-      onSubmit={handleSubmit}
-      background={LOGIN_BACKGROUND}
-      title={<span className="font-sans text-4xl font-bold tracking-tight text-zaff-primary">ZAFF</span>}
-      subtitle="Collectible Card Gaming Platform"
-    >
-      <p className="mb-8 text-center text-zaff-text">CIAO</p>
-
-      <TextField
-        id="server-address"
-        label="Server Address"
-        value={address}
-        onChange={(e) => {
-          setAddress(e.target.value);
-          if (addressError) setAddressError('');
-        }}
-        placeholder="localhost:8080"
-        autoComplete="off"
-        error={addressError}
-      />
-
-      <TextField
-        id="player-name"
-        label="Player Name"
-        value={playerName}
-        onChange={(e) => {
-          setPlayerName(e.target.value);
-          if (nameError) setNameError('');
-        }}
-        placeholder="Enter your name"
-        autoComplete="off"
-        error={nameError}
-      />
-
-      <Button type="submit" size="lg" fullWidth>
-        Join Server
-      </Button>
-
-      <a
-        href={RELEASES_URL}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="mt-4 flex items-center justify-center gap-2 text-sm text-zaff-muted transition-colors hover:text-zaff-primary"
+        onSubmit={handleSubmit}
+        background={LOGIN_BACKGROUND}
+        title={
+          <span className="font-sans text-4xl font-bold tracking-tight text-zaff-primary">
+            ZAFF
+          </span>
+        }
+        subtitle="Collectible Card Gaming Platform"
       >
-        <GitHubIcon className="h-4 w-4" />
-        Download server from here
-      </a>
+        <p className="mb-8 text-center text-zaff-text">CIAO</p>
 
-      <a
-        {...navLinkProps('home', () => onOpenMtgLog?.())}
-        className="mt-2 block w-full text-center text-sm text-zaff-muted transition-colors hover:text-zaff-primary"
-      >
-        ← Registro Partite MTG
-      </a>
+        <TextField
+          id="server-address"
+          label="Server Address"
+          value={address}
+          onChange={(e) => {
+            setAddress(e.target.value);
+            if (addressError) setAddressError("");
+          }}
+          placeholder="localhost:8080"
+          autoComplete="off"
+          error={addressError}
+        />
+
+        <TextField
+          id="player-name"
+          label="Player Name"
+          value={playerName}
+          onChange={(e) => {
+            setPlayerName(e.target.value);
+            if (nameError) setNameError("");
+          }}
+          placeholder="Enter your name"
+          autoComplete="off"
+          error={nameError}
+        />
+
+        <Button type="submit" size="lg" fullWidth>
+          Join Server
+        </Button>
+
+        <a
+          href={RELEASES_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-4 flex items-center justify-center gap-2 text-sm text-zaff-muted transition-colors hover:text-zaff-primary"
+        >
+          <GitHubIcon className="h-4 w-4" />
+          Download server from here
+        </a>
+
+        <a
+          {...navLinkProps("home", () => onOpenMtgLog?.())}
+          className="mt-2 block w-full text-center text-sm text-zaff-muted transition-colors hover:text-zaff-primary"
+        >
+          ← Registro Partite MTG
+        </a>
       </CenteredPanel>
     </>
   );

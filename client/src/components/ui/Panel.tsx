@@ -15,8 +15,21 @@ interface CenteredPanelProps {
 }
 
 /**
+ * L'illustrazione è alta quanto è larga (1231×1278): sul telefono la mostriamo
+ * a tutta larghezza, quindi occupa i primi ~104vw della pagina. Il riquadro
+ * parte sotto il volto e le orbite, e una sfumatura chiude il bordo basso del
+ * disegno sul fondo scuro.
+ */
+const PHONE_ART_TOP = 'pt-[57vw]';
+const PHONE_ART_FADE =
+  'linear-gradient(to bottom, rgba(15,23,42,0) 30vw, rgba(15,23,42,0.72) 72vw, var(--color-zaff-bg) 104vw)';
+
+/**
  * Maschera centrata a tutto schermo — accesso ZAFF, accesso al registro,
  * scelta del mazzo: stesso riquadro, stessi margini, stessa gerarchia.
+ *
+ * Con un'illustrazione di sfondo il riquadro scende (di 10vh sul desktop, sotto
+ * il disegno sul telefono) per lasciare in vista volto e orbite.
  */
 export default function CenteredPanel({
   title,
@@ -41,21 +54,30 @@ export default function CenteredPanel({
     width === 'sm' ? 'max-w-sm' : 'max-w-md',
     // sopra l'illustrazione il riquadro si fa più denso, così il testo resta leggibile
     background && 'bg-zaff-surface/85 backdrop-blur-md',
+    // sul desktop scende un po': l'illustrazione ha il volto in alto
+    background && 'sm:mt-[10vh]',
     className
   );
 
+  const containerClass = cx(
+    'relative flex min-h-screen justify-center bg-zaff-bg px-4',
+    background ? `items-start pb-10 ${PHONE_ART_TOP} sm:items-center sm:py-10 sm:pt-10` : 'items-center py-10'
+  );
+
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-zaff-bg px-4 py-10">
+    <div className={containerClass}>
       {background && (
         <>
           <div
             aria-hidden="true"
-            // poco sopra il centro: il volto resta sopra il riquadro, il modulo cade sull'area sfumata
-            className="absolute inset-0 bg-cover bg-no-repeat"
-            style={{ backgroundImage: `url(${background})`, backgroundPosition: 'center 35%' }}
+            // telefono: a tutta larghezza in cima; desktop: riempie lo schermo, un po' sopra il centro
+            className="absolute inset-0 bg-[length:100%_auto] bg-top bg-no-repeat sm:bg-[position:center_35%] sm:bg-cover"
+            style={{ backgroundImage: `url(${background})` }}
           />
-          {/* velo scuro: tiene il contrasto del modulo sopra qualsiasi illustrazione */}
-          <div aria-hidden="true" className="absolute inset-0 bg-zaff-bg/60" />
+          {/* telefono: sfumatura che porta il bordo basso del disegno nel fondo scuro */}
+          <div aria-hidden="true" className="absolute inset-0 sm:hidden" style={{ background: PHONE_ART_FADE }} />
+          {/* desktop: velo uniforme, il riquadro ci sta sopra */}
+          <div aria-hidden="true" className="absolute inset-0 hidden bg-zaff-bg/60 sm:block" />
         </>
       )}
 
