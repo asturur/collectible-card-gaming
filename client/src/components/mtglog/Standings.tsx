@@ -48,7 +48,7 @@ export default function Standings({ rows, showPie }: StandingsProps) {
               <div className="min-w-0">
                 <b className="block break-words text-[13px] font-semibold text-zaff-text sm:text-[15px]">{t.name}</b>
                 <span className="text-[13px] tabular-nums text-zaff-muted">
-                  {t.w} vinte su {t.g}
+                  {t.w} vinte su {t.g} · {Math.round(pcts[i])}%
                 </span>
               </div>
               <div className="flex shrink-0 flex-col items-center gap-0.5">
@@ -64,22 +64,27 @@ export default function Standings({ rows, showPie }: StandingsProps) {
       </div>
 
       {showPie && totalWins > 0 && (
-        <div className="mt-4 flex flex-wrap items-center gap-5">
-          <svg viewBox="0 0 140 140" width="140" height="140" className="shrink-0">
-            {slices.map((s) => (
-              <path key={s.name} d={s.path} fill={s.color} />
-            ))}
-          </svg>
-          <div className="flex flex-col gap-1.5 text-sm text-zaff-muted">
-            {slices.map((s) => (
-              <div key={s.name} className="text-zaff-text">
-                <span
-                  className="mr-1.5 inline-block h-[11px] w-[11px] rounded-full align-[-1px]"
-                  style={{ background: s.color }}
-                />
-                {s.name} — {Math.round((s.w / totalWins) * 100)}% ({s.w}/{totalWins})
-              </div>
-            ))}
+        <div className="mt-4">
+          <p className="mb-2 text-xs text-zaff-muted">
+            Come si dividono tutte le {totalWins} vittorie registrate, tra i giocatori:
+          </p>
+          <div className="flex flex-wrap items-center gap-5">
+            <svg viewBox="0 0 140 140" width="140" height="140" className="shrink-0">
+              {slices.map((s) => (
+                <path key={s.name} d={s.path} fill={s.color} />
+              ))}
+            </svg>
+            <div className="flex flex-col gap-1.5 text-sm text-zaff-muted">
+              {slices.map((s) => (
+                <div key={s.name} className="text-zaff-text">
+                  <span
+                    className="mr-1.5 inline-block h-[11px] w-[11px] rounded-full align-[-1px]"
+                    style={{ background: s.color }}
+                  />
+                  {s.name} — {Math.round((s.w / totalWins) * 100)}% delle vittorie totali ({s.w} di {totalWins})
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
