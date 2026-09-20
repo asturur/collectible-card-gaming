@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import html2canvas from 'html2canvas';
 import { canEdit, subscribeToTable, supabase, TABLE_GAMES } from '../../services/supabase';
-import Modal from './Modal';
 import { ManaIcons } from './ManaIcon';
 import { dateLabel, rowToGame } from './stats';
-import { BTN_DANGER_LINK, BTN_LINK, BTN_PRIMARY, tabClass } from './ui';
+import Modal from '../ui/Modal';
+import Button from '../ui/Button';
+import FilterTabs from '../ui/FilterTabs';
+import { HEADING_SECTION, TEXT_MINI, TEXT_MUTED } from '../ui/styles';
 
 export interface GamePlayer {
   name: string;
@@ -158,25 +160,18 @@ export default function GameList({ userId, onEdit }: GameListProps) {
   }
 
   if (loading) {
-    return <p className="text-zaff-muted">Caricamento…</p>;
+    return <p className={TEXT_MUTED}>Caricamento…</p>;
   }
 
   return (
     <>
       {groups.length >= 2 && (
-        <div className="mb-3 flex flex-wrap gap-2">
-          {['all', ...groups].map((g) => (
-            <button
-              key={g}
-              type="button"
-              onClick={() => setGroupFilter(g)}
-              aria-pressed={groupFilter === g}
-              className={tabClass(groupFilter === g)}
-            >
-              {g === 'all' ? 'Tutti i gruppi' : g}
-            </button>
-          ))}
-        </div>
+        <FilterTabs
+          className="mb-3"
+          value={groupFilter}
+          onChange={setGroupFilter}
+          options={[{ value: 'all', label: 'Tutti i gruppi' }, ...groups.map((g) => ({ value: g, label: g }))]}
+        />
       )}
 
       {visibleGames.length === 0 ? (
@@ -185,7 +180,7 @@ export default function GameList({ userId, onEdit }: GameListProps) {
         </div>
       ) : (
         <>
-          <p className="mb-2 text-xs text-zaff-muted">{visibleGames.length} partite</p>
+          <p className={`mb-2 ${TEXT_MINI}`}>{visibleGames.length} partite</p>
           <ul>
             {visibleGames.map((g) => (
               <li key={g.id}>
@@ -194,7 +189,7 @@ export default function GameList({ userId, onEdit }: GameListProps) {
                   onClick={() => setSelectedId(g.id)}
                   className="mb-2 flex w-full items-center gap-3.5 rounded-lg border border-zaff-border bg-zaff-bg px-3.5 py-3 text-left transition hover:border-zaff-primary"
                 >
-                  <span className="shrink-0 whitespace-nowrap border-r border-zaff-border pr-3 font-serif text-sm text-zaff-muted">
+                  <span className="shrink-0 whitespace-nowrap border-r border-zaff-border pr-3 text-sm text-zaff-muted">
                     {dateLabel(g.date)}
                   </span>
                   <span className="flex min-w-0 flex-1 flex-wrap gap-x-3.5 gap-y-1.5">
@@ -226,8 +221,8 @@ export default function GameList({ userId, onEdit }: GameListProps) {
         <Modal level={2} wide onClose={() => setSelectedId(null)}>
           <div ref={shareCardRef} className="px-0.5 py-1.5">
             <p className="mb-0.5 text-[11px] uppercase tracking-[0.06em] text-zaff-muted">Registro partite di Magic</p>
-            <h2 className="font-serif text-lg text-zaff-text sm:text-xl">{dateLabel(selectedGame.date)}</h2>
-            <p className="mb-3 text-xs text-zaff-muted">
+            <h2 className={HEADING_SECTION}>{dateLabel(selectedGame.date)}</h2>
+            <p className={`mb-3 ${TEXT_MINI}`}>
               {selectedGame.format || 'formato non indicato'} · {selectedGame.players.length} giocatori · gruppo:{' '}
               {selectedGame.group}
             </p>
@@ -241,7 +236,7 @@ export default function GameList({ userId, onEdit }: GameListProps) {
                   }`}
                 >
                   <div className="min-w-0 flex-1">
-                    <span className="font-serif text-[15px] text-zaff-text">{p.name}</span>
+                    <span className="text-[15px] text-zaff-text">{p.name}</span>
                     {playerTags[i] && (
                       <span
                         className={`block text-xs ${p.winner ? 'text-zaff-gold' : 'italic text-zaff-muted opacity-75'}`}
@@ -273,23 +268,18 @@ export default function GameList({ userId, onEdit }: GameListProps) {
           </div>
 
           <div className="mt-3.5 flex flex-wrap items-center gap-2.5">
-            <button
-              type="button"
-              onClick={() => handleExport(selectedGame)}
-              disabled={exporting}
-              className={BTN_PRIMARY}
-            >
+            <Button onClick={() => handleExport(selectedGame)} disabled={exporting}>
               {exporting ? 'Genero immagine…' : '🖼️ Esporta risultati'}
-            </button>
+            </Button>
 
             {canEdit(selectedGame.createdBy, userId) && (
               <>
-                <button type="button" onClick={() => onEdit(selectedGame)} className={BTN_LINK}>
+                <Button variant="link" size="sm" onClick={() => onEdit(selectedGame)}>
                   Modifica
-                </button>
-                <button type="button" onClick={() => handleDelete(selectedGame.id)} className={BTN_DANGER_LINK}>
+                </Button>
+                <Button variant="danger" size="sm" onClick={() => handleDelete(selectedGame.id)}>
                   Cancella
-                </button>
+                </Button>
               </>
             )}
           </div>

@@ -1,7 +1,9 @@
-import { useState, type FormEvent } from 'react';
+import { useState } from 'react';
 import { supabase } from '../../services/supabase';
-import { BTN_LINK, BTN_PRIMARY, INPUT } from './ui';
 import { navLinkProps } from '../../router';
+import Button from '../ui/Button';
+import CenteredPanel from '../ui/Panel';
+import { TextField } from '../ui/Field';
 
 type AuthMode = 'signin' | 'signup';
 
@@ -26,8 +28,7 @@ export default function AuthScreen({ onOpenZaff }: AuthScreenProps) {
     setMessage('');
   }
 
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
+  async function handleSubmit() {
     setError('');
     setMessage('');
 
@@ -65,55 +66,54 @@ export default function AuthScreen({ onOpenZaff }: AuthScreenProps) {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zaff-bg px-5">
-      <div className="w-full max-w-[320px] rounded-lg border border-zaff-border bg-zaff-surface px-6 py-7 text-center">
-        <h1 className="mb-1.5 font-serif text-xl text-zaff-text">Registro partite</h1>
-        <p className="mb-4 text-sm text-zaff-muted">
-          {mode === 'signin' ? 'Accedi con il tuo account per continuare' : 'Crea un account per iniziare'}
+    <CenteredPanel
+      onSubmit={handleSubmit}
+      title="Registro partite"
+      subtitle={mode === 'signin' ? 'Accedi con il tuo account per continuare' : 'Crea un account per iniziare'}
+    >
+      <TextField
+        id="auth-email"
+        type="email"
+        label="Email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        placeholder="nome@esempio.it"
+        autoComplete="username"
+        required
+      />
+
+      <TextField
+        id="auth-password"
+        type="password"
+        label="Password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        placeholder="La tua password"
+        autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
+        required
+      />
+
+      <Button type="submit" size="lg" fullWidth disabled={loading}>
+        {mode === 'signin' ? 'Accedi' : 'Crea account'}
+      </Button>
+
+      <Button variant="ghost" size="lg" fullWidth className="mt-3" onClick={toggleMode}>
+        {mode === 'signin' ? 'Non hai un account? Registrati' : 'Hai già un account? Accedi'}
+      </Button>
+
+      {error && (
+        <p className="mt-3 text-center text-sm text-red-400" role="alert">
+          {error}
         </p>
+      )}
+      {message && <p className="mt-3 text-center text-sm text-green-400">{message}</p>}
 
-        <form onSubmit={handleSubmit}>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="Email"
-            autoComplete="username"
-            required
-            className={`${INPUT} mb-2.5 text-center`}
-          />
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Password"
-            autoComplete="current-password"
-            required
-            className={`${INPUT} mb-2.5 text-center`}
-          />
-          <button type="submit" disabled={loading} className={`${BTN_PRIMARY} w-full py-2.5`}>
-            {mode === 'signin' ? 'Accedi' : 'Crea account'}
-          </button>
-        </form>
-
-        <button type="button" onClick={toggleMode} className={`${BTN_LINK} mt-2 w-full`}>
-          {mode === 'signin' ? 'Non hai un account? Registrati' : 'Hai già un account? Accedi'}
-        </button>
-
-        {error && (
-          <p className="mt-2 min-h-[18px] text-[13px] text-red-400" role="alert">
-            {error}
-          </p>
-        )}
-        {message && <p className="mt-2 text-[13px] text-green-400">{message}</p>}
-
-        <a
-          {...navLinkProps('zaff', onOpenZaff)}
-          className="mt-4 block w-full text-center text-xs text-zaff-muted transition hover:text-zaff-gold"
-        >
-          Vai a ZAFF, la piattaforma di gioco →
-        </a>
-      </div>
-    </div>
+      <a
+        {...navLinkProps('zaff', onOpenZaff)}
+        className="mt-4 block w-full text-center text-sm text-zaff-muted transition-colors hover:text-zaff-primary"
+      >
+        Vai a ZAFF, la piattaforma di gioco →
+      </a>
+    </CenteredPanel>
   );
 }

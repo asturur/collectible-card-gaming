@@ -1,5 +1,8 @@
-import { useState, type FormEvent } from 'react';
+import { useState } from 'react';
 import { navLinkProps } from '../router';
+import Button from './ui/Button';
+import CenteredPanel from './ui/Panel';
+import { TextField } from './ui/Field';
 
 const REPO_URL = 'https://github.com/asturur/collectible-card-gaming';
 const RELEASES_URL = `${REPO_URL}/releases`;
@@ -30,8 +33,7 @@ export default function JoinScreen({ onJoin, onOpenMtgLog }: JoinScreenProps) {
   const [addressError, setAddressError] = useState('');
   const [nameError, setNameError] = useState('');
 
-  function handleSubmit(e: FormEvent) {
-    e.preventDefault();
+  function handleSubmit() {
     const trimmedAddress = address.trim();
     const trimmedName = playerName.trim();
 
@@ -54,7 +56,11 @@ export default function JoinScreen({ onJoin, onOpenMtgLog }: JoinScreenProps) {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-zaff-bg px-4">
+    <CenteredPanel
+      onSubmit={handleSubmit}
+      title={<span className="font-sans text-4xl font-bold tracking-tight text-zaff-primary">ZAFF</span>}
+      subtitle="Collectible Card Gaming Platform"
+    >
       {/* Angolo "Fork me on GitHub": triangolo + octocat che saluta al passaggio del mouse */}
       <a
         href={REPO_URL}
@@ -78,93 +84,54 @@ export default function JoinScreen({ onJoin, onOpenMtgLog }: JoinScreenProps) {
         </svg>
       </a>
 
-      <form
-        onSubmit={handleSubmit}
-        className="w-full max-w-md rounded-2xl border border-zaff-border bg-zaff-surface p-8 shadow-xl"
+      <p className="mb-8 text-center text-zaff-text">CIAO</p>
+
+      <TextField
+        id="server-address"
+        label="Server Address"
+        value={address}
+        onChange={(e) => {
+          setAddress(e.target.value);
+          if (addressError) setAddressError('');
+        }}
+        placeholder="localhost:8080"
+        autoComplete="off"
+        error={addressError}
+      />
+
+      <TextField
+        id="player-name"
+        label="Player Name"
+        value={playerName}
+        onChange={(e) => {
+          setPlayerName(e.target.value);
+          if (nameError) setNameError('');
+        }}
+        placeholder="Enter your name"
+        autoComplete="off"
+        error={nameError}
+      />
+
+      <Button type="submit" size="lg" fullWidth>
+        Join Server
+      </Button>
+
+      <a
+        href={RELEASES_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-4 flex items-center justify-center gap-2 text-sm text-zaff-muted transition-colors hover:text-zaff-primary"
       >
-        <h1 className="mb-2 text-center text-4xl font-bold tracking-tight text-zaff-primary">
-          ZAFF
-        </h1>
-        <p className="mb-8 text-center text-zaff-muted">
-          Collectible Card Gaming Platform
-        </p>
-        <p className="mb-8 text-center text-zaff-text">CIAO</p>
+        <GitHubIcon className="h-4 w-4" />
+        Download server from here
+      </a>
 
-        <label
-          htmlFor="server-address"
-          className="mb-2 block text-sm font-medium text-zaff-text"
-        >
-          Server Address
-        </label>
-        <input
-          id="server-address"
-          type="text"
-          value={address}
-          onChange={(e) => {
-            setAddress(e.target.value);
-            if (addressError) setAddressError('');
-          }}
-          placeholder="localhost:8080"
-          className="mb-1 w-full rounded-lg border border-zaff-border bg-zaff-bg px-4 py-3 text-zaff-text placeholder:text-zaff-muted focus:outline-none focus:ring-2 focus:ring-zaff-primary"
-          autoComplete="off"
-        />
-        {addressError && (
-          <p className="mb-3 text-sm text-red-400" role="alert">
-            {addressError}
-          </p>
-        )}
-        {!addressError && <div className="mb-3" />}
-
-        <label
-          htmlFor="player-name"
-          className="mb-2 block text-sm font-medium text-zaff-text"
-        >
-          Player Name
-        </label>
-        <input
-          id="player-name"
-          type="text"
-          value={playerName}
-          onChange={(e) => {
-            setPlayerName(e.target.value);
-            if (nameError) setNameError('');
-          }}
-          placeholder="Enter your name"
-          className="mb-1 w-full rounded-lg border border-zaff-border bg-zaff-bg px-4 py-3 text-zaff-text placeholder:text-zaff-muted focus:outline-none focus:ring-2 focus:ring-zaff-primary"
-          autoComplete="off"
-        />
-        {nameError && (
-          <p className="mb-3 text-sm text-red-400" role="alert">
-            {nameError}
-          </p>
-        )}
-        {!nameError && <div className="mb-3" />}
-
-        <button
-          type="submit"
-          className="w-full rounded-lg bg-zaff-primary px-4 py-3 font-semibold text-white transition-colors hover:bg-zaff-primary-hover focus:outline-none focus:ring-2 focus:ring-zaff-primary focus:ring-offset-2 focus:ring-offset-zaff-surface"
-        >
-          Join Server
-        </button>
-
-        {/* Download server link */}
-        <a
-          href={RELEASES_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-4 flex items-center justify-center gap-2 text-sm text-zaff-muted transition-colors hover:text-zaff-primary"
-        >
-          <GitHubIcon className="h-4 w-4" />
-          Download server from here
-        </a>
-
-        <a
-          {...navLinkProps('home', () => onOpenMtgLog?.())}
-          className="mt-2 block w-full text-center text-sm text-zaff-muted transition-colors hover:text-zaff-primary"
-        >
-          ← Registro Partite MTG
-        </a>
-      </form>
-    </div>
+      <a
+        {...navLinkProps('home', () => onOpenMtgLog?.())}
+        className="mt-2 block w-full text-center text-sm text-zaff-muted transition-colors hover:text-zaff-primary"
+      >
+        ← Registro Partite MTG
+      </a>
+    </CenteredPanel>
   );
 }

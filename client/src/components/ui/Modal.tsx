@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react';
+import { cx, HEADING_SECTION, TEXT_MINI } from './styles';
 
 /** Riquadri aperti, dal più in basso al più in alto: Esc chiude solo quello in cima. */
 const openModals: object[] = [];
@@ -65,12 +66,8 @@ export default function Modal({ title, subtitle, wide = false, level = 1, onClos
           ×
         </button>
 
-        {title && (
-          <h2 className="mb-3 border-b border-zaff-border pb-1.5 pr-8 font-serif text-lg text-zaff-text sm:text-xl">
-            {title}
-          </h2>
-        )}
-        {subtitle && <p className="-mt-1 mb-3 text-xs text-zaff-muted">{subtitle}</p>}
+        {title && <h2 className={cx(HEADING_SECTION, 'mb-3 border-b border-zaff-border pb-1.5 pr-8')}>{title}</h2>}
+        {subtitle && <p className={cx('-mt-1 mb-3', TEXT_MINI)}>{subtitle}</p>}
 
         {children}
       </div>

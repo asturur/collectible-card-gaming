@@ -9,10 +9,12 @@ import DeckEditor from './mtglog/DeckEditor';
 import GameForm from './mtglog/GameForm';
 import GameList, { type Game } from './mtglog/GameList';
 import GameStats from './mtglog/GameStats';
-import Modal from './mtglog/Modal';
 import Standings from './mtglog/Standings';
 import { computeTally, rowToGame } from './mtglog/stats';
-import { BTN_GHOST, BTN_PRIMARY, tabClass } from './mtglog/ui';
+import Modal from './ui/Modal';
+import Button, { ButtonLink } from './ui/Button';
+import FilterTabs from './ui/FilterTabs';
+import { cx, HEADING_PAGE, PANEL, TEXT_MUTED } from './ui/styles';
 import { navLinkProps } from '../router';
 
 interface MtgLogProps {
@@ -91,13 +93,19 @@ export default function MtgLog({ onOpenZaff }: MtgLogProps) {
   if (!isSupabaseConfigured) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-zaff-bg px-4">
-        <div className="w-full max-w-md rounded-xl border border-zaff-border bg-zaff-surface p-8 text-center">
+        <div className={cx(PANEL, 'max-w-md text-center')}>
           <p className="text-red-400">
             Supabase non configurato (variabili VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY mancanti).
           </p>
-          <a {...navLinkProps('zaff', onOpenZaff)} className={`mt-6 w-full ${BTN_GHOST}`}>
+          <ButtonLink
+            {...navLinkProps('zaff', onOpenZaff)}
+            variant="ghost"
+            size="lg"
+            fullWidth
+            className="mt-6"
+          >
             Vai a ZAFF →
-          </a>
+          </ButtonLink>
         </div>
       </div>
     );
@@ -106,7 +114,7 @@ export default function MtgLog({ onOpenZaff }: MtgLogProps) {
   if (session === 'loading') {
     return (
       <div className="flex min-h-screen items-center justify-center bg-zaff-bg px-4">
-        <p className="text-zaff-muted">Caricamento…</p>
+        <p className={TEXT_MUTED}>Caricamento…</p>
       </div>
     );
   }
@@ -130,7 +138,7 @@ export default function MtgLog({ onOpenZaff }: MtgLogProps) {
         <header className="border-b-2 border-zaff-text pb-4 sm:pb-[18px]">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="min-w-0">
-              <h1 className="font-serif text-xl tracking-wide sm:text-[26px]">Registro partite di Magic</h1>
+              <h1 className={HEADING_PAGE}>Registro partite di Magic</h1>
               <p className="text-sm text-zaff-muted">
                 Chi gioca, con che mazzo, come è finita. Condiviso con tutto il gruppo.
               </p>
@@ -139,65 +147,51 @@ export default function MtgLog({ onOpenZaff }: MtgLogProps) {
             <div className="flex w-full flex-col items-stretch gap-0.5 sm:w-auto sm:items-end">
               <div className="flex flex-wrap items-center gap-3 sm:justify-end">
                 <span className="truncate text-xs text-zaff-muted">{session.user.email}</span>
-                <button type="button" onClick={() => supabase?.auth.signOut()} className={BTN_GHOST}>
+                <Button variant="ghost" onClick={() => supabase?.auth.signOut()}>
                   Esci
-                </button>
-                <a {...navLinkProps('zaff', onOpenZaff)} className={BTN_GHOST}>
+                </Button>
+                <ButtonLink {...navLinkProps('zaff', onOpenZaff)} variant="ghost">
                   Vai a ZAFF →
-                </a>
+                </ButtonLink>
               </div>
 
               <div className="mtg-sep" />
 
               <div className="flex flex-wrap gap-2.5 sm:justify-end">
-                <button
-                  type="button"
+                <Button
                   onClick={() => {
                     setEditingGame(null);
                     setOpenModal('newGame');
                   }}
-                  className={BTN_PRIMARY}
                 >
                   ➕ Nuova partita
-                </button>
-                <button type="button" onClick={() => setOpenModal('games')} className={BTN_PRIMARY}>
-                  📜 Partite salvate
-                </button>
-                <button type="button" onClick={() => setOpenModal('stats')} className={BTN_PRIMARY}>
-                  📊 Statistiche mazzi
-                </button>
+                </Button>
+                <Button onClick={() => setOpenModal('games')}>📜 Partite salvate</Button>
+                <Button onClick={() => setOpenModal('stats')}>📊 Statistiche mazzi</Button>
               </div>
 
               <div className="mtg-sep" />
 
               <div className="flex flex-wrap gap-2.5 sm:justify-end">
-                <button type="button" onClick={() => setOpenModal('players')} className={BTN_PRIMARY}>
-                  👤 Gestisci giocatori
-                </button>
-                <button type="button" onClick={() => setOpenModal('groups')} className={BTN_PRIMARY}>
-                  🏷️ Gestisci gruppi
-                </button>
-                <button type="button" onClick={() => setOpenModal('decks')} className={BTN_PRIMARY}>
+                <Button onClick={() => setOpenModal('players')}>👤 Gestisci giocatori</Button>
+                <Button onClick={() => setOpenModal('groups')}>🏷️ Gestisci gruppi</Button>
+                <Button onClick={() => setOpenModal('decks')}>
                   <DeckIcon /> Gestisci mazzi
-                </button>
+                </Button>
               </div>
             </div>
           </div>
 
           {groups.length >= 2 && (
-            <div className="mt-4 flex flex-wrap gap-2">
-              {['all', ...groups].map((g) => (
-                <button
-                  key={g}
-                  type="button"
-                  onClick={() => setGroupFilter(g)}
-                  aria-pressed={groupFilter === g}
-                  className={tabClass(groupFilter === g)}
-                >
-                  {g === 'all' ? 'Tutti i gruppi' : g}
-                </button>
-              ))}
-            </div>
+            <FilterTabs
+              className="mt-4"
+              value={groupFilter}
+              onChange={setGroupFilter}
+              options={[
+                { value: 'all', label: 'Tutti i gruppi' },
+                ...groups.map((g) => ({ value: g, label: g })),
+              ]}
+            />
           )}
 
           <Standings rows={standings} showPie={groupFilter !== 'all'} />

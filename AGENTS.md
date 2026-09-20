@@ -199,14 +199,37 @@ Shared zones:
 
 ### Client Architecture
 
-#### Screen Flow
+#### Routes
+
+Two pages, resolved from the path in `client/src/router.ts` (base `/collectible-card-gaming/`):
 
 ```
-JoinScreen → DeckPicker → DeckPreview → GameView
-  (join)      (pickDeck)   (previewDeck)   (game)
+/        → MtgLog       registro partite — the app's home
+/zaff    → JoinScreen → DeckPicker → DeckPreview → GameView
+             (join)      (pickDeck)   (previewDeck)   (game)
 ```
+
+`useRoute()` uses `history.pushState` + `popstate`; the ZAFF sub-screens stay internal
+state (a refresh under `/zaff` lands on the join screen). The build emits `404.html` as
+a copy of `index.html` so GitHub Pages serves the deep link.
 
 WebSocket is opened only when entering `GameView`. Deck selection/preview is purely client-side using MTGJSON API.
+
+#### Shared UI kit (`client/src/components/ui/`)
+
+Both halves of the app are built from these; prefer extending them over new one-off classes.
+
+| Component | Purpose |
+|-----------|---------|
+| `Button` / `ButtonLink` | `primary` (gradient), `ghost`, `link`, `danger` × `sm`/`md`/`lg` |
+| `Field` | `TextField`, `SelectField`, `TextAreaField` (label + control + error), `density="compact"` for dense forms |
+| `Panel` | `CenteredPanel` — the full-screen mask (ZAFF join, registro login, deck picker) |
+| `Modal` | Overlay with ✕/Esc/backdrop close; `level={2}` stacks over another modal |
+| `FilterTabs`, `Badge`, `NumberStepper` | Group/source filters, pills, −/+ numeric input |
+| `styles.ts` | `PANEL`, `FIELD_*`, `HEADING_*`, `TEXT_*`, `cx()` |
+
+Fonts: Cinzel (`font-serif`) is for headings only — always via `HEADING_*`. Everything
+else uses Inter (`font-sans`). Mana symbols come from mana-font via `mtglog/ManaIcon`.
 
 #### Socket Layer
 
@@ -255,7 +278,10 @@ Message handling in `useSocket`:
 | `server/state.go` | Go GameState, Player, Card structs, zone init |
 | `server/client.go` | Client: ReadLoop, handleMessage dispatch |
 | `server/tunnel.go` | Built-in Cloudflare tunnel support |
-| `client/src/App.tsx` | Screen state machine |
+| `client/src/App.tsx` | Route + screen state machine |
+| `client/src/router.ts` | Two-route router (`/`, `/zaff`) |
+| `client/src/components/ui/` | Shared UI kit (buttons, fields, panel, modal…) |
+| `client/src/components/MtgLog.tsx` | Registro partite home (header, standings, modals) |
 | `client/src/components/GameView.tsx` | Game screen, LOAD_DECK dispatch |
 | `client/src/components/DeckPreview.tsx` | Deck review before confirmation |
 | `client/src/network/useSocket.ts` | Central client message handler |

@@ -1,5 +1,7 @@
 import { useMemo } from 'react';
 import { scryfallImageUrl, type MtgJsonDeck, type MtgJsonCard } from '../services/mtgjson';
+import Button from './ui/Button';
+import { cx, HEADING_PANEL, HEADING_SECTION } from './ui/styles';
 
 interface DeckPreviewProps {
   deck: MtgJsonDeck;
@@ -124,7 +126,7 @@ export default function DeckPreview({ deck, onGoBack, onConfirm }: DeckPreviewPr
     <div className="flex min-h-screen flex-col bg-zaff-bg text-zaff-text">
       {/* Header */}
       <header className="border-b border-zaff-border bg-zaff-surface px-6 py-4">
-        <h2 className="text-2xl font-bold text-zaff-primary">{deck.name}</h2>
+        <h2 className={HEADING_PANEL}>{deck.name}</h2>
         <p className="mt-1 text-sm text-zaff-muted">
           {deck.type} &middot; {total} cards ({unique} unique)
         </p>
@@ -134,7 +136,7 @@ export default function DeckPreview({ deck, onGoBack, onConfirm }: DeckPreviewPr
       <main className="flex-1 overflow-y-auto px-6 py-6">
         {sections.map((section) => (
           <section key={section.title} className="mb-8">
-            <h3 className="mb-4 text-xl font-bold text-zaff-text">
+            <h3 className={cx(HEADING_SECTION, 'mb-4')}>
               {section.title}
               <span className="ml-2 text-base font-normal text-zaff-muted">
                 ({section.cards.reduce((sum, c) => sum + c.count, 0)} cards)
@@ -154,18 +156,12 @@ export default function DeckPreview({ deck, onGoBack, onConfirm }: DeckPreviewPr
 
       {/* Bottom action bar */}
       <footer className="flex items-center justify-between border-t border-zaff-border bg-zaff-surface px-6 py-4">
-        <button
-          onClick={onGoBack}
-          className="rounded-lg border border-zaff-border px-6 py-3 font-semibold text-zaff-muted transition-colors hover:bg-zaff-border hover:text-zaff-text focus:outline-none focus:ring-2 focus:ring-zaff-primary"
-        >
+        <Button variant="ghost" size="lg" onClick={onGoBack}>
           Go Back
-        </button>
-        <button
-          onClick={onConfirm}
-          className="rounded-lg bg-zaff-primary px-6 py-3 font-semibold text-white transition-colors hover:bg-zaff-primary-hover focus:outline-none focus:ring-2 focus:ring-zaff-primary focus:ring-offset-2 focus:ring-offset-zaff-surface"
-        >
+        </Button>
+        <Button size="lg" onClick={onConfirm}>
           Confirm Deck
-        </button>
+        </Button>
       </footer>
     </div>
   );

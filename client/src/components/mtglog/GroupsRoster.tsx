@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { canEdit, supabase, TABLE_GAMES, TABLE_GROUPS } from '../../services/supabase';
-import { BTN_DANGER_LINK, BTN_LINK, BTN_PRIMARY, INPUT } from './ui';
+import Button from '../ui/Button';
+import { FIELD_CONTROL_SM } from '../ui/styles';
 
 interface GroupsRosterProps {
   userId: string;
@@ -113,11 +114,11 @@ export default function GroupsRoster({ userId }: GroupsRosterProps) {
           onChange={(e) => setNewName(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
           placeholder="es. Colleghi, Alessandro e Davide"
-          className={INPUT}
+          className={FIELD_CONTROL_SM}
         />
-        <button type="button" onClick={handleAdd} className={`shrink-0 ${BTN_PRIMARY}`}>
+        <Button onClick={handleAdd} className="shrink-0">
           Aggiungi
-        </button>
+        </Button>
       </div>
 
       {loading ? (
@@ -136,28 +137,28 @@ export default function GroupsRoster({ userId }: GroupsRosterProps) {
                     onChange={(e) => setRenameValue(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && confirmRename(r.name)}
                     autoFocus
-                    className={INPUT}
+                    className={FIELD_CONTROL_SM}
                   />
                   <div className="flex shrink-0 gap-1.5">
-                    <button type="button" onClick={() => confirmRename(r.name)} className={BTN_LINK}>
+                    <Button variant="link" size="sm" onClick={() => confirmRename(r.name)}>
                       Salva
-                    </button>
-                    <button type="button" onClick={() => setRenaming(null)} className={BTN_DANGER_LINK}>
+                    </Button>
+                    <Button variant="danger" size="sm" onClick={() => setRenaming(null)}>
                       Annulla
-                    </button>
+                    </Button>
                   </div>
                 </>
               ) : (
                 <>
-                  <span className="min-w-0 flex-1 truncate font-serif text-[15px] text-zaff-text">{r.name}</span>
+                  <span className="min-w-0 flex-1 truncate text-[15px] text-zaff-text">{r.name}</span>
                   {canEdit(r.createdBy, userId) && (
                     <div className="flex shrink-0 gap-1.5">
-                      <button type="button" onClick={() => startRename(r.name)} className={BTN_LINK}>
+                      <Button variant="link" size="sm" onClick={() => startRename(r.name)}>
                         Rinomina
-                      </button>
-                      <button type="button" onClick={() => handleDelete(r.name)} className={BTN_DANGER_LINK}>
+                      </Button>
+                      <Button variant="danger" size="sm" onClick={() => handleDelete(r.name)}>
                         Cancella
-                      </button>
+                      </Button>
                     </div>
                   )}
                 </>

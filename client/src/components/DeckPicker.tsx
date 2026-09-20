@@ -7,6 +7,10 @@ import {
   type DeckListEntry,
   type MtgJsonDeck,
 } from '../services/mtgjson';
+import Button from './ui/Button';
+import CenteredPanel from './ui/Panel';
+import { SelectField } from './ui/Field';
+import { TEXT_ERROR } from './ui/styles';
 
 interface DeckPickerProps {
   onDeckSelected: (deck: MtgJsonDeck) => void;
@@ -84,76 +88,46 @@ export default function DeckPicker({ onDeckSelected }: DeckPickerProps) {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zaff-bg px-4">
-      <div className="w-full max-w-md rounded-2xl border border-zaff-border bg-zaff-surface p-8 shadow-xl">
-        <h2 className="mb-2 text-center text-3xl font-bold tracking-tight text-zaff-primary">
-          Choose a Deck
-        </h2>
-        <p className="mb-8 text-center text-zaff-muted">
-          Browse premade decks from MTGJSON
-        </p>
+    <CenteredPanel title="Choose a Deck" subtitle="Browse premade decks from MTGJSON">
+      {error && (
+        <div className={`mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 ${TEXT_ERROR}`} role="alert">
+          {error}
+        </div>
+      )}
 
-        {error && (
-          <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400" role="alert">
-            {error}
-          </div>
-        )}
+      <SelectField
+        id="deck-type"
+        label="Deck Type"
+        value={selectedType}
+        onChange={(e) => setSelectedType(e.target.value)}
+      >
+        <option value="">Select a deck type...</option>
+        {deckTypes.map((type) => (
+          <option key={type} value={type}>
+            {type}
+          </option>
+        ))}
+      </SelectField>
 
-        {/* Deck Type dropdown */}
-        <label
-          htmlFor="deck-type"
-          className="mb-2 block text-sm font-medium text-zaff-text"
+      {selectedType && (
+        <SelectField
+          id="deck-name"
+          label="Deck Name"
+          value={selectedFileName}
+          onChange={(e) => setSelectedFileName(e.target.value)}
         >
-          Deck Type
-        </label>
-        <select
-          id="deck-type"
-          value={selectedType}
-          onChange={(e) => setSelectedType(e.target.value)}
-          className="mb-6 w-full rounded-lg border border-zaff-border bg-zaff-bg px-4 py-3 text-zaff-text focus:outline-none focus:ring-2 focus:ring-zaff-primary"
-        >
-          <option value="">Select a deck type...</option>
-          {deckTypes.map((type) => (
-            <option key={type} value={type}>
-              {type}
+          <option value="">Select a deck...</option>
+          {filteredDecks.map((deck) => (
+            <option key={deck.fileName} value={deck.fileName}>
+              {deck.name}
             </option>
           ))}
-        </select>
+        </SelectField>
+      )}
 
-        {/* Deck Name dropdown (visible only when type is selected) */}
-        {selectedType && (
-          <>
-            <label
-              htmlFor="deck-name"
-              className="mb-2 block text-sm font-medium text-zaff-text"
-            >
-              Deck Name
-            </label>
-            <select
-              id="deck-name"
-              value={selectedFileName}
-              onChange={(e) => setSelectedFileName(e.target.value)}
-              className="mb-6 w-full rounded-lg border border-zaff-border bg-zaff-bg px-4 py-3 text-zaff-text focus:outline-none focus:ring-2 focus:ring-zaff-primary"
-            >
-              <option value="">Select a deck...</option>
-              {filteredDecks.map((deck) => (
-                <option key={deck.fileName} value={deck.fileName}>
-                  {deck.name}
-                </option>
-              ))}
-            </select>
-          </>
-        )}
-
-        {/* OK button */}
-        <button
-          onClick={handleConfirm}
-          disabled={!selectedFileName || fetching}
-          className="w-full rounded-lg bg-zaff-primary px-4 py-3 font-semibold text-white transition-colors hover:bg-zaff-primary-hover focus:outline-none focus:ring-2 focus:ring-zaff-primary focus:ring-offset-2 focus:ring-offset-zaff-surface disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {fetching ? 'Loading deck...' : 'OK'}
-        </button>
-      </div>
-    </div>
+      <Button onClick={handleConfirm} disabled={!selectedFileName || fetching} size="lg" fullWidth>
+        {fetching ? 'Loading deck...' : 'OK'}
+      </Button>
+    </CenteredPanel>
   );
 }

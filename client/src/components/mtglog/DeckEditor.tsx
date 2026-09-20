@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { supabase, TABLE_DECKS } from '../../services/supabase';
 import { ManaPips } from './ManaIcon';
-import { BTN_GHOST, BTN_LINK, BTN_PRIMARY, INPUT, LABEL, MINI } from './ui';
+import Button from '../ui/Button';
+import { TextField, SelectField } from '../ui/Field';
+import { cx, FIELD_CONTROL_SM, FIELD_LABEL, TEXT_MINI, TEXT_MUTED } from '../ui/styles';
 
 interface DeckEditorProps {
   deckId: string | null;
@@ -280,47 +282,43 @@ export default function DeckEditor({ deckId, initialDraft, onBack, onSaved }: De
   const total = draft.reduce((sum, c) => sum + c.qty, 0);
 
   if (loading) {
-    return <p className="text-zaff-muted">Caricamento…</p>;
+    return <p className={TEXT_MUTED}>Caricamento…</p>;
   }
 
   return (
     <>
-      <div className="mb-3.5">
-        <label className={LABEL} htmlFor="deckName">
-          Nome mazzo
-        </label>
-        <input
-          id="deckName"
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="es. Mono nero aggro by Ale"
-          className={INPUT}
-        />
-      </div>
+      <TextField
+        id="deckName"
+        label="Nome mazzo"
+        density="compact"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        placeholder="es. Mono nero aggro by Ale"
+      />
 
-      <div className="mb-3.5">
-        <label className={LABEL} htmlFor="deckSource">
-          Origine mazzo
-        </label>
-        <select id="deckSource" value={source} onChange={(e) => setSource(e.target.value)} className={INPUT}>
-          <option value="">Non specificato</option>
-          <option value="brew">Homebrew (fatto in casa)</option>
-          <option value="precon">Precon (di fabbrica)</option>
-        </select>
-      </div>
+      <SelectField
+        id="deckSource"
+        label="Origine mazzo"
+        density="compact"
+        value={source}
+        onChange={(e) => setSource(e.target.value)}
+      >
+        <option value="">Non specificato</option>
+        <option value="brew">Homebrew (fatto in casa)</option>
+        <option value="precon">Precon (di fabbrica)</option>
+      </SelectField>
 
-      <div className="mb-3.5">
-        <label className={LABEL}>Colori del mazzo</label>
+      <div className="mb-4">
+        <span className={FIELD_LABEL}>Colori del mazzo</span>
         <ManaPips colors={colors} onToggle={toggleColor} />
-        <p className={`mt-1.5 ${MINI}`}>
+        <p className={cx('mt-1.5', TEXT_MINI)}>
           Si accendono da soli quando aggiungi terre base; puoi correggerli a mano in ogni momento.
         </p>
       </div>
 
-      <button type="button" onClick={togglePreconBox} className={BTN_LINK}>
+      <Button variant="link" size="sm" onClick={togglePreconBox}>
         Importa un mazzo precon Commander…
-      </button>
+      </Button>
 
       {preconOpen && (
         <div className="mb-3.5 mt-0.5 rounded-lg border border-zaff-border bg-zaff-bg p-3">
@@ -330,9 +328,9 @@ export default function DeckEditor({ deckId, initialDraft, onBack, onSaved }: De
             onChange={(e) => setPreconSearch(e.target.value)}
             autoComplete="off"
             placeholder="Cerca il nome del precon (es. Elven Empire)…"
-            className={INPUT}
+            className={FIELD_CONTROL_SM}
           />
-          {preconStatus && <p className={`mt-1.5 ${MINI}`}>{preconStatus}</p>}
+          {preconStatus && <p className={cx('mt-1.5', TEXT_MINI)}>{preconStatus}</p>}
           {preconMatches.length > 0 && (
             <div className="mt-2 max-h-[260px] overflow-y-auto">
               {preconMatches.map((d) => (
@@ -351,8 +349,8 @@ export default function DeckEditor({ deckId, initialDraft, onBack, onSaved }: De
         </div>
       )}
 
-      <div className="relative mb-3.5 mt-3.5">
-        <label className={LABEL} htmlFor="cardSearch">
+      <div className="relative mt-3.5">
+        <label className={FIELD_LABEL} htmlFor="cardSearch">
           Cerca carta
         </label>
         <input
@@ -365,7 +363,7 @@ export default function DeckEditor({ deckId, initialDraft, onBack, onSaved }: De
           }}
           autoComplete="off"
           placeholder="Scrivi il nome della carta…"
-          className={INPUT}
+          className={FIELD_CONTROL_SM}
         />
         {suggestions.length > 0 && (
           <div className="absolute inset-x-0 top-full z-10 max-h-[220px] overflow-y-auto rounded-lg border border-zaff-border bg-zaff-surface">
@@ -387,37 +385,32 @@ export default function DeckEditor({ deckId, initialDraft, onBack, onSaved }: De
         )}
       </div>
 
-      <div className="mb-3.5 grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div>
-          <label className={LABEL} htmlFor="cardQty">
-            Copie
-          </label>
-          <input
-            id="cardQty"
-            type="number"
-            min={1}
-            max={99}
-            value={qty}
-            onChange={(e) => setQty(Math.max(1, parseInt(e.target.value, 10) || 1))}
-            className={INPUT}
-          />
-        </div>
-        <div className="flex items-end">
-          <button type="button" onClick={handleAddCard} className={`${BTN_GHOST} w-full`}>
-            Aggiungi al mazzo
-          </button>
-        </div>
+      <div className="mt-3.5 grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+        <TextField
+          id="cardQty"
+          label="Copie"
+          density="compact"
+          type="number"
+          min={1}
+          max={99}
+          value={qty}
+          onChange={(e) => setQty(Math.max(1, parseInt(e.target.value, 10) || 1))}
+          fieldClassName="mb-0"
+        />
+        <Button variant="ghost" onClick={handleAddCard}>
+          Aggiungi al mazzo
+        </Button>
       </div>
 
       <div className="my-3.5 flex items-center justify-between rounded-lg border border-zaff-primary bg-zaff-bg px-4 py-3">
         <span className="text-sm text-zaff-muted">Totale carte</span>
-        <b className="bg-gradient-to-r from-zaff-primary to-zaff-accent bg-clip-text font-serif text-[26px] text-transparent">
+        <b className="bg-gradient-to-r from-zaff-primary to-zaff-accent bg-clip-text text-[26px] font-bold text-transparent">
           {total}
         </b>
       </div>
 
       {draft.length === 0 ? (
-        <p className={`mb-2.5 ${MINI}`}>Nessuna carta ancora aggiunta.</p>
+        <p className={cx('mb-2.5', TEXT_MINI)}>Nessuna carta ancora aggiunta.</p>
       ) : (
         <div className="mb-2.5 max-h-64 overflow-y-auto">
           {draft.map((c, i) => (
@@ -442,12 +435,12 @@ export default function DeckEditor({ deckId, initialDraft, onBack, onSaved }: De
       )}
 
       <div className="flex flex-wrap items-center gap-2.5">
-        <button type="button" onClick={handleSave} disabled={saving} className={BTN_PRIMARY}>
+        <Button onClick={handleSave} disabled={saving}>
           {deckId ? 'Salva modifiche' : 'Salva mazzo'}
-        </button>
-        <button type="button" onClick={onBack} className={BTN_GHOST}>
+        </Button>
+        <Button variant="ghost" onClick={onBack}>
           Annulla
-        </button>
+        </Button>
       </div>
 
       {error && (
@@ -456,7 +449,7 @@ export default function DeckEditor({ deckId, initialDraft, onBack, onSaved }: De
         </p>
       )}
 
-      <p className={`mt-2.5 ${MINI}`}>
+      <p className={cx('mt-2.5', TEXT_MINI)}>
         I nomi delle carte arrivano da{' '}
         <a href="https://scryfall.com" target="_blank" rel="noopener" className="underline hover:text-zaff-gold">
           Scryfall

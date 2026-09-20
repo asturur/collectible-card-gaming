@@ -3,7 +3,10 @@ import { subscribeToTable, supabase, TABLE_DECKS, TABLE_GAMES, TABLE_GROUPS, TAB
 import type { Game } from './GameList';
 import LifeCounter from './LifeCounter';
 import { ManaPips } from './ManaIcon';
-import { BTN_GHOST, BTN_LINK, BTN_PRIMARY, INPUT, LABEL, MINI } from './ui';
+import Button from '../ui/Button';
+import NumberStepper from '../ui/NumberStepper';
+import { SelectField, TextAreaField, TextField } from '../ui/Field';
+import { cx, FIELD_CONTROL_SM, FIELD_LABEL, TEXT_MINI, TEXT_MUTED } from '../ui/styles';
 
 interface GameFormProps {
   editingGame?: Game | null;
@@ -40,52 +43,6 @@ function emptyPlayerRow(): PlayerRow {
     winner: false,
     colors: new Set(),
   };
-}
-
-/** Stepper punti vita: − / campo numerico / +, come nell'app originale. */
-function LifeStepper({
-  value,
-  onChange,
-  placeholder,
-  className = '',
-}: {
-  value: string;
-  onChange: (next: string) => void;
-  placeholder?: string;
-  className?: string;
-}) {
-  function step(delta: number) {
-    const current = value === '' ? 0 : Number(value) || 0;
-    onChange(String(current + delta));
-  }
-  return (
-    <div className={`flex overflow-hidden rounded-lg border border-zaff-border ${className}`}>
-      <button
-        type="button"
-        onClick={() => step(-1)}
-        aria-label="Meno uno"
-        className="w-[30px] shrink-0 bg-zaff-bg text-base leading-none text-zaff-text transition hover:bg-zaff-gold hover:text-zaff-bg"
-      >
-        −
-      </button>
-      <input
-        type="number"
-        inputMode="numeric"
-        value={value}
-        placeholder={placeholder}
-        onChange={(e) => onChange(e.target.value)}
-        className="mtg-life-input w-11 min-w-0 flex-1 border-0 bg-zaff-bg px-0.5 py-2 text-center tabular-nums text-zaff-text placeholder:text-zaff-muted focus:outline-none"
-      />
-      <button
-        type="button"
-        onClick={() => step(1)}
-        aria-label="Più uno"
-        className="w-[30px] shrink-0 bg-zaff-bg text-base leading-none text-zaff-text transition hover:bg-zaff-gold hover:text-zaff-bg"
-      >
-        +
-      </button>
-    </div>
-  );
 }
 
 /** Form "Nuova partita"/"Modifica partita": giocatori dinamici, select mazzo/nome,
@@ -271,7 +228,7 @@ export default function GameForm({ editingGame, onBack, onSaved }: GameFormProps
   }
 
   if (loading) {
-    return <p className="text-zaff-muted">Caricamento…</p>;
+    return <p className={TEXT_MUTED}>Caricamento…</p>;
   }
 
   if (lifeCounterOpen) {
@@ -287,49 +244,41 @@ export default function GameForm({ editingGame, onBack, onSaved }: GameFormProps
 
   return (
     <>
-      <div className="mb-3.5">
-        <label className={LABEL} htmlFor="group">
-          Gruppo
-        </label>
-        <select id="group" value={group} onChange={(e) => setGroup(e.target.value)} className={INPUT}>
-          <option value="">Generale</option>
-          {groups.map((g) => (
-            <option key={g} value={g}>
-              {g}
-            </option>
+      <SelectField id="group" label="Gruppo" density="compact" value={group} onChange={(e) => setGroup(e.target.value)}>
+        <option value="">Generale</option>
+        {groups.map((g) => (
+          <option key={g} value={g}>
+            {g}
+          </option>
+        ))}
+      </SelectField>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <TextField
+          id="date"
+          label="Data"
+          density="compact"
+          type="date"
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+        />
+        <TextField
+          id="fmt"
+          label="Formato"
+          density="compact"
+          list="fmts"
+          value={format}
+          onChange={(e) => setFormat(e.target.value)}
+          placeholder="Commander"
+        />
+        <datalist id="fmts">
+          {FORMATS.map((f) => (
+            <option key={f} value={f} />
           ))}
-        </select>
+        </datalist>
       </div>
 
-      <div className="mb-3.5 grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div>
-          <label className={LABEL} htmlFor="date">
-            Data
-          </label>
-          <input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} className={INPUT} />
-        </div>
-        <div>
-          <label className={LABEL} htmlFor="fmt">
-            Formato
-          </label>
-          <input
-            id="fmt"
-            type="text"
-            list="fmts"
-            value={format}
-            onChange={(e) => setFormat(e.target.value)}
-            placeholder="Commander"
-            className={INPUT}
-          />
-          <datalist id="fmts">
-            {FORMATS.map((f) => (
-              <option key={f} value={f} />
-            ))}
-          </datalist>
-        </div>
-      </div>
-
-      <label className={LABEL}>Giocatori</label>
+      <span className={FIELD_LABEL}>Giocatori</span>
       <div>
         {players.map((p, i) => (
           <div
@@ -343,7 +292,7 @@ export default function GameForm({ editingGame, onBack, onSaved }: GameFormProps
                 value={p.name}
                 onChange={(e) => updatePlayer(i, { name: e.target.value })}
                 placeholder={`Giocatore ${i + 1}`}
-                className={`${INPUT} min-w-0 flex-1 font-serif text-base`}
+                className={cx(FIELD_CONTROL_SM, 'min-w-0 flex-1')}
               />
               <datalist id={`playerNames-${i}`}>
                 {playerNames.map((n) => (
@@ -367,7 +316,7 @@ export default function GameForm({ editingGame, onBack, onSaved }: GameFormProps
                 <select
                   value={p.deckSelect}
                   onChange={(e) => handleDeckSelectChange(i, e.target.value)}
-                  className={`${INPUT} min-w-0 flex-1`}
+                  className={cx(FIELD_CONTROL_SM, 'min-w-0 flex-1')}
                 >
                   <option value="">Nessun mazzo</option>
                   {decks.map((d) => (
@@ -382,11 +331,12 @@ export default function GameForm({ editingGame, onBack, onSaved }: GameFormProps
                   value={p.deckManual}
                   onChange={(e) => updatePlayer(i, { deckManual: e.target.value })}
                   placeholder="Nome mazzo libero"
-                  className={`${INPUT} min-w-0 flex-1`}
+                  className={cx(FIELD_CONTROL_SM, 'min-w-0 flex-1')}
                 />
               )}
-              <button
-                type="button"
+              <Button
+                variant="link"
+                size="sm"
                 onClick={() =>
                   updatePlayer(i, {
                     deckMode: p.deckMode === 'select' ? 'manual' : 'select',
@@ -394,10 +344,10 @@ export default function GameForm({ editingGame, onBack, onSaved }: GameFormProps
                     deckManual: '',
                   })
                 }
-                className={`${BTN_LINK} shrink-0 text-xs`}
+                className="shrink-0"
               >
                 {p.deckMode === 'select' ? 'Scrivi a mano' : 'Scegli dai mazzi salvati'}
-              </button>
+              </Button>
             </div>
 
             <input
@@ -405,7 +355,7 @@ export default function GameForm({ editingGame, onBack, onSaved }: GameFormProps
               value={p.desc}
               onChange={(e) => updatePlayer(i, { desc: e.target.value })}
               placeholder="Com'è fatto il mazzo, strategia, note"
-              className={`${INPUT} mb-2`}
+              className={cx(FIELD_CONTROL_SM, 'mb-2')}
             />
 
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -423,10 +373,11 @@ export default function GameForm({ editingGame, onBack, onSaved }: GameFormProps
                   Vincitore
                 </label>
 
-                <LifeStepper
+                <NumberStepper
                   value={p.life}
                   onChange={(next) => updatePlayer(i, { life: next })}
                   placeholder="PV"
+                  aria-label="Punti vita"
                   className="w-[104px]"
                 />
               </div>
@@ -435,49 +386,48 @@ export default function GameForm({ editingGame, onBack, onSaved }: GameFormProps
         ))}
       </div>
 
-      <button type="button" onClick={addPlayer} className={BTN_LINK}>
+      <Button variant="link" size="sm" onClick={addPlayer}>
         + Aggiungi giocatore
-      </button>
+      </Button>
 
       <div className="mt-3.5">
-        <label className={LABEL} htmlFor="startLife">
+        <label className={FIELD_LABEL} htmlFor="startLife">
           Punti vita iniziali
         </label>
-        <LifeStepper
+        <NumberStepper
           value={String(startLife)}
+          min={1}
           onChange={(next) => setStartLife(Math.max(1, parseInt(next, 10) || 1))}
           className="max-w-[140px]"
         />
       </div>
 
-      <button
-        type="button"
+      <Button
         onClick={handleOpenLifeCounter}
-        className="mt-4 flex w-full items-center justify-center gap-2.5 rounded-lg bg-gradient-to-r from-zaff-primary to-zaff-accent px-4 py-3.5 font-serif text-lg font-bold tracking-wide text-zaff-bg transition hover:brightness-110 active:brightness-95"
+        size="lg"
+        fullWidth
+        className="mt-4 py-3.5 text-lg"
       >
         <span className="text-xl leading-none">▶</span> Avvia partita
-      </button>
+      </Button>
 
-      <div className="mt-4">
-        <label className={LABEL} htmlFor="notes">
-          Appunti
-        </label>
-        <textarea
-          id="notes"
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          placeholder="Combo assurde, alleanze tradite, mulligan sfortunati…"
-          className={`${INPUT} min-h-[70px] resize-y`}
-        />
-      </div>
+      <TextAreaField
+        id="notes"
+        label="Appunti"
+        density="compact"
+        value={notes}
+        onChange={(e) => setNotes(e.target.value)}
+        placeholder="Combo assurde, alleanze tradite, mulligan sfortunati…"
+        fieldClassName="mt-4"
+      />
 
       <div className="mt-2.5 flex flex-wrap items-center gap-2.5">
-        <button type="button" onClick={handleSaveClick} disabled={saving} className={BTN_PRIMARY}>
+        <Button onClick={handleSaveClick} disabled={saving}>
           {editingGame ? 'Salva modifiche' : 'Salva partita'}
-        </button>
-        <button type="button" onClick={onBack} className={BTN_GHOST}>
+        </Button>
+        <Button variant="ghost" onClick={onBack}>
           Annulla
-        </button>
+        </Button>
       </div>
 
       {message && <p className="mt-3 text-sm text-green-400">{message}</p>}
@@ -487,7 +437,7 @@ export default function GameForm({ editingGame, onBack, onSaved }: GameFormProps
         </p>
       )}
 
-      <p className={`mt-2.5 ${MINI}`}>
+      <p className={cx('mt-2.5', TEXT_MINI)}>
         I pallini sotto ogni nome sono i colori del mazzo: bianco, blu, nero, rosso, verde.
       </p>
     </>

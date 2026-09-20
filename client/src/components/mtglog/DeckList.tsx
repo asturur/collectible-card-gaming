@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { canEdit, supabase, TABLE_DECKS } from '../../services/supabase';
-import Modal from './Modal';
 import { ManaIcons, ManaPips } from './ManaIcon';
-import { BTN_DANGER_LINK, BTN_LINK } from './ui';
+import Modal from '../ui/Modal';
+import Button from '../ui/Button';
+import Badge from '../ui/Badge';
+import { TEXT_MINI, TEXT_MUTED } from '../ui/styles';
 
 interface DeckListProps {
   userId: string;
@@ -57,19 +59,11 @@ function sourceLabel(source: string): string | null {
   return null;
 }
 
-/** Pillola "Homebrew"/"Precon" accanto al nome del mazzo (.badge-source). */
+/** Pillola "Homebrew"/"Precon" accanto al nome del mazzo. */
 function SourceBadge({ source }: { source: string }) {
   const label = sourceLabel(source);
   if (!label) return null;
-  return (
-    <span
-      className={`shrink-0 rounded-full border px-2 py-px text-[11px] ${
-        source === 'brew' ? 'border-green-400 text-green-400' : 'border-cyan-400 text-cyan-400'
-      }`}
-    >
-      {label}
-    </span>
-  );
+  return <Badge tone={source === 'brew' ? 'brew' : 'precon'}>{label}</Badge>;
 }
 
 /** Lista mazzi salvati + dettaglio, con creazione/modifica/cancellazione (Step 5).
@@ -142,7 +136,7 @@ export default function DeckList({ userId, onCreate, onEdit, onImportFile }: Dec
     <>
       <div className="mb-3">
         {loading ? (
-          <p className="text-zaff-muted">Caricamento…</p>
+          <p className={TEXT_MUTED}>Caricamento…</p>
         ) : decks.length === 0 ? (
           <p className="text-sm text-zaff-muted">Ancora nessun mazzo salvato.</p>
         ) : (
@@ -160,17 +154,17 @@ export default function DeckList({ userId, onCreate, onEdit, onImportFile }: Dec
                 <div className="flex shrink-0 gap-1.5 whitespace-nowrap">
                   {canEdit(d.createdBy, userId) ? (
                     <>
-                      <button type="button" onClick={() => onEdit(d.id)} className={BTN_LINK}>
+                      <Button variant="link" size="sm" onClick={() => onEdit(d.id)}>
                         Modifica
-                      </button>
-                      <button type="button" onClick={() => handleDelete(d.id)} className={BTN_DANGER_LINK}>
+                      </Button>
+                      <Button variant="danger" size="sm" onClick={() => handleDelete(d.id)}>
                         Cancella
-                      </button>
+                      </Button>
                     </>
                   ) : (
-                    <button type="button" onClick={() => setSelectedId(d.id)} className={BTN_LINK}>
+                    <Button variant="link" size="sm" onClick={() => setSelectedId(d.id)}>
                       Visualizza
-                    </button>
+                    </Button>
                   )}
                 </div>
               </li>
@@ -180,12 +174,12 @@ export default function DeckList({ userId, onCreate, onEdit, onImportFile }: Dec
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <button type="button" onClick={onCreate} className={BTN_LINK}>
+        <Button variant="link" size="sm" onClick={onCreate}>
           + Crea nuovo mazzo
-        </button>
-        <button type="button" onClick={() => fileInputRef.current?.click()} className={BTN_LINK}>
+        </Button>
+        <Button variant="link" size="sm" onClick={() => fileInputRef.current?.click()}>
           📄 Importa mazzo (file ManaBox)
-        </button>
+        </Button>
       </div>
       <input ref={fileInputRef} type="file" accept=".txt" hidden onChange={handleFileChange} />
 
@@ -197,7 +191,7 @@ export default function DeckList({ userId, onCreate, onEdit, onImportFile }: Dec
 
       {selectedDeck && (
         <Modal level={2} title={selectedDeck.name} onClose={() => setSelectedId(null)}>
-          <p className="mb-2.5 flex items-center gap-2 text-xs text-zaff-muted">
+          <p className={`mb-2.5 flex items-center gap-2 ${TEXT_MINI}`}>
             <SourceBadge source={selectedDeck.source} />
             {deckTotal(selectedDeck)} carte
           </p>

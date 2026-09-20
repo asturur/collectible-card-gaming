@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { BTN_GHOST, BTN_PRIMARY } from './ui';
+import Button from '../ui/Button';
+import { HEADING_SECTION } from '../ui/styles';
 
 interface LifeCounterProps {
   players: string[];
@@ -60,19 +61,15 @@ export default function LifeCounter({ players, startLife, onCancel, onFinish }: 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-zaff-bg p-3">
       <div className="mb-3 flex shrink-0 items-center justify-between gap-2">
-        <button type="button" onClick={onCancel} className={BTN_GHOST}>
+        <Button variant="ghost" onClick={onCancel}>
           Annulla
-        </button>
-        <button type="button" onClick={openHighRoll} className={BTN_GHOST}>
+        </Button>
+        <Button variant="ghost" onClick={openHighRoll}>
           🎲 High Roll
-        </button>
-        <button
-          type="button"
-          onClick={() => onFinish(Object.fromEntries(lives.map((p) => [p.name, p.life])))}
-          className={BTN_PRIMARY}
-        >
+        </Button>
+        <Button onClick={() => onFinish(Object.fromEntries(lives.map((p) => [p.name, p.life])))}>
           Fine partita
-        </button>
+        </Button>
       </div>
 
       <div
@@ -85,35 +82,35 @@ export default function LifeCounter({ players, startLife, onCancel, onFinish }: 
               <button
                 type="button"
                 onClick={() => adjust(i, -5)}
-                className="border-b border-r border-zaff-border font-serif text-[clamp(16px,3vw,24px)] text-zaff-muted transition-colors active:bg-zaff-gold/25 active:text-zaff-gold"
+                className="border-b border-r border-zaff-border text-[clamp(16px,3vw,24px)] text-zaff-muted transition-colors active:bg-zaff-gold/25 active:text-zaff-gold"
               >
                 −5
               </button>
               <button
                 type="button"
                 onClick={() => adjust(i, 5)}
-                className="border-b border-zaff-border font-serif text-[clamp(16px,3vw,24px)] text-zaff-muted transition-colors active:bg-zaff-gold/25 active:text-zaff-gold"
+                className="border-b border-zaff-border text-[clamp(16px,3vw,24px)] text-zaff-muted transition-colors active:bg-zaff-gold/25 active:text-zaff-gold"
               >
                 +5
               </button>
               <button
                 type="button"
                 onClick={() => adjust(i, -1)}
-                className="border-r border-zaff-border font-serif text-[clamp(16px,3vw,24px)] text-zaff-muted transition-colors active:bg-zaff-gold/25 active:text-zaff-gold"
+                className="border-r border-zaff-border text-[clamp(16px,3vw,24px)] text-zaff-muted transition-colors active:bg-zaff-gold/25 active:text-zaff-gold"
               >
                 −1
               </button>
               <button
                 type="button"
                 onClick={() => adjust(i, 1)}
-                className="font-serif text-[clamp(16px,3vw,24px)] text-zaff-muted transition-colors active:bg-zaff-gold/25 active:text-zaff-gold"
+                className="text-[clamp(16px,3vw,24px)] text-zaff-muted transition-colors active:bg-zaff-gold/25 active:text-zaff-gold"
               >
                 +1
               </button>
             </div>
             <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-              <p className="mb-0.5 font-serif text-[clamp(13px,2vw,17px)] text-zaff-muted">{p.name}</p>
-              <p className="font-serif text-[clamp(34px,8vw,72px)] leading-none tabular-nums text-zaff-text">{p.life}</p>
+              <p className="mb-0.5 text-[clamp(13px,2vw,17px)] text-zaff-muted">{p.name}</p>
+              <p className="text-[clamp(34px,8vw,72px)] font-semibold leading-none tabular-nums text-zaff-text">{p.life}</p>
             </div>
           </div>
         ))}
@@ -122,7 +119,7 @@ export default function LifeCounter({ players, startLife, onCancel, onFinish }: 
       {highRollOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
           <div className="w-full max-w-xs rounded-2xl border border-zaff-border bg-zaff-surface p-6 shadow-xl">
-            <h2 className="mb-1 font-serif text-lg text-zaff-text">🎲 High Roll</h2>
+            <h2 className={HEADING_SECTION}>🎲 High Roll</h2>
             <p className="mb-3 text-xs text-zaff-muted">Tiro 1–20: il numero più alto inizia.</p>
             <ul className="mb-4 space-y-1">
               {rolls.map((r) => (
@@ -136,20 +133,12 @@ export default function LifeCounter({ players, startLife, onCancel, onFinish }: 
               ))}
             </ul>
             <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setRolls(rollHighRoll(lives.map((p) => p.name)))}
-                className="flex-1 rounded-lg border border-zaff-border px-3 py-2 text-sm font-semibold text-zaff-text hover:bg-zaff-bg"
-              >
+              <Button variant="ghost" className="flex-1" onClick={() => setRolls(rollHighRoll(lives.map((p) => p.name)))}>
                 Tira di nuovo
-              </button>
-              <button
-                type="button"
-                onClick={() => setHighRollOpen(false)}
-                className="flex-1 rounded-lg bg-zaff-primary px-3 py-2 text-sm font-semibold text-white hover:bg-zaff-primary-hover"
-              >
+              </Button>
+              <Button className="flex-1" onClick={() => setHighRollOpen(false)}>
                 Chiudi
-              </button>
+              </Button>
             </div>
           </div>
         </div>

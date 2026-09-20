@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { subscribeToTable, supabase, TABLE_DECKS, TABLE_GAMES } from '../../services/supabase';
 import type { Game } from './GameList';
 import { rowToGame } from './stats';
-import { LABEL, tabClass } from './ui';
+import Badge from '../ui/Badge';
+import FilterTabs from '../ui/FilterTabs';
+import { FIELD_LABEL, TEXT_MINI, TEXT_MUTED } from '../ui/styles';
 
 interface DeckSourceRow {
   name: string;
@@ -40,7 +42,7 @@ function computeDeckStats(games: Game[], decks: DeckSourceRow[]): DeckStatRow[] 
   }));
 }
 
-const SOURCE_FILTERS: { value: string; label: string }[] = [
+const SOURCE_FILTERS = [
   { value: 'all', label: 'Tutti' },
   { value: 'brew', label: 'Homebrew' },
   { value: 'precon', label: 'Precon' },
@@ -121,7 +123,7 @@ export default function GameStats() {
     });
 
   if (loading) {
-    return <p className="text-zaff-muted">Caricamento…</p>;
+    return <p className={TEXT_MUTED}>Caricamento…</p>;
   }
 
   return (
@@ -139,7 +141,7 @@ export default function GameStats() {
           const pct = s.g ? Math.round((s.w / s.g) * 100) : 0;
           return (
             <div key={key || 'none'} className={`min-w-[140px] flex-1 rounded-lg border bg-zaff-bg px-3.5 py-2.5 ${border}`}>
-              <b className="mb-0.5 block font-serif text-sm text-zaff-text">{label}</b>
+              <b className="mb-0.5 block text-sm font-semibold text-zaff-text">{label}</b>
               <span className="text-[13px] text-zaff-muted">
                 {s.n} mazzi · {s.g} partite · {pct}% vittorie
               </span>
@@ -149,22 +151,10 @@ export default function GameStats() {
       </div>
 
       <div className="my-3.5 flex flex-wrap items-center gap-2.5">
-        <div className="flex flex-wrap gap-2">
-          {SOURCE_FILTERS.map((f) => (
-            <button
-              key={f.value}
-              type="button"
-              onClick={() => setSourceFilter(f.value)}
-              aria-pressed={sourceFilter === f.value}
-              className={tabClass(sourceFilter === f.value)}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
+        <FilterTabs options={SOURCE_FILTERS} value={sourceFilter} onChange={setSourceFilter} />
         <div className="flex-1" />
         <div className="flex items-center gap-2">
-          <label className={`${LABEL} mb-0 whitespace-nowrap`} htmlFor="deckStatsSort">
+          <label className={`${FIELD_LABEL} mb-0 whitespace-nowrap`} htmlFor="deckStatsSort">
             Ordina per
           </label>
           <select
@@ -181,22 +171,18 @@ export default function GameStats() {
       </div>
 
       {rows.length === 0 ? (
-        <p className="text-xs text-zaff-muted">Nessun mazzo in questa categoria.</p>
+        <p className={TEXT_MINI}>Nessun mazzo in questa categoria.</p>
       ) : (
         <div>
           {rows.map((r) => (
             <div key={r.deck} className="border-b border-zaff-border py-2.5 last:border-b-0">
               <div className="flex items-baseline justify-between gap-2.5">
-                <b className="min-w-0 truncate font-serif text-[15px] text-zaff-text">
-                  {r.deck}
+                <b className="flex min-w-0 items-center gap-2 truncate text-[15px] font-semibold text-zaff-text">
+                  <span className="truncate">{r.deck}</span>
                   {r.source && (
-                    <span
-                      className={`ml-2 rounded-full border px-2 py-px text-[11px] font-normal ${
-                        r.source === 'brew' ? 'border-green-400 text-green-400' : 'border-cyan-400 text-cyan-400'
-                      }`}
-                    >
+                    <Badge tone={r.source === 'brew' ? 'brew' : 'precon'}>
                       {r.source === 'brew' ? 'Homebrew' : 'Precon'}
-                    </span>
+                    </Badge>
                   )}
                 </b>
                 <span className="shrink-0 whitespace-nowrap text-[13px] text-zaff-muted">

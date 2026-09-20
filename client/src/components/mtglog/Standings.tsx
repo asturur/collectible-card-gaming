@@ -46,7 +46,7 @@ export default function Standings({ rows, showPie }: StandingsProps) {
               }`}
             >
               <div className="min-w-0">
-                <b className="block break-words font-serif text-[13px] font-semibold sm:text-[15px] text-zaff-text">{t.name}</b>
+                <b className="block break-words text-[13px] font-semibold text-zaff-text sm:text-[15px]">{t.name}</b>
                 <span className="text-[13px] tabular-nums text-zaff-muted">
                   {t.w} vinte su {t.g}
                 </span>
