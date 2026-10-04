@@ -55,6 +55,15 @@ export default function AuthScreen({ onOpenZaff }: AuthScreenProps) {
       const { data, error: signUpError } = await supabase.auth.signUp({
         email: trimmedEmail,
         password,
+        options: {
+          // Indirizzo da cui parte davvero questa registrazione, non uno
+          // fisso scritto a mano: così il link nell'email di conferma porta
+          // sempre al sito giusto, anche se in futuro cambia ancora indirizzo.
+          // Va comunque autorizzato una volta nelle impostazioni di Supabase
+          // ("Redirect URLs"), altrimenti Supabase lo ignora e usa il suo
+          // indirizzo di default.
+          emailRedirectTo: window.location.origin + import.meta.env.BASE_URL,
+        },
       });
       setLoading(false);
       if (signUpError) {
