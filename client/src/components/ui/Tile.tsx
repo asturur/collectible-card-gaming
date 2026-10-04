@@ -139,6 +139,74 @@ export function ClashIcon() {
 }
 
 /**
+ * Anello diviso in tre archi colorati, per il tasto "Statistiche mazzi":
+ * richiama i grafici a torta già usati nelle pagine di statistica dell'app
+ * (stessi colori della palette `PIE_COLORS`).
+ */
+export function StatsRingIcon() {
+  const r = 20;
+  const cx = 50;
+  const cy = 40;
+  const circumference = 2 * Math.PI * r;
+  const segments = [
+    { frac: 0.4, color: '#E8CA7E' },
+    { frac: 0.32, color: '#B4842F' },
+    { frac: 0.28, color: '#6B4E9E' },
+  ];
+  let offset = 0;
+  return (
+    <TileArtBackdrop seed="stats">
+      <g transform={`rotate(-90 ${cx} ${cy})`}>
+        {segments.map((s) => {
+          const len = s.frac * circumference;
+          const dashoffset = -offset;
+          offset += len;
+          return (
+            <circle
+              key={s.color}
+              cx={cx}
+              cy={cy}
+              r={r}
+              fill="none"
+              stroke={s.color}
+              strokeWidth="9"
+              strokeDasharray={`${len} ${circumference - len}`}
+              strokeDashoffset={dashoffset}
+            />
+          );
+        })}
+      </g>
+      <circle cx={cx} cy={cy} r="9" fill="#120E20" />
+    </TileArtBackdrop>
+  );
+}
+
+/**
+ * Due figure stilizzate (testa + spalle), per il tasto "Gestisci giocatori":
+ * stessa tavolozza oro delle altre illustrazioni.
+ */
+export function PlayersIcon() {
+  return (
+    <TileArtBackdrop seed="players">
+      <defs>
+        <linearGradient id="playersGold" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#F3D48A" />
+          <stop offset="100%" stopColor="#9E7A31" />
+        </linearGradient>
+      </defs>
+      <g opacity="0.85">
+        <circle cx="38" cy="30" r="9" fill="url(#playersGold)" />
+        <path d="M20,58 C20,44 26,38 38,38 C50,38 56,44 56,58 Z" fill="url(#playersGold)" />
+      </g>
+      <g>
+        <circle cx="64" cy="33" r="9" fill="url(#playersGold)" />
+        <path d="M46,60 C46,46 52,40 64,40 C76,40 82,46 82,60 Z" fill="url(#playersGold)" />
+      </g>
+    </TileArtBackdrop>
+  );
+}
+
+/**
  * Libro aperto stilizzato per il tasto "Partite salvate": pagine, dorso e un
  * piccolo segnalibro, nei toni oro/pergamena già usati nelle altre illustrazioni.
  */

@@ -13,7 +13,7 @@ import MatchupStats from './mtglog/MatchupStats';
 import { computeTally, rowToGame } from './mtglog/stats';
 import Modal from './ui/Modal';
 import Button, { ButtonLink } from './ui/Button';
-import { ClashIcon, DeckBackArt, GridTile, OpenBookIcon, TILE_GRID } from './ui/Tile';
+import { ClashIcon, DeckBackArt, GridTile, OpenBookIcon, PlayersIcon, StatsRingIcon, TILE_GRID } from './ui/Tile';
 import { cx, HEADING_PAGE, PANEL, TEXT_MUTED } from './ui/styles';
 import { navLinkProps } from '../router';
 
@@ -155,8 +155,8 @@ export default function MtgLog({ onOpenZaff }: MtgLogProps) {
               }}
             />
             <GridTile graphic={<OpenBookIcon />} label="Partite Salvate" onClick={() => setOpenModal('games')} />
-            <GridTile icon="📊" label="Statistiche Mazzi" onClick={() => setOpenModal('stats')} />
-            <GridTile icon="👤" label="Gestisci Giocatori" onClick={() => setOpenModal('players')} />
+            <GridTile graphic={<StatsRingIcon />} label="Statistiche Mazzi" onClick={() => setOpenModal('stats')} />
+            <GridTile graphic={<PlayersIcon />} label="Gestisci Giocatori" onClick={() => setOpenModal('players')} />
             <GridTile graphic={<DeckBackArt />} label="Gestisci Mazzi" onClick={() => setOpenModal('decks')} />
           </div>
 
