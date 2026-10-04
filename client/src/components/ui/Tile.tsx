@@ -60,7 +60,7 @@ function TileArtBackdrop({ seed, children }: { seed: string; children: ReactNode
   const glow = `tileGlow-${seed}`;
   const fade = `tileFade-${seed}`;
   return (
-    <svg viewBox="0 0 100 100" className="h-full w-full" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <svg viewBox="0 0 100 100" className="h-full w-full" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
       <defs>
         <radialGradient id={glow} cx="50%" cy="38%" r="65%">
           <stop offset="0%" stopColor="#4B3F7A" />
@@ -73,11 +73,10 @@ function TileArtBackdrop({ seed, children }: { seed: string; children: ReactNode
         </linearGradient>
       </defs>
       <rect x="0" y="0" width="100" height="100" fill={`url(#${glow})`} />
-      {/* Il soggetto resta raccolto in un'area più piccola e centrata: la
-          cornice (sopra) riempie comunque tutto il riquadro, ma così il
-          disegno non viene tagliato dal bottone quando il rapporto
-          larghezza/altezza della tessera cambia (desktop vs smartphone). */}
-      <g transform="translate(50,40) scale(0.62) translate(-50,-40)">{children}</g>
+      {/* "meet" invece di "slice": l'illustrazione resta sempre tutta visibile
+          (mai tagliata dal bottone), anche quando il rapporto larghezza/altezza
+          della tessera cambia molto (desktop molto più largo che smartphone). */}
+      <g transform="translate(50,40) scale(0.8) translate(-50,-40)">{children}</g>
       <rect x="0" y="0" width="100" height="100" fill={`url(#${fade})`} />
     </svg>
   );
@@ -107,7 +106,6 @@ export function DeckBackArt() {
       {pips.map((p) => (
         <circle key={p.color} cx={p.x} cy={p.y} r="9" fill={p.color} stroke="url(#deckGold)" strokeWidth="1.4" />
       ))}
-      <circle cx="50" cy="40" r="5.5" fill="#120E20" stroke="url(#deckGold)" strokeWidth="1.2" />
     </TileArtBackdrop>
   );
 }
@@ -139,13 +137,17 @@ export function SwordShieldIcon() {
       />
       <line x1="50" y1="25" x2="50" y2="70" stroke="url(#duelGold)" strokeWidth="1.4" opacity="0.5" />
       <line x1="33" y1="40" x2="67" y2="40" stroke="url(#duelGold)" strokeWidth="1.4" opacity="0.5" />
-      <g transform="translate(38,28) rotate(38)">
-        <polygon points="0,0 34,-3.5 34,3.5" fill="url(#duelSteel)" />
-        <rect x="31" y="-5" width="6" height="10" rx="1" fill="url(#duelGold)" />
-        <rect x="37" y="-3" width="14" height="6" rx="2" fill="url(#duelGold)" />
-        <circle cx="54" cy="0" r="4" fill="url(#duelGold)" />
+      <g transform="translate(36,26) rotate(38)">
+        {/* lama appuntita, più larga di un punteruolo */}
+        <polygon points="0,0 5,-3 30,-6.5 30,6.5 5,3" fill="url(#duelSteel)" />
+        <line x1="6" y1="0" x2="29" y2="0" stroke="#5B6672" strokeWidth="0.8" opacity="0.6" />
+        {/* elsa, perpendicolare alla lama — questo è ciò che la rende "una spada" */}
+        <rect x="29" y="-11" width="5" height="22" rx="2" fill="url(#duelGold)" />
+        {/* impugnatura e pomo */}
+        <rect x="34" y="-3.5" width="13" height="7" rx="2.5" fill="url(#duelGold)" />
+        <circle cx="50" cy="0" r="5" fill="url(#duelGold)" />
       </g>
-      <polygon points="38,20 40,26 46,28 40,30 38,36 36,30 30,28 36,26" fill="#FDF6E3" />
+      <polygon points="36,18 38,24 44,26 38,28 36,34 34,28 28,26 34,24" fill="#FDF6E3" />
     </TileArtBackdrop>
   );
 }
