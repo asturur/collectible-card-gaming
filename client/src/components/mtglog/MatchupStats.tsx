@@ -37,7 +37,7 @@ export default function MatchupStats({ games }: MatchupStatsProps) {
 
   return (
     <div className="mt-5">
-      <span className={FIELD_LABEL}>Statistiche per sfida</span>
+      <span className={FIELD_LABEL}>Statistiche per Sfida</span>
       <div className={TILE_GRID}>
         {matchups.map((m) => (
           <GridTile

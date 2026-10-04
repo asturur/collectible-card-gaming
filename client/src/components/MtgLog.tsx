@@ -13,7 +13,7 @@ import MatchupStats from './mtglog/MatchupStats';
 import { computeTally, rowToGame } from './mtglog/stats';
 import Modal from './ui/Modal';
 import Button, { ButtonLink } from './ui/Button';
-import { GridTile, TILE_GRID } from './ui/Tile';
+import { ClashIcon, DeckBackArt, GridTile, OpenBookIcon, TILE_GRID } from './ui/Tile';
 import { cx, HEADING_PAGE, PANEL, TEXT_MUTED } from './ui/styles';
 import { navLinkProps } from '../router';
 
@@ -23,17 +23,6 @@ interface MtgLogProps {
 }
 
 type MtgLogModal = null | 'players' | 'decks' | 'newGame' | 'games' | 'stats';
-
-/** Icona "mazzo di carte" del bottone Gestisci mazzi, come nell'app originale. */
-function DeckIcon() {
-  return (
-    <svg width="14" height="19" viewBox="0 0 14 19" className="-mb-0.5" aria-hidden="true">
-      <rect x="0.5" y="0.5" width="13" height="18" rx="2.2" fill="#0B0B0C" stroke="#0B0B0C" />
-      <rect x="1.8" y="1.8" width="10.4" height="15.4" rx="1.4" fill="#3B2A6B" />
-      <ellipse cx="7" cy="9.5" rx="3.6" ry="5.2" fill="#CBB994" />
-    </svg>
-  );
-}
 
 /**
  * Registro Partite MTG (vedi plans/PLAN_5_MTG_LOG_PORTING.md): autenticazione,
@@ -158,17 +147,17 @@ export default function MtgLog({ onOpenZaff }: MtgLogProps) {
               individuare e "toccare" col dito su schermo piccolo. */}
           <div className={TILE_GRID}>
             <GridTile
-              icon="➕"
-              label="Nuova partita"
+              graphic={<ClashIcon />}
+              label="Nuova Partita"
               onClick={() => {
                 setEditingGame(null);
                 setOpenModal('newGame');
               }}
             />
-            <GridTile icon="📜" label="Partite salvate" onClick={() => setOpenModal('games')} />
-            <GridTile icon="📊" label="Statistiche mazzi" onClick={() => setOpenModal('stats')} />
-            <GridTile icon="👤" label="Gestisci giocatori" onClick={() => setOpenModal('players')} />
-            <GridTile icon={<DeckIcon />} label="Gestisci mazzi" onClick={() => setOpenModal('decks')} />
+            <GridTile graphic={<OpenBookIcon />} label="Partite Salvate" onClick={() => setOpenModal('games')} />
+            <GridTile icon="📊" label="Statistiche Mazzi" onClick={() => setOpenModal('stats')} />
+            <GridTile icon="👤" label="Gestisci Giocatori" onClick={() => setOpenModal('players')} />
+            <GridTile graphic={<DeckBackArt />} label="Gestisci Mazzi" onClick={() => setOpenModal('decks')} />
           </div>
 
           <div className="mtg-sep" />
@@ -179,7 +168,7 @@ export default function MtgLog({ onOpenZaff }: MtgLogProps) {
       </div>
 
       {openModal === 'newGame' && (
-        <Modal wide title={editingGame ? 'Modifica partita' : 'Nuova partita'} onClose={closeModal}>
+        <Modal wide title={editingGame ? 'Modifica Partita' : 'Nuova Partita'} onClose={closeModal}>
           <GameForm
             editingGame={editingGame}
             onBack={closeModal}
@@ -192,7 +181,7 @@ export default function MtgLog({ onOpenZaff }: MtgLogProps) {
       )}
 
       {openModal === 'games' && (
-        <Modal wide title="Partite salvate" onClose={closeModal}>
+        <Modal wide title="Partite Salvate" onClose={closeModal}>
           <GameList
             userId={userId}
             onEdit={(game) => {
@@ -206,7 +195,7 @@ export default function MtgLog({ onOpenZaff }: MtgLogProps) {
       {openModal === 'stats' && (
         <Modal
           wide
-          title="Statistiche mazzi"
+          title="Statistiche Mazzi"
           subtitle="Percentuale di vittoria di ogni mazzo, su tutte le partite."
           onClose={closeModal}
         >
@@ -225,7 +214,7 @@ export default function MtgLog({ onOpenZaff }: MtgLogProps) {
       )}
 
       {openModal === 'decks' && (
-        <Modal title="Mazzi salvati" onClose={closeModal}>
+        <Modal title="Mazzi Salvati" onClose={closeModal}>
           <DeckList
             userId={userId}
             onCreate={() => setDeckEditor({ deckId: null, draft: null })}
@@ -238,7 +227,7 @@ export default function MtgLog({ onOpenZaff }: MtgLogProps) {
       {deckEditor && (
         <Modal
           level={2}
-          title={deckEditor.deckId ? 'Modifica mazzo' : 'Nuovo mazzo'}
+          title={deckEditor.deckId ? 'Modifica Mazzo' : 'Nuovo Mazzo'}
           onClose={() => setDeckEditor(null)}
         >
           <DeckEditor

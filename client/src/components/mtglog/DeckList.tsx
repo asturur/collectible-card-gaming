@@ -284,10 +284,10 @@ export default function DeckList({ userId, onCreate, onEdit, onImportFile }: Dec
 
       <div className="flex flex-wrap gap-2">
         <Button variant="link" size="sm" onClick={onCreate}>
-          + Crea nuovo mazzo
+          + Crea Nuovo Mazzo
         </Button>
         <Button variant="link" size="sm" onClick={() => fileInputRef.current?.click()}>
-          📄 Importa mazzo (file ManaBox)
+          📄 Importa Mazzo (File ManaBox)
         </Button>
         <Button
           variant="link"
@@ -297,7 +297,7 @@ export default function DeckList({ userId, onCreate, onEdit, onImportFile }: Dec
             setError('');
           }}
         >
-          📋 Incolla mazzo
+          📋 Incolla Mazzo
         </Button>
       </div>
       <input ref={fileInputRef} type="file" accept=".txt" hidden onChange={handleFileChange} />

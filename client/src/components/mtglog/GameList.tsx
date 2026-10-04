@@ -319,7 +319,7 @@ export default function GameList({ userId, onEdit }: GameListProps) {
 
           <div className="mt-3.5 flex flex-wrap items-center gap-2.5">
             <Button onClick={() => handleExport(selectedGame)} disabled={exporting}>
-              {exporting ? 'Genero immagine…' : '🖼️ Esporta risultati'}
+              {exporting ? 'Genero immagine…' : '🖼️ Esporta Risultati'}
             </Button>
 
             {canEdit(selectedGame.createdBy, userId) && (

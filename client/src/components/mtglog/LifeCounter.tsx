@@ -101,7 +101,7 @@ export default function LifeCounter({ players, startLife, onCancel, onFinish }: 
           🎲 High Roll
         </Button>
         <Button onClick={() => onFinish(Object.fromEntries(lives.map((p) => [p.name, p.life])))}>
-          Fine partita
+          Fine Partita
         </Button>
       </div>
 
@@ -192,7 +192,7 @@ export default function LifeCounter({ players, startLife, onCancel, onFinish }: 
             </ul>
             <div className="flex gap-2">
               <Button variant="ghost" className="flex-1" onClick={() => setRolls(rollHighRoll(lives.map((p) => p.name)))}>
-                Tira di nuovo
+                Tira di Nuovo
               </Button>
               <Button className="flex-1" onClick={() => setHighRollOpen(false)}>
                 Chiudi

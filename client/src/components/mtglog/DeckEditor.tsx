@@ -438,7 +438,7 @@ export default function DeckEditor({ deckId, initialDraft, onBack, onSaved }: De
           fieldClassName="mb-0"
         />
         <Button variant="ghost" onClick={handleAddCard}>
-          Aggiungi al mazzo
+          Aggiungi al Mazzo
         </Button>
       </div>
 
@@ -499,7 +499,7 @@ export default function DeckEditor({ deckId, initialDraft, onBack, onSaved }: De
 
       <div className="flex flex-wrap items-center gap-2.5">
         <Button onClick={handleSave} disabled={saving}>
-          {deckId ? 'Salva modifiche' : 'Salva mazzo'}
+          {deckId ? 'Salva Modifiche' : 'Salva Mazzo'}
         </Button>
         <Button variant="ghost" onClick={onBack}>
           Annulla

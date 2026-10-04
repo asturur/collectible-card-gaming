@@ -506,7 +506,7 @@ export default function GameForm({ editingGame, onBack, onSaved }: GameFormProps
                 }
                 className="shrink-0"
               >
-                {p.deckMode === 'select' ? 'Scrivi a mano' : 'Scegli dai mazzi salvati'}
+                {p.deckMode === 'select' ? 'Scrivi a Mano' : 'Scegli dai Mazzi Salvati'}
               </Button>
             </div>
 
@@ -547,7 +547,7 @@ export default function GameForm({ editingGame, onBack, onSaved }: GameFormProps
       </div>
 
       <Button variant="link" size="sm" onClick={addPlayer}>
-        + Aggiungi giocatore
+        + Aggiungi Giocatore
       </Button>
 
       <div className="mt-3.5">
@@ -568,7 +568,7 @@ export default function GameForm({ editingGame, onBack, onSaved }: GameFormProps
         fullWidth
         className="mt-4 py-3.5 text-lg"
       >
-        <span className="text-xl leading-none">▶</span> Avvia partita
+        <span className="text-xl leading-none">▶</span> Avvia Partita
       </Button>
 
       <TextAreaField
@@ -583,7 +583,7 @@ export default function GameForm({ editingGame, onBack, onSaved }: GameFormProps
 
       <div className="mt-2.5 flex flex-wrap items-center gap-2.5">
         <Button onClick={handleSaveClick} disabled={saving}>
-          {editingGame ? 'Salva modifiche' : 'Salva partita'}
+          {editingGame ? 'Salva Modifiche' : 'Salva Partita'}
         </Button>
         <Button variant="ghost" onClick={onBack}>
           Annulla
