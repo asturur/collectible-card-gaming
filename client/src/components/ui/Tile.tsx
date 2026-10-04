@@ -58,8 +58,10 @@ export function GridTile({ icon, graphic, label, sublabel, onClick }: GridTilePr
  */
 function TileArtBackdrop({ seed, children }: { seed: string; children: ReactNode }) {
   const glow = `tileGlow-${seed}`;
-  const fade = `tileFade-${seed}`;
-  const vignette = `tileVignette-${seed}`;
+  const edgeTop = `tileEdgeTop-${seed}`;
+  const edgeBottom = `tileEdgeBottom-${seed}`;
+  const edgeLeft = `tileEdgeLeft-${seed}`;
+  const edgeRight = `tileEdgeRight-${seed}`;
   return (
     <svg viewBox="0 0 100 100" className="h-full w-full" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
       <defs>
@@ -68,16 +70,25 @@ function TileArtBackdrop({ seed, children }: { seed: string; children: ReactNode
           <stop offset="55%" stopColor="#241B3E" />
           <stop offset="100%" stopColor="#120E20" />
         </radialGradient>
-        {/* Sfuma tutt'intorno (non solo in basso) verso il colore di sfondo
-            del bottone, cosí il riquadro dell'illustrazione non si vede come
-            un "adesivo" con un bordo netto. */}
-        <radialGradient id={vignette} cx="50%" cy="50%" r="72%">
-          <stop offset="0%" stopColor="#1e293b" stopOpacity="0" />
-          <stop offset="65%" stopColor="#1e293b" stopOpacity="0" />
+        {/* Una sfumatura per lato (non una sola radiale al centro, che
+            schiariva solo gli angoli e lasciava i bordi dritti netti):
+            insieme fondono tutto il contorno dell'illustrazione nello
+            sfondo del bottone — più marcata sopra e sotto, verso la
+            scritta, come richiesto. */}
+        <linearGradient id={edgeTop} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#1e293b" stopOpacity="1" />
+          <stop offset="36%" stopColor="#1e293b" stopOpacity="0" />
+        </linearGradient>
+        <linearGradient id={edgeBottom} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="55%" stopColor="#1e293b" stopOpacity="0" />
           <stop offset="100%" stopColor="#1e293b" stopOpacity="1" />
-        </radialGradient>
-        <linearGradient id={fade} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#1e293b" stopOpacity="0" />
+        </linearGradient>
+        <linearGradient id={edgeLeft} x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="#1e293b" stopOpacity="1" />
+          <stop offset="26%" stopColor="#1e293b" stopOpacity="0" />
+        </linearGradient>
+        <linearGradient id={edgeRight} x1="0" y1="0" x2="1" y2="0">
+          <stop offset="74%" stopColor="#1e293b" stopOpacity="0" />
           <stop offset="100%" stopColor="#1e293b" stopOpacity="1" />
         </linearGradient>
       </defs>
@@ -86,8 +97,10 @@ function TileArtBackdrop({ seed, children }: { seed: string; children: ReactNode
           (mai tagliata dal bottone), anche quando il rapporto larghezza/altezza
           della tessera cambia molto (desktop molto più largo che smartphone). */}
       <g transform="translate(50,40) scale(0.8) translate(-50,-40)">{children}</g>
-      <rect x="0" y="0" width="100" height="100" fill={`url(#${vignette})`} />
-      <rect x="0" y="0" width="100" height="100" fill={`url(#${fade})`} />
+      <rect x="0" y="0" width="100" height="100" fill={`url(#${edgeTop})`} />
+      <rect x="0" y="0" width="100" height="100" fill={`url(#${edgeBottom})`} />
+      <rect x="0" y="0" width="100" height="100" fill={`url(#${edgeLeft})`} />
+      <rect x="0" y="0" width="100" height="100" fill={`url(#${edgeRight})`} />
     </svg>
   );
 }
