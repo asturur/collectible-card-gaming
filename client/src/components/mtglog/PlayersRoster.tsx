@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { canEdit, supabase, TABLE_GAMES, TABLE_PLAYERS } from '../../services/supabase';
+import { canEdit, sameName, supabase, TABLE_GAMES, TABLE_PLAYERS } from '../../services/supabase';
 import Button from '../ui/Button';
 import { FIELD_CONTROL_SM } from '../ui/styles';
 
@@ -46,8 +46,11 @@ export default function PlayersRoster({ userId }: PlayersRosterProps) {
   async function handleAdd() {
     const name = newName.trim();
     if (!name || !supabase) return;
-    if (roster.some((r) => r.name === name)) {
+    // Confronto senza distinguere maiuscole/minuscole: "andrea" non deve
+    // finire per sbaglio come secondo giocatore se "Andrea" già esiste.
+    if (roster.some((r) => sameName(r.name, name))) {
       setNewName('');
+      setError('');
       return;
     }
     const { error: insertError } = await supabase.from(TABLE_PLAYERS).insert({ name });
@@ -63,11 +66,19 @@ export default function PlayersRoster({ userId }: PlayersRosterProps) {
   async function renamePlayerEverywhere(oldName: string, newNameValue: string): Promise<string | null> {
     if (!supabase) return 'Supabase non configurato.';
 
-    if (roster.some((r) => r.name === newNameValue)) {
+    // Se il nuovo nome coincide (a parte maiuscole/spazi) con uno già in
+    // elenco, è la stessa persona: fondo i due usando la grafia già
+    // esistente, invece di rischiare un doppione tipo "Andrea"/"andrea".
+    // Escludo la riga stessa che sto rinominando: altrimenti correggere solo
+    // le maiuscole (es. "andrea" -> "Andrea") sembrerebbe un doppione con se stessa.
+    const existingMatch = roster.find((r) => r.name !== oldName && sameName(r.name, newNameValue));
+    const finalName = existingMatch ? existingMatch.name : newNameValue;
+
+    if (existingMatch) {
       const { error: deleteError } = await supabase.from(TABLE_PLAYERS).delete().eq('name', oldName);
       if (deleteError) return deleteError.message;
     } else {
-      const { error: updateError } = await supabase.from(TABLE_PLAYERS).update({ name: newNameValue }).eq('name', oldName);
+      const { error: updateError } = await supabase.from(TABLE_PLAYERS).update({ name: finalName }).eq('name', oldName);
       if (updateError) return updateError.message;
     }
 
@@ -79,7 +90,7 @@ export default function PlayersRoster({ userId }: PlayersRosterProps) {
     );
     for (const g of affected) {
       const updatedPlayers = ((g.players ?? []) as GamePlayer[]).map((p) =>
-        p.name === oldName ? { ...p, name: newNameValue } : p
+        p.name === oldName ? { ...p, name: finalName } : p
       );
       const { error: gameUpdateError } = await supabase.from(TABLE_GAMES).update({ players: updatedPlayers }).eq('id', g.id);
       if (gameUpdateError) return gameUpdateError.message;

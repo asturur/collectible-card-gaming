@@ -24,6 +24,23 @@ export function canEdit(createdBy: string | null | undefined, currentUserId: str
   return !createdBy || createdBy === currentUserId;
 }
 
+/**
+ * Confronta due nomi giocatore ignorando maiuscole/minuscole e spazi
+ * iniziali/finali. Il vincolo di unicità del database su `giocatori.name`
+ * è invece sensibile alle maiuscole, quindi senza questo controllo
+ * "Andrea" e "andrea" potrebbero finire per sbaglio come due giocatori
+ * diversi: va sempre usato prima di salvare o confrontare un nome nuovo
+ * con quelli già in elenco.
+ */
+export function sameName(a: string, b: string): boolean {
+  return a.trim().toLowerCase() === b.trim().toLowerCase();
+}
+
+/** Nome già in elenco che corrisponde a `name` ignorando maiuscole/spazi, se c'è. */
+export function findCanonicalName(existing: string[], name: string): string | undefined {
+  return existing.find((n) => sameName(n, name));
+}
+
 /** Supabase rifiuta due canali con lo stesso nome: ogni sottoscrizione ne chiede uno suo. */
 let channelSeq = 0;
 

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { subscribeToTable, supabase, TABLE_DECKS, TABLE_GAMES, TABLE_PLAYERS } from '../../services/supabase';
+import { findCanonicalName, subscribeToTable, supabase, TABLE_DECKS, TABLE_GAMES, TABLE_PLAYERS } from '../../services/supabase';
 import type { Game } from './GameList';
 import LifeCounter from './LifeCounter';
 import { ManaPips } from './ManaIcon';
@@ -182,8 +182,14 @@ export default function GameForm({ editingGame, onBack, onSaved }: GameFormProps
     const readPlayers = players
       .map((p, i) => {
         const deckVal = p.deckMode === 'manual' ? p.deckManual.trim() : p.deckSelect;
+        const typedName = p.name.trim();
+        // Se il nome digitato coincide con uno già in elenco a parte
+        // maiuscole/minuscole o spazi (es. "andrea" invece di "Andrea"),
+        // uso la grafia già esistente: evita di creare per sbaglio un
+        // secondo giocatore che in realtà è la stessa persona.
+        const name = findCanonicalName(playerNames, typedName) ?? typedName;
         return {
-          name: p.name.trim(),
+          name,
           deck: deckVal,
           desc: p.desc.trim(),
           life: p.life === '' ? null : Number(p.life),
