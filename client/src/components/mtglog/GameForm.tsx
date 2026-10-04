@@ -323,10 +323,16 @@ export default function GameForm({ editingGame, onBack, onSaved }: GameFormProps
         {/* Data e ora separate invece di un unico <input type="datetime-local">:
             quel riquadro combinato ha una larghezza minima che su iPhone resta
             più larga dello schermo anche dentro una colonna ristretta; data e
-            ora separate restano invece entrambe strette a sufficienza. */}
+            ora separate restano invece entrambe strette a sufficienza.
+            Il campo orario nativo, però, ha anche lui una larghezza minima
+            che Safari su iPhone non rispetta se il box è troppo stretto (la
+            disegna comunque, sbordando fuori): per questo i due campi sono
+            impilati invece che affiancati sugli schermi stretti, dove c'è
+            tutta la larghezza del modulo a disposizione per ciascuno; da
+            tablet in su, con più spazio, tornano affiancati. */}
         <div className="mb-4 min-w-0">
           <span className={FIELD_LABEL}>Data e ora di inizio</span>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <input
               type="date"
               value={startedAt.slice(0, 10)}
