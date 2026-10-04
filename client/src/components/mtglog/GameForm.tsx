@@ -14,7 +14,7 @@ import LifeCounter from './LifeCounter';
 import { ManaPips } from './ManaIcon';
 import Button from '../ui/Button';
 import NumberStepper from '../ui/NumberStepper';
-import { TextAreaField, TextField } from '../ui/Field';
+import { TextAreaField } from '../ui/Field';
 import { cx, FIELD_CONTROL_SM, FIELD_LABEL, TEXT_MINI, TEXT_MUTED } from '../ui/styles';
 
 interface GameFormProps {
@@ -320,18 +320,27 @@ export default function GameForm({ editingGame, onBack, onSaved }: GameFormProps
   return (
     <>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {/* min-w-0: senza, su iPhone il riquadro nativo data/ora può uscire dallo
-            schermo invece di restringersi dentro la sua colonna della griglia. */}
-        <TextField
-          id="date"
-          label="Data e ora di inizio"
-          density="compact"
-          type="datetime-local"
-          value={startedAt}
-          onChange={(e) => setStartedAt(e.target.value)}
-          fieldClassName="min-w-0"
-          className="min-w-0"
-        />
+        {/* Data e ora separate invece di un unico <input type="datetime-local">:
+            quel riquadro combinato ha una larghezza minima che su iPhone resta
+            più larga dello schermo anche dentro una colonna ristretta; data e
+            ora separate restano invece entrambe strette a sufficienza. */}
+        <div className="mb-4 min-w-0">
+          <span className={FIELD_LABEL}>Data e ora di inizio</span>
+          <div className="grid grid-cols-2 gap-2">
+            <input
+              type="date"
+              value={startedAt.slice(0, 10)}
+              onChange={(e) => setStartedAt(`${e.target.value}T${startedAt.slice(11, 16) || '00:00'}`)}
+              className={cx(FIELD_CONTROL_SM, 'min-w-0')}
+            />
+            <input
+              type="time"
+              value={startedAt.slice(11, 16)}
+              onChange={(e) => setStartedAt(`${startedAt.slice(0, 10)}T${e.target.value || '00:00'}`)}
+              className={cx(FIELD_CONTROL_SM, 'min-w-0')}
+            />
+          </div>
+        </div>
         <div className="mb-4">
           <label className={FIELD_LABEL} htmlFor="fmt">
             Formato

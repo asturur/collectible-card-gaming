@@ -275,14 +275,24 @@ export default function GameList({ userId, onEdit }: GameListProps) {
             </p>
 
             <div>
+              {/* Intestazione della colonna numerica: senza, "0"/"4" ecc.
+                  sembrano punteggi a caso invece di punti vita rimasti. */}
+              <div className="flex items-center pb-1">
+                <div className="min-w-0 flex-1" />
+                <div className="max-w-[210px] shrink-0" />
+                <div className="w-11 shrink-0 text-right text-[10px] uppercase tracking-wide text-zaff-muted">PV</div>
+              </div>
               {selectedGame.players.map((p, i) => (
                 <div
                   key={i}
-                  className={`flex items-center gap-2.5 border-b border-zaff-border py-2.5 last:border-b-0 ${
+                  className={`flex items-center border-b border-zaff-border py-2.5 last:border-b-0 ${
                     p.winner ? 'bg-zaff-text/5' : ''
                   }`}
                 >
-                  <div className="min-w-0 flex-1">
+                  {/* mr-2.5 invece di `gap` sulla riga: html2canvas (usato per
+                      esportare l'immagine) non supporta bene `gap` nel flexbox
+                      e le colonne finivano per sovrapporsi nell'immagine. */}
+                  <div className="min-w-0 flex-1 pr-2.5">
                     <span className={`text-[15px] ${p.winner ? 'font-bold text-zaff-text' : 'italic text-zaff-muted'}`}>
                       {p.winner && '🎉 '}
                       {p.name}
@@ -297,11 +307,11 @@ export default function GameList({ userId, onEdit }: GameListProps) {
                     )}
                   </div>
                   <div
-                    className="flex max-w-[210px] shrink-0 flex-col items-end gap-0.5 text-right text-[13px] text-zaff-muted"
+                    className="flex max-w-[210px] shrink-0 flex-col items-end pr-2.5 text-right text-[13px] text-zaff-muted"
                     title={p.deck || ''}
                   >
-                    <ManaIcons colors={p.colors} className="text-[17px]" />
-                    <span className="max-w-[210px] truncate">{p.deck || '—'}</span>
+                    <ManaIcons colors={p.colors} className="mb-1 text-[17px]" />
+                    <span className="max-w-[210px] truncate leading-snug">{p.deck || '—'}</span>
                   </div>
                   <div className="w-11 shrink-0 text-right text-[17px] tabular-nums text-zaff-text">
                     {p.life === null || p.life === undefined ? '–' : p.life}
