@@ -13,7 +13,7 @@ import MatchupStats from './mtglog/MatchupStats';
 import { computeTally, rowToGame } from './mtglog/stats';
 import Modal from './ui/Modal';
 import Button, { ButtonLink } from './ui/Button';
-import { ClashIcon, DeckBackArt, GridTile, OpenBookIcon, PlayersIcon, StatsRingIcon, TILE_GRID } from './ui/Tile';
+import { DeckBackArt, GridTile, OpenBookIcon, PlayersIcon, StatsRingIcon, SwordShieldIcon, TILE_GRID } from './ui/Tile';
 import { cx, HEADING_PAGE, PANEL, TEXT_MUTED } from './ui/styles';
 import { navLinkProps } from '../router';
 
@@ -147,7 +147,7 @@ export default function MtgLog({ onOpenZaff }: MtgLogProps) {
               individuare e "toccare" col dito su schermo piccolo. */}
           <div className={TILE_GRID}>
             <GridTile
-              graphic={<ClashIcon />}
+              graphic={<SwordShieldIcon />}
               label="Nuova Partita"
               onClick={() => {
                 setEditingGame(null);

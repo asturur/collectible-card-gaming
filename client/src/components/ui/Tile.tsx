@@ -73,19 +73,29 @@ function TileArtBackdrop({ seed, children }: { seed: string; children: ReactNode
         </linearGradient>
       </defs>
       <rect x="0" y="0" width="100" height="100" fill={`url(#${glow})`} />
-      {children}
+      {/* Il soggetto resta raccolto in un'area più piccola e centrata: la
+          cornice (sopra) riempie comunque tutto il riquadro, ma così il
+          disegno non viene tagliato dal bottone quando il rapporto
+          larghezza/altezza della tessera cambia (desktop vs smartphone). */}
+      <g transform="translate(50,40) scale(0.62) translate(-50,-40)">{children}</g>
       <rect x="0" y="0" width="100" height="100" fill={`url(#${fade})`} />
     </svg>
   );
 }
 
 /**
- * Illustrazione decorativa originale per la tessera "Gestisci mazzi": NON è
- * il dorso ufficiale delle carte Magic né la sua scritta/logo (materiali
- * protetti da copyright/marchio) — è uno stemma arcano generico, inventato
- * per questa app.
+ * Illustrazione decorativa originale per la tessera "Gestisci mazzi": i 5
+ * colori del mana stilizzati come gemme, disposti a pentagono (nessun
+ * simbolo ufficiale riprodotto — solo cerchi colorati con bordo dorato).
  */
 export function DeckBackArt() {
+  const pips: { x: number; y: number; color: string }[] = [
+    { x: 50, y: 18, color: '#EDE6CC' }, // bianco
+    { x: 70.9, y: 33.2, color: '#5B9BD9' }, // blu
+    { x: 62.9, y: 57.8, color: '#3B2A4A' }, // nero
+    { x: 37.1, y: 57.8, color: '#C9453B' }, // rosso
+    { x: 29.1, y: 33.2, color: '#4C8A5B' }, // verde
+  ];
   return (
     <TileArtBackdrop seed="deck">
       <defs>
@@ -94,46 +104,48 @@ export function DeckBackArt() {
           <stop offset="100%" stopColor="#9E7A31" />
         </linearGradient>
       </defs>
-      <circle cx="50" cy="40" r="26" fill="none" stroke="url(#deckGold)" strokeWidth="1.4" opacity="0.85" />
-      <circle cx="50" cy="40" r="19" fill="none" stroke="url(#deckGold)" strokeWidth="0.8" opacity="0.55" />
-      <g transform="translate(50,40)" fill="url(#deckGold)" opacity="0.9">
-        {Array.from({ length: 8 }).map((_, i) => (
-          <polygon key={i} points="0,-24 3,-6 0,0 -3,-6" transform={`rotate(${i * 45})`} />
-        ))}
-        <circle r="4.5" fill="#120E20" stroke="url(#deckGold)" strokeWidth="1" />
-      </g>
+      {pips.map((p) => (
+        <circle key={p.color} cx={p.x} cy={p.y} r="9" fill={p.color} stroke="url(#deckGold)" strokeWidth="1.4" />
+      ))}
+      <circle cx="50" cy="40" r="5.5" fill="#120E20" stroke="url(#deckGold)" strokeWidth="1.2" />
     </TileArtBackdrop>
   );
 }
 
 /**
- * Due guantoni stilizzati che si scontrano, per il tasto "Nuova Partita":
- * forma geometrica semplice (niente personaggi o loghi di terzi), pensata
- * per restare leggibile anche piccola su schermo di telefono.
+ * Una spada che colpisce uno scudo, per il tasto "Nuova Partita": forma
+ * geometrica semplice (niente personaggi o loghi di terzi, e diversa dalle
+ * due spade incrociate di "Statistiche per sfida"), pensata per restare
+ * leggibile anche piccola su schermo di telefono.
  */
-export function ClashIcon() {
+export function SwordShieldIcon() {
   return (
-    <TileArtBackdrop seed="clash">
+    <TileArtBackdrop seed="duel">
       <defs>
-        <linearGradient id="clashGold" x1="0" y1="0" x2="1" y2="1">
+        <linearGradient id="duelGold" x1="0" y1="0" x2="1" y2="1">
           <stop offset="0%" stopColor="#F3D48A" />
-          <stop offset="100%" stopColor="#B4842F" />
+          <stop offset="100%" stopColor="#9E7A31" />
+        </linearGradient>
+        <linearGradient id="duelSteel" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="#E7ECF2" />
+          <stop offset="100%" stopColor="#97A5B3" />
         </linearGradient>
       </defs>
-      <g>
-        <rect x="10" y="34" width="16" height="18" rx="6" fill="url(#clashGold)" transform="rotate(-12 18 43)" />
-        <ellipse cx="33" cy="40" rx="13" ry="11" fill="url(#clashGold)" />
-        <circle cx="41" cy="33" r="5.5" fill="url(#clashGold)" />
-      </g>
-      <g>
-        <rect x="74" y="34" width="16" height="18" rx="6" fill="url(#clashGold)" transform="rotate(12 82 43)" />
-        <ellipse cx="67" cy="40" rx="13" ry="11" fill="url(#clashGold)" />
-        <circle cx="59" cy="33" r="5.5" fill="url(#clashGold)" />
-      </g>
-      <polygon
-        points="50,28 52.5,35.5 60,38 52.5,40.5 50,48 47.5,40.5 40,38 47.5,35.5"
-        fill="#FDF6E3"
+      <path
+        d="M50,16 L75,25 L75,48 C75,64 61,74 50,79 C39,74 25,64 25,48 L25,25 Z"
+        fill="#241B3E"
+        stroke="url(#duelGold)"
+        strokeWidth="2.5"
       />
+      <line x1="50" y1="25" x2="50" y2="70" stroke="url(#duelGold)" strokeWidth="1.4" opacity="0.5" />
+      <line x1="33" y1="40" x2="67" y2="40" stroke="url(#duelGold)" strokeWidth="1.4" opacity="0.5" />
+      <g transform="translate(38,28) rotate(38)">
+        <polygon points="0,0 34,-3.5 34,3.5" fill="url(#duelSteel)" />
+        <rect x="31" y="-5" width="6" height="10" rx="1" fill="url(#duelGold)" />
+        <rect x="37" y="-3" width="14" height="6" rx="2" fill="url(#duelGold)" />
+        <circle cx="54" cy="0" r="4" fill="url(#duelGold)" />
+      </g>
+      <polygon points="38,20 40,26 46,28 40,30 38,36 36,30 30,28 36,26" fill="#FDF6E3" />
     </TileArtBackdrop>
   );
 }
