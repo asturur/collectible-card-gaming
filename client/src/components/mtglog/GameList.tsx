@@ -56,6 +56,41 @@ function JpgBadge() {
   );
 }
 
+const MANA_DOT_COLOR: Record<string, string> = {
+  W: '#EDE6CC',
+  U: '#5B9BD9',
+  B: '#3B2A4A',
+  R: '#C9453B',
+  G: '#4C8A5B',
+};
+
+/** Pallini mana semplici (niente font di icone) per il dettaglio/immagine
+ *  esportata: il font mana-font usato altrove (`ManaIcons`) è un font
+ *  personalizzato, e html2canvas non ne calcola sempre bene altezza e
+ *  posizione del glifo — nella JPG i simboli risultavano scentrati dentro
+ *  i pallini e facevano sballare l'altezza della riga, tagliando il nome
+ *  del mazzo sotto. Pallini pieni invece del simbolo preciso, ma sempre
+ *  ben centrati e di altezza prevedibile. */
+function ExportManaDots({ colors }: { colors: string[] | undefined }) {
+  if (!colors || colors.length === 0) return null;
+  return (
+    <span className="mb-1.5 inline-flex items-center">
+      {colors.map((c, i) => (
+        <span
+          key={c + i}
+          className="ml-1 inline-block h-[15px] w-[15px] shrink-0 rounded-full first:ml-0"
+          // Colore via style, non con una classe Tailwind con opacità tipo
+          // "border-black/25": su Tailwind v4 genera un color-mix() che
+          // html2canvas (la libreria con cui generiamo l'immagine) non sa
+          // interpretare (vedi lo stesso problema già risolto più sopra).
+          style={{ background: MANA_DOT_COLOR[c] ?? '#9CA3AF', border: '1px solid rgba(0,0,0,0.25)' }}
+          title={c}
+        />
+      ))}
+    </span>
+  );
+}
+
 export interface GamePlayer {
   name: string;
   deck: string;
@@ -272,7 +307,7 @@ export default function GameList({ userId, onEdit }: GameListProps) {
                             }`}
                           >
                             {p.winner && '🎉 '}
-                            {!p.winner && gHasWinner && '🪦 '}
+                            {!p.winner && gHasWinner && '😵 '}
                             {p.name}
                             <ManaIcons colors={p.colors} className="ml-1.5 text-[13px]" />
                           </span>
@@ -351,7 +386,7 @@ export default function GameList({ userId, onEdit }: GameListProps) {
                   <div className="min-w-0 flex-1 pr-2.5">
                     <span className={`text-[15px] ${p.winner ? 'font-bold text-zaff-text' : 'italic text-zaff-muted'}`}>
                       {p.winner && '🎉 '}
-                      {!p.winner && hasWinner && '🪦 '}
+                      {!p.winner && hasWinner && '😵 '}
                       {p.name}
                     </span>
                     {playerTags[i] && (
@@ -367,7 +402,7 @@ export default function GameList({ userId, onEdit }: GameListProps) {
                     className="flex max-w-[210px] shrink-0 flex-col items-end pr-2.5 text-right text-[13px] text-zaff-muted"
                     title={p.deck || ''}
                   >
-                    <ManaIcons colors={p.colors} className="mb-1 text-[17px]" />
+                    <ExportManaDots colors={p.colors} />
                     <span className="max-w-[210px] truncate leading-snug">{p.deck || '—'}</span>
                   </div>
                   <div className="w-11 shrink-0 text-right text-[17px] tabular-nums text-zaff-text">
