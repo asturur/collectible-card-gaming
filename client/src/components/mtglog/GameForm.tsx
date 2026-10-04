@@ -30,6 +30,9 @@ interface PlayerRow {
   life: string;
   winner: boolean;
   colors: Set<string>;
+  /** Valore di `name` per cui l'utente ha già confermato "è un'altra persona,
+   *  non unire con l'omonimo esistente". Si azzera appena il nome cambia di nuovo. */
+  confirmedDifferentFor?: string;
 }
 
 function emptyPlayerRow(): PlayerRow {
@@ -131,8 +134,24 @@ export default function GameForm({ editingGame, onBack, onSaved }: GameFormProps
   }
 
   function selectPlayerName(index: number, name: string) {
-    updatePlayer(index, { name });
+    updatePlayer(index, { name, confirmedDifferentFor: undefined });
     setNameSuggestFor(null);
+  }
+
+  /** Nome di un giocatore già in elenco che somiglia a quello digitato (a parte
+   *  maiuscole/spazi) ma non coincide esattamente, e che l'utente non ha ancora
+   *  detto essere una persona diversa. `null` quando non c'è nulla da chiedere. */
+  function nameConflictFor(p: PlayerRow): string | null {
+    const trimmed = p.name.trim();
+    if (!trimmed) return null;
+    const match = findCanonicalName(playerNames, trimmed);
+    if (!match || match === trimmed) return null;
+    if (p.confirmedDifferentFor === trimmed) return null;
+    return match;
+  }
+
+  function hasUnresolvedNameConflict(): boolean {
+    return players.some((p) => nameConflictFor(p) !== null);
   }
 
   function toggleWinner(index: number) {
@@ -158,6 +177,10 @@ export default function GameForm({ editingGame, onBack, onSaved }: GameFormProps
 
   function handleOpenLifeCounter() {
     setError('');
+    if (hasUnresolvedNameConflict()) {
+      setError('Rispondi alla domanda sul nome del giocatore prima di procedere.');
+      return;
+    }
     const names = players.map((p) => p.name.trim()).filter(Boolean);
     if (!names.length) {
       setError('Scegli almeno un giocatore prima di avviare il conteggio.');
@@ -178,6 +201,10 @@ export default function GameForm({ editingGame, onBack, onSaved }: GameFormProps
       setError('Supabase non configurato.');
       return;
     }
+    if (hasUnresolvedNameConflict()) {
+      setError('Rispondi alla domanda sul nome del giocatore prima di salvare.');
+      return;
+    }
 
     const readPlayers = players
       .map((p, i) => {
@@ -186,8 +213,10 @@ export default function GameForm({ editingGame, onBack, onSaved }: GameFormProps
         // Se il nome digitato coincide con uno già in elenco a parte
         // maiuscole/minuscole o spazi (es. "andrea" invece di "Andrea"),
         // uso la grafia già esistente: evita di creare per sbaglio un
-        // secondo giocatore che in realtà è la stessa persona.
-        const name = findCanonicalName(playerNames, typedName) ?? typedName;
+        // secondo giocatore che in realtà è la stessa persona. Ma non se
+        // l'utente ha già confermato che si tratta di un omonimo diverso.
+        const name =
+          p.confirmedDifferentFor === typedName ? typedName : findCanonicalName(playerNames, typedName) ?? typedName;
         return {
           name,
           deck: deckVal,
@@ -356,6 +385,28 @@ export default function GameForm({ editingGame, onBack, onSaved }: GameFormProps
                 </button>
               )}
             </div>
+
+            {(() => {
+              const match = nameConflictFor(p);
+              if (!match) return null;
+              return (
+                <div className="mb-2 rounded-lg border border-amber-400/40 bg-amber-400/10 p-2.5 text-sm text-zaff-text">
+                  <p className="mb-2">Esiste già un giocatore chiamato "{match}". È la stessa persona?</p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button size="sm" onClick={() => updatePlayer(i, { name: match, confirmedDifferentFor: undefined })}>
+                      Sì, è lui/lei
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => updatePlayer(i, { confirmedDifferentFor: p.name.trim() })}
+                    >
+                      No, è un'altra persona
+                    </Button>
+                  </div>
+                </div>
+              );
+            })()}
 
             <div className="mb-2 flex flex-wrap items-center gap-2">
               {p.deckMode === 'select' ? (

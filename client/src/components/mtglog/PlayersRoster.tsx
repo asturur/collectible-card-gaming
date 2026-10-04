@@ -12,6 +12,13 @@ interface RosterEntry {
   createdBy: string | null;
 }
 
+/** Nome digitato che somiglia (a parte maiuscole/spazi) a uno già in elenco:
+ *  prima di aggiungere o rinominare, si chiede se è la stessa persona. */
+interface NameConflict {
+  typed: string;
+  existing: string;
+}
+
 /** Riga di `partite.players` (JSON) rilevante per la rinomina. */
 interface GamePlayer {
   name: string;
@@ -27,6 +34,8 @@ export default function PlayersRoster({ userId }: PlayersRosterProps) {
   const [renameValue, setRenameValue] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [addConflict, setAddConflict] = useState<NameConflict | null>(null);
+  const [renameConflict, setRenameConflict] = useState<(NameConflict & { oldName: string }) | null>(null);
 
   async function loadRoster() {
     if (!supabase) return;
@@ -43,16 +52,30 @@ export default function PlayersRoster({ userId }: PlayersRosterProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function handleAdd() {
+  /** `treatAsDifferent` arriva true solo dopo che l'utente ha già risposto
+   *  "no, è un'altra persona" all'avviso di omonimia: salta il controllo e
+   *  aggiunge comunque il nome digitato, senza richiederlo di nuovo. */
+  async function handleAdd(treatAsDifferent = false) {
     const name = newName.trim();
     if (!name || !supabase) return;
-    // Confronto senza distinguere maiuscole/minuscole: "andrea" non deve
-    // finire per sbaglio come secondo giocatore se "Andrea" già esiste.
-    if (roster.some((r) => sameName(r.name, name))) {
-      setNewName('');
-      setError('');
-      return;
+
+    if (!treatAsDifferent) {
+      if (roster.some((r) => r.name === name)) {
+        setNewName('');
+        setError('');
+        setAddConflict(null);
+        return;
+      }
+      // Somiglia (a parte maiuscole/spazi) a uno già in elenco: non si sa se
+      // è un errore di battitura o un omonimo, quindi si chiede all'utente
+      // invece di decidere da soli.
+      const nearMatch = roster.find((r) => sameName(r.name, name));
+      if (nearMatch) {
+        setAddConflict({ typed: name, existing: nearMatch.name });
+        return;
+      }
     }
+
     const { error: insertError } = await supabase.from(TABLE_PLAYERS).insert({ name });
     if (insertError && insertError.code !== '23505') {
       setError('Non sono riuscito ad aggiungere il giocatore: ' + insertError.message);
@@ -60,18 +83,27 @@ export default function PlayersRoster({ userId }: PlayersRosterProps) {
     }
     setNewName('');
     setError('');
+    setAddConflict(null);
     await loadRoster();
   }
 
-  async function renamePlayerEverywhere(oldName: string, newNameValue: string): Promise<string | null> {
+  /** `treatAsDifferent` true = l'utente ha confermato che non è la stessa
+   *  persona: si rinomina senza fondere con l'omonimo trovato. */
+  async function renamePlayerEverywhere(
+    oldName: string,
+    newNameValue: string,
+    treatAsDifferent = false
+  ): Promise<string | null> {
     if (!supabase) return 'Supabase non configurato.';
 
     // Se il nuovo nome coincide (a parte maiuscole/spazi) con uno già in
-    // elenco, è la stessa persona: fondo i due usando la grafia già
-    // esistente, invece di rischiare un doppione tipo "Andrea"/"andrea".
+    // elenco ed è davvero la stessa persona, fondo i due usando la grafia
+    // già esistente invece di creare un doppione tipo "Andrea"/"andrea".
     // Escludo la riga stessa che sto rinominando: altrimenti correggere solo
     // le maiuscole (es. "andrea" -> "Andrea") sembrerebbe un doppione con se stessa.
-    const existingMatch = roster.find((r) => r.name !== oldName && sameName(r.name, newNameValue));
+    const existingMatch = treatAsDifferent
+      ? undefined
+      : roster.find((r) => r.name !== oldName && sameName(r.name, newNameValue));
     const finalName = existingMatch ? existingMatch.name : newNameValue;
 
     if (existingMatch) {
@@ -103,18 +135,34 @@ export default function PlayersRoster({ userId }: PlayersRosterProps) {
     setRenaming(name);
     setRenameValue(name);
     setError('');
+    setRenameConflict(null);
   }
 
-  async function confirmRename(oldName: string) {
-    const trimmed = renameValue.trim();
+  async function applyRename(oldName: string, newNameValue: string, treatAsDifferent: boolean) {
     setRenaming(null);
-    if (!trimmed || trimmed === oldName) return;
-    const renameError = await renamePlayerEverywhere(oldName, trimmed);
+    setRenameConflict(null);
+    const renameError = await renamePlayerEverywhere(oldName, newNameValue, treatAsDifferent);
     if (renameError) {
       setError('Rinomina non riuscita: ' + renameError);
       return;
     }
     await loadRoster();
+  }
+
+  async function confirmRename(oldName: string) {
+    const trimmed = renameValue.trim();
+    if (!trimmed || trimmed === oldName) {
+      setRenaming(null);
+      return;
+    }
+    // Come per "Aggiungi": una somiglianza (non un'identità esatta, impossibile
+    // tra due righe della rubrica) va chiesta, non decisa in automatico.
+    const nearMatch = roster.find((r) => r.name !== oldName && sameName(r.name, trimmed));
+    if (nearMatch) {
+      setRenameConflict({ oldName, typed: trimmed, existing: nearMatch.name });
+      return;
+    }
+    await applyRename(oldName, trimmed, false);
   }
 
   async function handleDelete(name: string) {
@@ -130,19 +178,42 @@ export default function PlayersRoster({ userId }: PlayersRosterProps) {
 
   return (
     <>
-      <div className="mb-4 flex gap-2">
+      <div className="mb-2 flex gap-2">
         <input
           type="text"
           value={newName}
-          onChange={(e) => setNewName(e.target.value)}
+          onChange={(e) => {
+            setNewName(e.target.value);
+            setAddConflict(null);
+          }}
           onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
           placeholder="Nome nuovo giocatore"
           className={FIELD_CONTROL_SM}
         />
-        <Button onClick={handleAdd} className="shrink-0">
+        <Button onClick={() => handleAdd()} className="shrink-0">
           Aggiungi
         </Button>
       </div>
+
+      {addConflict && (
+        <div className="mb-4 rounded-lg border border-amber-400/40 bg-amber-400/10 p-2.5 text-sm text-zaff-text">
+          <p className="mb-2">Esiste già un giocatore chiamato "{addConflict.existing}". È la stessa persona?</p>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              onClick={() => {
+                setNewName('');
+                setAddConflict(null);
+              }}
+            >
+              Sì, non aggiungere
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => handleAdd(true)}>
+              No, è un'altra persona
+            </Button>
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <p className="text-zaff-muted">Caricamento…</p>
@@ -151,40 +222,73 @@ export default function PlayersRoster({ userId }: PlayersRosterProps) {
       ) : (
         <ul className="divide-y divide-zaff-border">
           {roster.map((r) => (
-            <li key={r.name} className="flex items-center justify-between gap-2 py-2">
-              {renaming === r.name ? (
-                <>
-                  <input
-                    type="text"
-                    value={renameValue}
-                    onChange={(e) => setRenameValue(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && confirmRename(r.name)}
-                    autoFocus
-                    className={FIELD_CONTROL_SM}
-                  />
-                  <div className="flex shrink-0 gap-1.5">
-                    <Button variant="link" size="sm" onClick={() => confirmRename(r.name)}>
-                      Salva
-                    </Button>
-                    <Button variant="danger" size="sm" onClick={() => setRenaming(null)}>
-                      Annulla
-                    </Button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <span className="min-w-0 flex-1 truncate text-[15px] text-zaff-text">{r.name}</span>
-                  {canEdit(r.createdBy, userId) && (
+            <li key={r.name} className="flex flex-col gap-2 py-2">
+              <div className="flex items-center justify-between gap-2">
+                {renaming === r.name ? (
+                  <>
+                    <input
+                      type="text"
+                      value={renameValue}
+                      onChange={(e) => {
+                        setRenameValue(e.target.value);
+                        setRenameConflict(null);
+                      }}
+                      onKeyDown={(e) => e.key === 'Enter' && confirmRename(r.name)}
+                      autoFocus
+                      className={FIELD_CONTROL_SM}
+                    />
                     <div className="flex shrink-0 gap-1.5">
-                      <Button variant="link" size="sm" onClick={() => startRename(r.name)}>
-                        Rinomina
+                      <Button variant="link" size="sm" onClick={() => confirmRename(r.name)}>
+                        Salva
                       </Button>
-                      <Button variant="danger" size="sm" onClick={() => handleDelete(r.name)}>
-                        Cancella
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={() => {
+                          setRenaming(null);
+                          setRenameConflict(null);
+                        }}
+                      >
+                        Annulla
                       </Button>
                     </div>
-                  )}
-                </>
+                  </>
+                ) : (
+                  <>
+                    <span className="min-w-0 flex-1 truncate text-[15px] text-zaff-text">{r.name}</span>
+                    {canEdit(r.createdBy, userId) && (
+                      <div className="flex shrink-0 gap-1.5">
+                        <Button variant="link" size="sm" onClick={() => startRename(r.name)}>
+                          Rinomina
+                        </Button>
+                        <Button variant="danger" size="sm" onClick={() => handleDelete(r.name)}>
+                          Cancella
+                        </Button>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+
+              {renaming === r.name && renameConflict && renameConflict.oldName === r.name && (
+                <div className="rounded-lg border border-amber-400/40 bg-amber-400/10 p-2.5 text-sm text-zaff-text">
+                  <p className="mb-2">Esiste già un giocatore chiamato "{renameConflict.existing}". È la stessa persona?</p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      size="sm"
+                      onClick={() => applyRename(renameConflict.oldName, renameConflict.typed, false)}
+                    >
+                      Sì, è lui/lei
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => applyRename(renameConflict.oldName, renameConflict.typed, true)}
+                    >
+                      No, è un'altra persona
+                    </Button>
+                  </div>
+                </div>
               )}
             </li>
           ))}
