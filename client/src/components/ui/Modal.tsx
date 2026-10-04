@@ -9,6 +9,9 @@ interface ModalProps {
   subtitle?: ReactNode;
   /** Riquadro largo (storico partite, nuova partita, statistiche). */
   wide?: boolean;
+  /** Riquadro extra largo (dettaglio/export partita): più spazio in orizzontale
+   *  per le righe con nome mazzo, utile a non doverlo mai tagliare. */
+  xl?: boolean;
   /** Livello di sovrapposizione: i riquadri annidati stanno sopra ai loro genitori. */
   level?: 1 | 2;
   onClose: () => void;
@@ -19,7 +22,7 @@ interface ModalProps {
  * Riquadro sovrapposto alla pagina, come i `.modal-overlay` dell'app HTML
  * originale: si chiude con la ✕, con Esc o toccando fuori dal riquadro.
  */
-export default function Modal({ title, subtitle, wide = false, level = 1, onClose, children }: ModalProps) {
+export default function Modal({ title, subtitle, wide = false, xl = false, level = 1, onClose, children }: ModalProps) {
   const token = useRef({});
   // `onClose` quasi sempre è una funzione creata di nuovo a ogni render del
   // genitore (es. `onClose={() => setOpenModal(null)}`): tenerla qui con un
@@ -64,7 +67,7 @@ export default function Modal({ title, subtitle, wide = false, level = 1, onClos
         role="dialog"
         aria-modal="true"
         className={`relative w-full rounded-xl border border-zaff-border bg-zaff-surface p-4 shadow-2xl sm:p-6 ${
-          wide ? 'max-w-[680px]' : 'max-w-[560px]'
+          xl ? 'max-w-[900px]' : wide ? 'max-w-[680px]' : 'max-w-[560px]'
         }`}
       >
         <button

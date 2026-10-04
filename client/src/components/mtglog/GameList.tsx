@@ -392,7 +392,7 @@ export default function GameList({ userId, onEdit }: GameListProps) {
       {selectedGame && (
         <Modal
           level={2}
-          wide
+          xl
           onClose={() => {
             setSelectedId(null);
             setExportedImage((prev) => {
@@ -437,7 +437,11 @@ export default function GameList({ userId, onEdit }: GameListProps) {
                 return (
                 <div
                   key={i}
-                  className="grid grid-cols-3 items-center border-b border-zaff-border py-2.5 last:border-b-0"
+                  // Riga alta e con parecchio margine verticale: al massimo 4
+                  // giocatori per partita, quindi ce n'è ampiamente lo spazio, e
+                  // così il nome del mazzo ha sempre abbastanza altezza libera
+                  // intorno a sé da non finire mai tagliato nell'immagine esportata.
+                  className="grid min-h-[86px] grid-cols-3 items-center border-b border-zaff-border py-5 last:border-b-0"
                   // Sfondo via style, non con la classe Tailwind "bg-zaff-text/5": quella
                   // genera un color-mix() che html2canvas (la libreria con cui generiamo
                   // l'immagine) non sa interpretare, e piantava in silenzio tutto
@@ -452,7 +456,7 @@ export default function GameList({ userId, onEdit }: GameListProps) {
                     </span>
                     {playerTags[i] && (
                       <span
-                        className={`text-xs ${p.winner ? 'text-zaff-gold' : 'italic text-zaff-muted opacity-75'}`}
+                        className={`mt-0.5 text-xs ${p.winner ? 'text-zaff-gold' : 'italic text-zaff-muted opacity-75'}`}
                       >
                         {p.winner ? 'vincitore — ' : ''}
                         {playerTags[i]}
@@ -464,7 +468,7 @@ export default function GameList({ userId, onEdit }: GameListProps) {
                     title={p.deck || ''}
                   >
                     <ExportManaSymbols colors={p.colors} />
-                    <span className="mt-1 max-w-full truncate leading-snug">{p.deck || '—'}</span>
+                    <span className="mt-2.5 max-w-full truncate pb-0.5 leading-[1.8]">{p.deck || '—'}</span>
                   </div>
                   <div className="text-center text-[17px] tabular-nums text-zaff-text">
                     {p.life === null || p.life === undefined ? '–' : p.life}
