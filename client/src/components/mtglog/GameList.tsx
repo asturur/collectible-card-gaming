@@ -105,6 +105,11 @@ export default function GameList({ userId, onEdit }: GameListProps) {
   const [error, setError] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
+  /** URL dell'ultima immagine generata: la mostriamo sempre (da salvare
+   *  tenendo premuto), perché su iPhone la condivisione nativa può fallire
+   *  in silenzio e un semplice download non è affidabile in Safari — così
+   *  il tasto "Esporta" non sembra mai non aver fatto nulla. */
+  const [exportedImage, setExportedImage] = useState<string | null>(null);
   const shareCardRef = useRef<HTMLDivElement>(null);
 
   async function loadGames() {
@@ -168,32 +173,23 @@ export default function GameList({ userId, onEdit }: GameListProps) {
         const fileName = `partita_${g.date || 'magic'}${time ? '_' + time : ''}.png`;
         const file = new File([blob], fileName, { type: 'image/png' });
 
-        function downloadFile() {
-          const url = URL.createObjectURL(blob!);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = fileName;
-          document.body.appendChild(a);
-          a.click();
-          a.remove();
-          URL.revokeObjectURL(url);
-        }
-
+        // La condivisione nativa è comoda quando funziona, ma su iPhone può
+        // essere rifiutata in silenzio se passa un attimo di troppo tra il
+        // tocco del bottone e qui (il tempo di generare l'immagine): per
+        // questo non ci basiamo solo su di lei, proviamo e basta.
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
           navigator
             .share({ files: [file], title: 'Partita di Magic', text: 'Risultato della partita del ' + dateLabel(g.date) })
-            // Su iOS la condivisione può venire rifiutata in silenzio se passa un
-            // attimo di troppo tra il tocco del bottone e l'apertura del foglio di
-            // condivisione (qui, il tempo di generare l'immagine): se non è stato
-            // l'utente ad annullarla, scarico il file come alternativa, così non
-            // sembra che il tasto non abbia fatto nulla.
-            .catch((err: unknown) => {
-              if (err instanceof DOMException && err.name === 'AbortError') return;
-              downloadFile();
-            });
-        } else {
-          downloadFile();
+            .catch(() => {});
         }
+
+        // Mostriamo SEMPRE anche l'anteprima qui sotto, da salvare tenendo
+        // premuto: un semplice download via link non è affidabile in Safari
+        // su iPhone, così il tasto non sembra mai non aver fatto nulla.
+        setExportedImage((prev) => {
+          if (prev) URL.revokeObjectURL(prev);
+          return URL.createObjectURL(blob);
+        });
       });
     } finally {
       setExporting(false);
@@ -252,7 +248,17 @@ export default function GameList({ userId, onEdit }: GameListProps) {
       )}
 
       {selectedGame && (
-        <Modal level={2} wide onClose={() => setSelectedId(null)}>
+        <Modal
+          level={2}
+          wide
+          onClose={() => {
+            setSelectedId(null);
+            setExportedImage((prev) => {
+              if (prev) URL.revokeObjectURL(prev);
+              return null;
+            });
+          }}
+        >
           <div ref={shareCardRef} className="px-0.5 py-1.5">
             <p className="mb-0.5 text-[11px] uppercase tracking-[0.06em] text-zaff-muted">Registro partite di Magic</p>
             <h2 className={HEADING_SECTION}>{dateLabel(selectedGame.date)}</h2>
@@ -343,6 +349,20 @@ export default function GameList({ userId, onEdit }: GameListProps) {
               </>
             )}
           </div>
+
+          {exportedImage && (
+            <div className="mt-3.5 rounded-lg border border-zaff-border bg-zaff-bg p-3">
+              <p className={cx('mb-2', TEXT_MINI)}>
+                Tieni premuto sull&apos;immagine qui sotto e scegli &quot;Salva immagine&quot; (o condividila da lì) —
+                più affidabile del tasto, che su alcuni iPhone non riesce ad aprire da solo il foglio di condivisione.
+              </p>
+              <img
+                src={exportedImage}
+                alt="Risultato della partita, da salvare"
+                className="w-full rounded-lg border border-zaff-border"
+              />
+            </div>
+          )}
         </Modal>
       )}
     </>
