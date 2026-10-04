@@ -3,7 +3,7 @@ import type { Game } from './GameList';
 import { computeMatchups, PIE_COLORS, pieSlicePath } from './stats';
 import Modal from '../ui/Modal';
 import { GridTile, TILE_GRID } from '../ui/Tile';
-import { cx, FIELD_LABEL, TEXT_MINI, TEXT_MUTED } from '../ui/styles';
+import { cx, TEXT_MINI, TEXT_MUTED } from '../ui/styles';
 
 interface MatchupStatsProps {
   games: Game[];
@@ -14,13 +14,21 @@ interface MatchupStatsProps {
  * (2 o più, esattamente quella formazione): un bottone per combinazione,
  * che apre il dettaglio con partite totali, vittorie di ciascuno e torta.
  * Le combinazioni mai giocate non compaiono: derivano solo dalle partite salvate.
+ * Pensato per stare dentro il proprio `Modal` (titolo "Statistiche per
+ * Sfida" già lì), quindi qui non c'è una propria intestazione.
  */
 export default function MatchupStats({ games }: MatchupStatsProps) {
   const matchups = useMemo(() => computeMatchups(games), [games]);
   const [openKey, setOpenKey] = useState<string | null>(null);
   const selected = matchups.find((m) => m.key === openKey) ?? null;
 
-  if (matchups.length === 0) return null;
+  if (matchups.length === 0) {
+    return (
+      <p className={TEXT_MUTED}>
+        Ancora nessuna sfida tra più giocatori registrata: compare qui appena ci sono partite salvate.
+      </p>
+    );
+  }
 
   const totalWins = selected ? selected.players.reduce((sum, p) => sum + p.w, 0) : 0;
   let angle = 0;
@@ -36,8 +44,7 @@ export default function MatchupStats({ games }: MatchupStatsProps) {
     : [];
 
   return (
-    <div className="mt-5">
-      <span className={FIELD_LABEL}>Statistiche per Sfida</span>
+    <>
       <div className={TILE_GRID}>
         {matchups.map((m) => (
           <GridTile
@@ -102,6 +109,6 @@ export default function MatchupStats({ games }: MatchupStatsProps) {
           )}
         </Modal>
       )}
-    </div>
+    </>
   );
 }

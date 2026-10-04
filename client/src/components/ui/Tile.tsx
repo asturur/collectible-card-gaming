@@ -275,3 +275,65 @@ export function OpenBookIcon() {
     </TileArtBackdrop>
   );
 }
+
+/**
+ * Podio a tre gradini con una stella sopra il primo posto, per il tasto
+ * "Statistiche giocatori": richiama la classifica, diverso dall'anello a
+ * fette di "Statistiche mazzi" qui sopra.
+ */
+export function PodiumIcon() {
+  return (
+    <TileArtBackdrop seed="podium">
+      <defs>
+        <linearGradient id="podiumGold" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#F3D48A" />
+          <stop offset="100%" stopColor="#9E7A31" />
+        </linearGradient>
+        <linearGradient id="podiumSilver" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#E7ECF2" />
+          <stop offset="100%" stopColor="#97A5B3" />
+        </linearGradient>
+        <linearGradient id="podiumBronze" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#D79A68" />
+          <stop offset="100%" stopColor="#8C5A34" />
+        </linearGradient>
+      </defs>
+      <rect x="20" y="46" width="18" height="26" rx="2" fill="url(#podiumSilver)" />
+      <rect x="62" y="52" width="18" height="20" rx="2" fill="url(#podiumBronze)" />
+      <rect x="41" y="34" width="18" height="38" rx="2" fill="url(#podiumGold)" />
+      <polygon
+        points="50,16 53,24 61,24 54.5,29 57,37 50,32 43,37 45.5,29 39,24 47,24"
+        fill="#FDF6E3"
+      />
+    </TileArtBackdrop>
+  );
+}
+
+/**
+ * Due spade incrociate, per il tasto "Statistiche per sfida": stessa
+ * tavolozza oro/acciaio di `SwordShieldIcon`, ma composizione diversa
+ * (incrociate invece che una sola che colpisce uno scudo).
+ */
+export function CrossedSwordsIcon() {
+  return (
+    <TileArtBackdrop seed="matchup">
+      <defs>
+        <linearGradient id="matchGold" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#F3D48A" />
+          <stop offset="100%" stopColor="#9E7A31" />
+        </linearGradient>
+        <linearGradient id="matchSteel" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#E7ECF2" />
+          <stop offset="100%" stopColor="#97A5B3" />
+        </linearGradient>
+      </defs>
+      <line x1="22" y1="20" x2="62" y2="58" stroke="url(#matchSteel)" strokeWidth="6" strokeLinecap="round" />
+      <circle cx="62" cy="58" r="4.5" fill="url(#matchGold)" />
+      <rect x="56" y="50.5" width="14" height="5" rx="2" fill="url(#matchGold)" transform="rotate(45 63 53)" />
+
+      <line x1="78" y1="20" x2="38" y2="58" stroke="url(#matchSteel)" strokeWidth="6" strokeLinecap="round" />
+      <circle cx="38" cy="58" r="4.5" fill="url(#matchGold)" />
+      <rect x="30" y="50.5" width="14" height="5" rx="2" fill="url(#matchGold)" transform="rotate(-45 37 53)" />
+    </TileArtBackdrop>
+  );
+}

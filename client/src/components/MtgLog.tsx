@@ -13,7 +13,17 @@ import MatchupStats from './mtglog/MatchupStats';
 import { computeTally, rowToGame } from './mtglog/stats';
 import Modal from './ui/Modal';
 import Button, { ButtonLink } from './ui/Button';
-import { DeckBackArt, GridTile, OpenBookIcon, PlayersIcon, StatsRingIcon, SwordShieldIcon, TILE_GRID } from './ui/Tile';
+import {
+  CrossedSwordsIcon,
+  DeckBackArt,
+  GridTile,
+  OpenBookIcon,
+  PlayersIcon,
+  PodiumIcon,
+  StatsRingIcon,
+  SwordShieldIcon,
+  TILE_GRID,
+} from './ui/Tile';
 import { cx, HEADING_PAGE, PANEL, TEXT_MUTED } from './ui/styles';
 import { navLinkProps } from '../router';
 
@@ -22,7 +32,7 @@ interface MtgLogProps {
   onOpenZaff: () => void;
 }
 
-type MtgLogModal = null | 'players' | 'decks' | 'newGame' | 'games' | 'stats';
+type MtgLogModal = null | 'players' | 'decks' | 'newGame' | 'games' | 'stats' | 'playerStats' | 'matchups';
 
 /**
  * Registro Partite MTG (vedi plans/PLAN_5_MTG_LOG_PORTING.md): autenticazione,
@@ -142,9 +152,11 @@ export default function MtgLog({ onOpenZaff }: MtgLogProps) {
 
           <div className="mtg-sep" />
 
-          {/* 5 tasti principali: stessa misura e forma per tutti (a prescindere dal
-              testo), come le tessere delle statistiche qui sotto — più facili da
-              individuare e "toccare" col dito su schermo piccolo. */}
+          {/* Tasti principali: stessa misura e forma per tutti (a prescindere dal
+              testo) — più facili da individuare e "toccare" col dito su schermo
+              piccolo. Classifica e statistiche per sfida stavano prima sempre
+              aperte qui in testata: ora sono due tessere come le altre, per una
+              home più semplice e "da app". */}
           <div className={TILE_GRID}>
             <GridTile
               graphic={<SwordShieldIcon />}
@@ -156,14 +168,19 @@ export default function MtgLog({ onOpenZaff }: MtgLogProps) {
             />
             <GridTile graphic={<OpenBookIcon />} label="Partite Salvate" onClick={() => setOpenModal('games')} />
             <GridTile graphic={<StatsRingIcon />} label="Statistiche Mazzi" onClick={() => setOpenModal('stats')} />
+            <GridTile
+              graphic={<PodiumIcon />}
+              label="Statistiche Giocatori"
+              onClick={() => setOpenModal('playerStats')}
+            />
+            <GridTile
+              graphic={<CrossedSwordsIcon />}
+              label="Statistiche per Sfida"
+              onClick={() => setOpenModal('matchups')}
+            />
             <GridTile graphic={<PlayersIcon />} label="Gestisci Giocatori" onClick={() => setOpenModal('players')} />
             <GridTile graphic={<DeckBackArt />} label="Gestisci Mazzi" onClick={() => setOpenModal('decks')} />
           </div>
-
-          <div className="mtg-sep" />
-
-          <Standings rows={standings} showPie />
-          <MatchupStats games={games} />
         </header>
       </div>
 
@@ -200,6 +217,23 @@ export default function MtgLog({ onOpenZaff }: MtgLogProps) {
           onClose={closeModal}
         >
           <GameStats />
+        </Modal>
+      )}
+
+      {openModal === 'playerStats' && (
+        <Modal
+          wide
+          title="Statistiche Giocatori"
+          subtitle="Classifica generale: partite vinte da ciascuno e come si dividono tutte le vittorie."
+          onClose={closeModal}
+        >
+          <Standings rows={standings} showPie />
+        </Modal>
+      )}
+
+      {openModal === 'matchups' && (
+        <Modal wide title="Statistiche per Sfida" onClose={closeModal}>
+          <MatchupStats games={games} />
         </Modal>
       )}
 
