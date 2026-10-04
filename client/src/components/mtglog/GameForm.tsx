@@ -1,5 +1,13 @@
 import { useEffect, useState } from 'react';
-import { findCanonicalName, subscribeToTable, supabase, TABLE_DECKS, TABLE_GAMES, TABLE_PLAYERS } from '../../services/supabase';
+import {
+  findCanonicalName,
+  subscribeToTable,
+  suggestAlternativeNames,
+  supabase,
+  TABLE_DECKS,
+  TABLE_GAMES,
+  TABLE_PLAYERS,
+} from '../../services/supabase';
 import type { Game } from './GameList';
 import LifeCounter from './LifeCounter';
 import { ManaPips } from './ManaIcon';
@@ -30,9 +38,10 @@ interface PlayerRow {
   life: string;
   winner: boolean;
   colors: Set<string>;
-  /** Valore di `name` per cui l'utente ha già confermato "è un'altra persona,
-   *  non unire con l'omonimo esistente". Si azzera appena il nome cambia di nuovo. */
-  confirmedDifferentFor?: string;
+  /** True dopo aver cliccato "No, è un'altra persona": finché il nome resta
+   *  identico (a parte maiuscole/spazi) a uno già in elenco, mostra l'avviso
+   *  "scegli un nome diverso" invece della domanda "è la stessa persona?". */
+  rejectingMatch?: boolean;
 }
 
 function emptyPlayerRow(): PlayerRow {
@@ -134,24 +143,27 @@ export default function GameForm({ editingGame, onBack, onSaved }: GameFormProps
   }
 
   function selectPlayerName(index: number, name: string) {
-    updatePlayer(index, { name, confirmedDifferentFor: undefined });
+    updatePlayer(index, { name, rejectingMatch: false });
     setNameSuggestFor(null);
   }
 
   /** Nome di un giocatore già in elenco che somiglia a quello digitato (a parte
-   *  maiuscole/spazi) ma non coincide esattamente, e che l'utente non ha ancora
-   *  detto essere una persona diversa. `null` quando non c'è nulla da chiedere. */
-  function nameConflictFor(p: PlayerRow): string | null {
+   *  maiuscole/spazi) ma non coincide esattamente. `null` quando non c'è
+   *  nessuna somiglianza da segnalare. */
+  function matchingExistingName(p: PlayerRow): string | null {
     const trimmed = p.name.trim();
     if (!trimmed) return null;
     const match = findCanonicalName(playerNames, trimmed);
     if (!match || match === trimmed) return null;
-    if (p.confirmedDifferentFor === trimmed) return null;
     return match;
   }
 
+  /** `true` quando c'è ancora qualcosa da chiedere o da correggere sul nome:
+   *  o la domanda "è la stessa persona?" non ha ancora risposta, oppure
+   *  l'utente ha detto "è un'altra persona" ma il nome somiglia ancora a
+   *  quello esistente (serve un nome davvero distinto, non solo le maiuscole). */
   function hasUnresolvedNameConflict(): boolean {
-    return players.some((p) => nameConflictFor(p) !== null);
+    return players.some((p) => matchingExistingName(p) !== null);
   }
 
   function toggleWinner(index: number) {
@@ -210,13 +222,10 @@ export default function GameForm({ editingGame, onBack, onSaved }: GameFormProps
       .map((p, i) => {
         const deckVal = p.deckMode === 'manual' ? p.deckManual.trim() : p.deckSelect;
         const typedName = p.name.trim();
-        // Se il nome digitato coincide con uno già in elenco a parte
-        // maiuscole/minuscole o spazi (es. "andrea" invece di "Andrea"),
-        // uso la grafia già esistente: evita di creare per sbaglio un
-        // secondo giocatore che in realtà è la stessa persona. Ma non se
-        // l'utente ha già confermato che si tratta di un omonimo diverso.
-        const name =
-          p.confirmedDifferentFor === typedName ? typedName : findCanonicalName(playerNames, typedName) ?? typedName;
+        // A questo punto il nome non è più ambiguo (il salvataggio è
+        // bloccato finché lo è): se coincide esattamente con uno già in
+        // elenco uso quella grafia, altrimenti è un nome nuovo o già chiarito.
+        const name = findCanonicalName(playerNames, typedName) ?? typedName;
         return {
           name,
           deck: deckVal,
@@ -387,20 +396,37 @@ export default function GameForm({ editingGame, onBack, onSaved }: GameFormProps
             </div>
 
             {(() => {
-              const match = nameConflictFor(p);
+              const match = matchingExistingName(p);
               if (!match) return null;
+
+              if (p.rejectingMatch) {
+                const [s1, s2] = suggestAlternativeNames(match);
+                return (
+                  <div className="mb-2 rounded-lg border border-red-400/40 bg-red-400/10 p-2.5 text-sm text-zaff-text">
+                    <p className="mb-2 text-red-400">
+                      Allora scegli un nome diverso da "{match}": cambiare solo maiuscole o spazi non basta a
+                      distinguerli. Ad esempio:
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <Button size="sm" onClick={() => updatePlayer(i, { name: s1, rejectingMatch: false })}>
+                        {s1}
+                      </Button>
+                      <Button size="sm" onClick={() => updatePlayer(i, { name: s2, rejectingMatch: false })}>
+                        {s2}
+                      </Button>
+                    </div>
+                  </div>
+                );
+              }
+
               return (
                 <div className="mb-2 rounded-lg border border-amber-400/40 bg-amber-400/10 p-2.5 text-sm text-zaff-text">
                   <p className="mb-2">Esiste già un giocatore chiamato "{match}". È la stessa persona?</p>
                   <div className="flex flex-wrap gap-2">
-                    <Button size="sm" onClick={() => updatePlayer(i, { name: match, confirmedDifferentFor: undefined })}>
+                    <Button size="sm" onClick={() => updatePlayer(i, { name: match, rejectingMatch: false })}>
                       Sì, è lui/lei
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => updatePlayer(i, { confirmedDifferentFor: p.name.trim() })}
-                    >
+                    <Button variant="ghost" size="sm" onClick={() => updatePlayer(i, { rejectingMatch: true })}>
                       No, è un'altra persona
                     </Button>
                   </div>

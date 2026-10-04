@@ -41,6 +41,16 @@ export function findCanonicalName(existing: string[], name: string): string | un
   return existing.find((n) => sameName(n, name));
 }
 
+/**
+ * Due esempi di nome distinto da proporre quando due persone diverse
+ * vogliono davvero chiamarsi allo stesso modo: cambiare solo
+ * maiuscole/minuscole o spazi non li distingue (sameName li considera
+ * ancora uguali), quindi suggerisco un suffisso vero e proprio.
+ */
+export function suggestAlternativeNames(base: string): [string, string] {
+  return [`${base}_2`, `${base}_B`];
+}
+
 /** Supabase rifiuta due canali con lo stesso nome: ogni sottoscrizione ne chiede uno suo. */
 let channelSeq = 0;
 
