@@ -181,12 +181,12 @@ export default function LifeCounter({ players, startLife, onCancel, onFinish }: 
             <p className="mb-3 text-xs text-zaff-muted">Tiro 1–20: il numero più alto inizia.</p>
             <ul className="mb-4 space-y-1">
               {rolls.map((r) => (
-                <li key={r.name} className="flex items-center justify-between text-sm text-zaff-text">
-                  <span>
+                <li key={r.name} className="flex items-center justify-between gap-2 text-sm text-zaff-text">
+                  <span className="min-w-0 truncate">
                     {r.name}
                     {r.roll === topRoll ? ' 🏆' : ''}
                   </span>
-                  <span>{r.roll}</span>
+                  <span className="shrink-0">{r.roll}</span>
                 </li>
               ))}
             </ul>

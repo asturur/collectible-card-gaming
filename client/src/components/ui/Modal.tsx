@@ -66,7 +66,11 @@ export default function Modal({ title, subtitle, wide = false, level = 1, onClos
           ×
         </button>
 
-        {title && <h2 className={cx(HEADING_SECTION, 'mb-3 border-b border-zaff-border pb-1.5 pr-8')}>{title}</h2>}
+        {title && (
+          <h2 className={cx(HEADING_SECTION, 'mb-3 truncate border-b border-zaff-border pb-1.5 pr-8')} title={typeof title === 'string' ? title : undefined}>
+            {title}
+          </h2>
+        )}
         {subtitle && <p className={cx('-mt-1 mb-3', TEXT_MINI)}>{subtitle}</p>}
 
         {children}

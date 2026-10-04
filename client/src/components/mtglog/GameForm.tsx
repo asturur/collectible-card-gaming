@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   findCanonicalName,
+  MAX_PLAYER_NAME_LENGTH,
   subscribeToTable,
   suggestAlternativeNames,
   supabase,
@@ -221,7 +222,10 @@ export default function GameForm({ editingGame, onBack, onSaved }: GameFormProps
     const readPlayers = players
       .map((p, i) => {
         const deckVal = p.deckMode === 'manual' ? p.deckManual.trim() : p.deckSelect;
-        const typedName = p.name.trim();
+        // .slice come rete di sicurezza: il campo ha già maxLength, ma un
+        // nome scelto dal suggerimento o già in elenco potrebbe in teoria
+        // arrivare da un'altra fonte (altro dispositivo, dato più vecchio).
+        const typedName = p.name.trim().slice(0, MAX_PLAYER_NAME_LENGTH);
         // A questo punto il nome non è più ambiguo (il salvataggio è
         // bloccato finché lo è): se coincide esattamente con uno già in
         // elenco uso quella grafia, altrimenti è un nome nuovo o già chiarito.
@@ -356,6 +360,7 @@ export default function GameForm({ editingGame, onBack, onSaved }: GameFormProps
                   onFocus={() => setNameSuggestFor(i)}
                   onBlur={() => setNameSuggestFor((cur) => (cur === i ? null : cur))}
                   placeholder={`Giocatore ${i + 1}`}
+                  maxLength={MAX_PLAYER_NAME_LENGTH}
                   autoComplete="off"
                   className={cx(FIELD_CONTROL_SM, 'w-full')}
                 />

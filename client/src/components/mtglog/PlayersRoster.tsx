@@ -1,10 +1,44 @@
-import { useEffect, useState } from 'react';
-import { canEdit, sameName, suggestAlternativeNames, supabase, TABLE_GAMES, TABLE_PLAYERS } from '../../services/supabase';
+import { useEffect, useState, type ReactNode } from 'react';
+import {
+  canEdit,
+  MAX_PLAYER_NAME_LENGTH,
+  sameName,
+  suggestAlternativeNames,
+  supabase,
+  TABLE_GAMES,
+  TABLE_PLAYERS,
+} from '../../services/supabase';
 import Button from '../ui/Button';
-import { FIELD_CONTROL_SM } from '../ui/styles';
+import { cx, FIELD_CONTROL_SM } from '../ui/styles';
 
 interface PlayersRosterProps {
   userId: string;
+}
+
+interface IconButtonProps {
+  label: string;
+  onClick: () => void;
+  tone?: 'default' | 'danger';
+  children: ReactNode;
+}
+
+/** Bottone quadrato con solo un'icona (emoji) e un'etichetta accessibile
+ *  (title + aria-label): stesso stile usato in "Gestisci Mazzi". */
+function IconButton({ label, onClick, tone = 'default', children }: IconButtonProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={label}
+      aria-label={label}
+      className={cx(
+        'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-zaff-border bg-zaff-bg text-base leading-none text-zaff-muted transition',
+        tone === 'danger' ? 'hover:border-red-400 hover:text-red-400' : 'hover:border-zaff-gold hover:text-zaff-gold'
+      )}
+    >
+      {children}
+    </button>
+  );
 }
 
 interface RosterEntry {
@@ -60,7 +94,7 @@ export default function PlayersRoster({ userId }: PlayersRosterProps) {
    *  al posto del contenuto del campo: permette di aggiungere subito il
    *  nome proposto con un click, senza doverlo prima scrivere a mano. */
   async function handleAdd(forcedName?: string) {
-    const name = (forcedName ?? newName).trim();
+    const name = (forcedName ?? newName).trim().slice(0, MAX_PLAYER_NAME_LENGTH);
     if (!name || !supabase) return;
 
     if (roster.some((r) => r.name === name)) {
@@ -149,7 +183,7 @@ export default function PlayersRoster({ userId }: PlayersRosterProps) {
   /** `forcedValue`, quando passato (dal bottone di un suggerimento), è usato
    *  al posto del contenuto del campo rinomina. */
   async function confirmRename(oldName: string, forcedValue?: string) {
-    const trimmed = (forcedValue ?? renameValue).trim();
+    const trimmed = (forcedValue ?? renameValue).trim().slice(0, MAX_PLAYER_NAME_LENGTH);
     if (!trimmed || trimmed === oldName) {
       setRenaming(null);
       return;
@@ -187,6 +221,7 @@ export default function PlayersRoster({ userId }: PlayersRosterProps) {
           }}
           onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
           placeholder="Nome nuovo giocatore"
+          maxLength={MAX_PLAYER_NAME_LENGTH}
           className={FIELD_CONTROL_SM}
         />
         <Button onClick={() => handleAdd()} className="shrink-0">
@@ -258,6 +293,7 @@ export default function PlayersRoster({ userId }: PlayersRosterProps) {
                         setRenameConflict(null);
                       }}
                       onKeyDown={(e) => e.key === 'Enter' && confirmRename(r.name)}
+                      maxLength={MAX_PLAYER_NAME_LENGTH}
                       autoFocus
                       className={FIELD_CONTROL_SM}
                     />
@@ -282,12 +318,12 @@ export default function PlayersRoster({ userId }: PlayersRosterProps) {
                     <span className="min-w-0 flex-1 truncate text-[15px] text-zaff-text">{r.name}</span>
                     {canEdit(r.createdBy, userId) && (
                       <div className="flex shrink-0 gap-1.5">
-                        <Button variant="link" size="sm" onClick={() => startRename(r.name)}>
-                          Rinomina
-                        </Button>
-                        <Button variant="danger" size="sm" onClick={() => handleDelete(r.name)}>
-                          Cancella
-                        </Button>
+                        <IconButton label="Rinomina giocatore" onClick={() => startRename(r.name)}>
+                          ✏️
+                        </IconButton>
+                        <IconButton label="Cancella giocatore" tone="danger" onClick={() => handleDelete(r.name)}>
+                          🗑️
+                        </IconButton>
                       </div>
                     )}
                   </>

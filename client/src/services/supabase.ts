@@ -19,6 +19,19 @@ export const TABLE_GAMES = 'partite';
 export const TABLE_PLAYERS = 'giocatori';
 export const TABLE_DECKS = 'mazzi';
 
+/** Lunghezza massima di un nome giocatore: generosa per qualunque nome vero
+ *  (nome e cognome, o un suffisso tipo "_B" per distinguere un omonimo). */
+export const MAX_PLAYER_NAME_LENGTH = 40;
+
+/**
+ * Lunghezza massima del nome di un mazzo. Verificato sul catalogo pubblico
+ * usato dall'app per importare i precon Commander (stesso filtro di
+ * DeckEditor): il nome più lungo tra i 208 mazzi Commander disponibili è di
+ * 59 caratteri ("Scions & Spellcraft Collector's Edition (FINAL FANTASY
+ * XIV)"); 80 lascia margine anche per future uscite più verbose.
+ */
+export const MAX_DECK_NAME_LENGTH = 80;
+
 /** A row is editable by its owner; legacy rows without an owner are editable by anyone. */
 export function canEdit(createdBy: string | null | undefined, currentUserId: string | undefined): boolean {
   return !createdBy || createdBy === currentUserId;
@@ -45,10 +58,15 @@ export function findCanonicalName(existing: string[], name: string): string | un
  * Due esempi di nome distinto da proporre quando due persone diverse
  * vogliono davvero chiamarsi allo stesso modo: cambiare solo
  * maiuscole/minuscole o spazi non li distingue (sameName li considera
- * ancora uguali), quindi suggerisco un suffisso vero e proprio.
+ * ancora uguali), quindi suggerisco un suffisso vero e proprio. Se il nome
+ * di base è già al limite di lunghezza, lo accorcio per lasciare posto al
+ * suffisso, così il suggerimento resta sempre digitabile per intero.
  */
-export function suggestAlternativeNames(base: string): [string, string] {
-  return [`${base}_2`, `${base}_B`];
+export function suggestAlternativeNames(base: string, maxLength: number = MAX_PLAYER_NAME_LENGTH): [string, string] {
+  return (['_2', '_B'] as const).map((suffix) => {
+    const room = Math.max(0, maxLength - suffix.length);
+    return base.slice(0, room) + suffix;
+  }) as [string, string];
 }
 
 /** Supabase rifiuta due canali con lo stesso nome: ogni sottoscrizione ne chiede uno suo. */

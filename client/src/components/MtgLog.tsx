@@ -48,7 +48,10 @@ export default function MtgLog({ onOpenZaff }: MtgLogProps) {
   const [session, setSession] = useState<Session | null | 'loading'>('loading');
   const [openModal, setOpenModal] = useState<MtgLogModal>(null);
   const [deckEditor, setDeckEditor] = useState<
-    null | { deckId: string | null; draft: { name: string; cards: { name: string; qty: number }[] } | null }
+    null | {
+      deckId: string | null;
+      draft: { name: string; cards: { name: string; qty: number; section?: 'main' | 'side' }[] } | null;
+    }
   >(null);
   const [editingGame, setEditingGame] = useState<Game | null>(null);
   const [games, setGames] = useState<Game[]>([]);

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { supabase, TABLE_DECKS } from '../../services/supabase';
+import { MAX_DECK_NAME_LENGTH, supabase, TABLE_DECKS } from '../../services/supabase';
 import { ManaPips } from './ManaIcon';
 import Button from '../ui/Button';
 import { TextField, SelectField } from '../ui/Field';
@@ -12,9 +12,17 @@ interface DeckEditorProps {
   onSaved: () => void;
 }
 
+/** `section` distingue il main deck dalla riserva (sideboard): le carte
+ *  importate o salvate prima di questa distinzione non hanno il campo e
+ *  vengono trattate come main deck (vedi `normalizeSection`). */
 interface DraftCard {
   name: string;
   qty: number;
+  section?: 'main' | 'side';
+}
+
+function normalizeSection(raw: unknown): 'main' | 'side' {
+  return raw === 'side' ? 'side' : 'main';
 }
 
 interface PreconCardEntry {
@@ -73,10 +81,13 @@ export default function DeckEditor({ deckId, initialDraft, onBack, onSaved }: De
   const [name, setName] = useState(initialDraft?.name ?? '');
   const [source, setSource] = useState('');
   const [colors, setColors] = useState<Set<string>>(new Set());
-  const [draft, setDraft] = useState<DraftCard[]>(initialDraft?.cards ?? []);
+  const [draft, setDraft] = useState<DraftCard[]>(
+    (initialDraft?.cards ?? []).map((c) => ({ ...c, section: normalizeSection(c.section) }))
+  );
   const [cardSearch, setCardSearch] = useState('');
   const [pickedCardName, setPickedCardName] = useState('');
   const [qty, setQty] = useState(1);
+  const [cardSection, setCardSection] = useState<'main' | 'side'>('main');
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [loading, setLoading] = useState(Boolean(deckId));
   const [saving, setSaving] = useState(false);
@@ -105,7 +116,9 @@ export default function DeckEditor({ deckId, initialDraft, onBack, onSaved }: De
           setName(data.name);
           setSource(data.source ?? '');
           setColors(new Set(data.colors ?? []));
-          setDraft(data.cards ?? []);
+          setDraft(
+            (data.cards ?? []).map((c: DraftCard) => ({ ...c, section: normalizeSection(c.section) }))
+          );
         }
         setLoading(false);
       });
@@ -187,14 +200,14 @@ export default function DeckEditor({ deckId, initialDraft, onBack, onSaved }: De
     const addAll = (list: PreconCardEntry[] | undefined) =>
       (list ?? []).forEach((c) => {
         const key = c.name.toLowerCase();
-        merged[key] = merged[key] ?? { name: c.name, qty: 0 };
+        merged[key] = merged[key] ?? { name: c.name, qty: 0, section: 'main' };
         merged[key].qty += c.count ?? 1;
       });
     addAll(deck.commander);
     addAll(deck.cards);
     const newDraft = Object.values(merged);
     setDraft(newDraft);
-    setName(deck.name);
+    setName(deck.name.slice(0, MAX_DECK_NAME_LENGTH));
     setSource('precon');
     setColors(new Set());
     autoDetectColors(newDraft.map((c) => c.name));
@@ -216,13 +229,15 @@ export default function DeckEditor({ deckId, initialDraft, onBack, onSaved }: De
     if (!cardName) return;
     const addQty = Math.max(1, qty || 1);
     setDraft((prev) => {
-      const idx = prev.findIndex((c) => c.name.toLowerCase() === cardName.toLowerCase());
+      const idx = prev.findIndex(
+        (c) => c.name.toLowerCase() === cardName.toLowerCase() && normalizeSection(c.section) === cardSection
+      );
       if (idx >= 0) {
         const next = [...prev];
         next[idx] = { ...next[idx], qty: next[idx].qty + addQty };
         return next;
       }
-      return [...prev, { name: cardName, qty: addQty }];
+      return [...prev, { name: cardName, qty: addQty, section: cardSection }];
     });
     autoDetectColors([cardName]);
     setCardSearch('');
@@ -231,12 +246,14 @@ export default function DeckEditor({ deckId, initialDraft, onBack, onSaved }: De
     setSuggestions([]);
   }
 
-  function handleRemoveCard(index: number) {
-    setDraft((prev) => prev.filter((_, i) => i !== index));
+  function handleRemoveCard(cardName: string, section: 'main' | 'side') {
+    setDraft((prev) => prev.filter((c) => !(c.name === cardName && normalizeSection(c.section) === section)));
   }
 
   async function handleSave() {
-    const trimmedName = name.trim();
+    // .slice come rete di sicurezza: il campo ha già maxLength, ma un nome
+    // importato (precon o file ManaBox) potrebbe superarlo anche se raro.
+    const trimmedName = name.trim().slice(0, MAX_DECK_NAME_LENGTH);
     setError('');
     if (!trimmedName) {
       setError('Dai un nome al mazzo prima di salvarlo.');
@@ -294,6 +311,7 @@ export default function DeckEditor({ deckId, initialDraft, onBack, onSaved }: De
         value={name}
         onChange={(e) => setName(e.target.value)}
         placeholder="es. Mono nero aggro by Ale"
+        maxLength={MAX_DECK_NAME_LENGTH}
       />
 
       <SelectField
@@ -385,7 +403,29 @@ export default function DeckEditor({ deckId, initialDraft, onBack, onSaved }: De
         )}
       </div>
 
-      <div className="mt-3.5 grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+      <div className="mt-3.5">
+        <span className={FIELD_LABEL}>Aggiungi a</span>
+        <div className="flex gap-1.5">
+          <Button
+            type="button"
+            variant={cardSection === 'main' ? 'primary' : 'ghost'}
+            size="sm"
+            onClick={() => setCardSection('main')}
+          >
+            Main Deck
+          </Button>
+          <Button
+            type="button"
+            variant={cardSection === 'side' ? 'primary' : 'ghost'}
+            size="sm"
+            onClick={() => setCardSection('side')}
+          >
+            Sideboard
+          </Button>
+        </div>
+      </div>
+
+      <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
         <TextField
           id="cardQty"
           label="Copie"
@@ -412,10 +452,12 @@ export default function DeckEditor({ deckId, initialDraft, onBack, onSaved }: De
       {draft.length === 0 ? (
         <p className={cx('mb-2.5', TEXT_MINI)}>Nessuna carta ancora aggiunta.</p>
       ) : (
-        <div className="mb-2.5 max-h-64 overflow-y-auto">
-          {draft.map((c, i) => (
+        (() => {
+          const mainDraft = draft.filter((c) => normalizeSection(c.section) === 'main');
+          const sideDraft = draft.filter((c) => normalizeSection(c.section) === 'side');
+          const renderRow = (c: DraftCard) => (
             <div
-              key={c.name}
+              key={normalizeSection(c.section) + '|' + c.name}
               className="flex items-center justify-between gap-2 border-b border-zaff-border py-1.5 text-sm text-zaff-text last:border-b-0"
             >
               <span className="min-w-0 flex-1 truncate">
@@ -423,15 +465,36 @@ export default function DeckEditor({ deckId, initialDraft, onBack, onSaved }: De
               </span>
               <button
                 type="button"
-                onClick={() => handleRemoveCard(i)}
+                onClick={() => handleRemoveCard(c.name, normalizeSection(c.section))}
                 title="Togli carta"
                 className="shrink-0 px-1 text-zaff-muted transition hover:text-red-400"
               >
                 ×
               </button>
             </div>
-          ))}
-        </div>
+          );
+          return (
+            <div className="mb-2.5">
+              <span className={FIELD_LABEL}>Main Deck · {mainDraft.reduce((s, c) => s + c.qty, 0)} carte</span>
+              <div className="mb-3 max-h-56 overflow-y-auto">
+                {mainDraft.length === 0 ? (
+                  <p className={TEXT_MINI}>Nessuna carta nel main deck.</p>
+                ) : (
+                  mainDraft.map(renderRow)
+                )}
+              </div>
+
+              <span className={FIELD_LABEL}>Sideboard · {sideDraft.reduce((s, c) => s + c.qty, 0)} carte</span>
+              <div className="max-h-56 overflow-y-auto">
+                {sideDraft.length === 0 ? (
+                  <p className={TEXT_MINI}>Nessuna carta in sideboard.</p>
+                ) : (
+                  sideDraft.map(renderRow)
+                )}
+              </div>
+            </div>
+          );
+        })()
       )}
 
       <div className="flex flex-wrap items-center gap-2.5">
