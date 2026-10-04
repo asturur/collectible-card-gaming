@@ -145,6 +145,14 @@ export default function GameList({ userId, onEdit }: GameListProps) {
     return selectedGame.players.map((p) => (p.winner ? randomFrom(WINNER_TAGS) : hasWinner ? randomFrom(LOSER_TAGS) : null));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId]);
+  /** Indici dei giocatori ordinati col/i vincitore/i per primo/i (a sinistra/in
+   *  cima): `playerTags` resta indicizzato sull'ordine originale, qui si
+   *  riordina solo la visualizzazione. */
+  const orderedPlayerIndices = useMemo(() => {
+    if (!selectedGame) return [];
+    const players = selectedGame.players;
+    return players.map((_, i) => i).sort((a, b) => Number(players[b].winner) - Number(players[a].winner));
+  }, [selectedGame]);
 
   async function handleDelete(id: string) {
     if (!supabase) return;
@@ -221,7 +229,8 @@ export default function GameList({ userId, onEdit }: GameListProps) {
                     {dateLabel(g.date)}
                   </span>
                   <span className="flex min-w-0 flex-1 flex-wrap gap-x-3.5 gap-y-1.5">
-                    {g.players.map((p, i) => (
+                    {/* Il/i vincitore/i sempre per primo/i, a sinistra. */}
+                    {[...g.players].sort((a, b) => Number(b.winner) - Number(a.winner)).map((p, i) => (
                       <span
                         key={i}
                         className={`whitespace-nowrap text-sm ${
@@ -288,7 +297,9 @@ export default function GameList({ userId, onEdit }: GameListProps) {
                 <div className="max-w-[210px] shrink-0" />
                 <div className="w-11 shrink-0 text-right text-[10px] uppercase tracking-wide text-zaff-muted">PV</div>
               </div>
-              {selectedGame.players.map((p, i) => (
+              {orderedPlayerIndices.map((i) => {
+                const p = selectedGame.players[i];
+                return (
                 <div
                   key={i}
                   className={`flex items-center border-b border-zaff-border py-2.5 last:border-b-0 ${
@@ -323,7 +334,8 @@ export default function GameList({ userId, onEdit }: GameListProps) {
                     {p.life === null || p.life === undefined ? '–' : p.life}
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
 
             {selectedGame.notes && (
