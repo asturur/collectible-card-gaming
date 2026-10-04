@@ -34,6 +34,28 @@ function IconButton({ label, onClick, tone = 'default', children }: IconButtonPr
   );
 }
 
+/** Piccolo badge "JPG", per far capire a colpo d'occhio nel tasto "Esporta
+ *  Risultati" in che formato viene generata l'immagine. */
+function JpgBadge() {
+  return (
+    <svg width="28" height="18" viewBox="0 0 28 18" className="mr-1 inline-block align-[-4px]" aria-hidden="true">
+      <rect x="0.5" y="0.5" width="27" height="17" rx="3.5" fill="#E8CA7E" stroke="#9E7A31" strokeWidth="1" />
+      <text
+        x="14"
+        y="12.5"
+        textAnchor="middle"
+        fontSize="9"
+        fontWeight="700"
+        fontFamily="system-ui, sans-serif"
+        letterSpacing="0.5"
+        fill="#241B3E"
+      >
+        JPG
+      </text>
+    </svg>
+  );
+}
+
 export interface GamePlayer {
   name: string;
   deck: string;
@@ -172,33 +194,41 @@ export default function GameList({ userId, onEdit }: GameListProps) {
     setError('');
     try {
       const canvas = await html2canvas(shareCardRef.current, { backgroundColor: '#1e293b', scale: 2 });
-      canvas.toBlob((blob) => {
-        if (!blob) {
-          setError("Non sono riuscito a generare l'immagine: riprova.");
-          return;
-        }
-        const time = idTimeSuffix(g.id);
-        const fileName = `partita_${g.date || 'magic'}${time ? '_' + time : ''}.png`;
-        const file = new File([blob], fileName, { type: 'image/png' });
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            setError("Non sono riuscito a generare l'immagine: riprova.");
+            return;
+          }
+          const time = idTimeSuffix(g.id);
+          const fileName = `partita_${g.date || 'magic'}${time ? '_' + time : ''}.jpg`;
+          const file = new File([blob], fileName, { type: 'image/jpeg' });
 
-        // La condivisione nativa è comoda quando funziona, ma su iPhone può
-        // essere rifiutata in silenzio se passa un attimo di troppo tra il
-        // tocco del bottone e qui (il tempo di generare l'immagine): per
-        // questo non ci basiamo solo su di lei, proviamo e basta.
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          navigator
-            .share({ files: [file], title: 'Partita di Magic', text: 'Risultato della partita del ' + dateLabel(g.date) })
-            .catch(() => {});
-        }
+          // La condivisione nativa è comoda quando funziona, ma su iPhone può
+          // essere rifiutata in silenzio se passa un attimo di troppo tra il
+          // tocco del bottone e qui (il tempo di generare l'immagine): per
+          // questo non ci basiamo solo su di lei, proviamo e basta.
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            navigator
+              .share({ files: [file], title: 'Partita di Magic', text: 'Risultato della partita del ' + dateLabel(g.date) })
+              .catch(() => {});
+          }
 
-        // Mostriamo SEMPRE anche l'anteprima qui sotto, da salvare tenendo
-        // premuto: un semplice download via link non è affidabile in Safari
-        // su iPhone, così il tasto non sembra mai non aver fatto nulla.
-        setExportedImage((prev) => {
-          if (prev) URL.revokeObjectURL(prev);
-          return URL.createObjectURL(blob);
-        });
-      });
+          // Mostriamo SEMPRE anche l'anteprima qui sotto, da salvare tenendo
+          // premuto: un semplice download via link non è affidabile in Safari
+          // su iPhone, così il tasto non sembra mai non aver fatto nulla.
+          setExportedImage((prev) => {
+            if (prev) URL.revokeObjectURL(prev);
+            return URL.createObjectURL(blob);
+          });
+        },
+        'image/jpeg',
+        0.92
+      );
+    } catch {
+      // Es. una classe colore non supportata da html2canvas: prima d'ora
+      // falliva qui in silenzio e il tasto sembrava non fare nulla.
+      setError("Non sono riuscito a generare l'immagine: riprova.");
     } finally {
       setExporting(false);
     }
@@ -308,9 +338,12 @@ export default function GameList({ userId, onEdit }: GameListProps) {
                 return (
                 <div
                   key={i}
-                  className={`flex items-center border-b border-zaff-border py-2.5 last:border-b-0 ${
-                    p.winner ? 'bg-zaff-text/5' : ''
-                  }`}
+                  className="flex items-center border-b border-zaff-border py-2.5 last:border-b-0"
+                  // Sfondo via style, non con la classe Tailwind "bg-zaff-text/5": quella
+                  // genera un color-mix() che html2canvas (la libreria con cui generiamo
+                  // l'immagine) non sa interpretare, e piantava in silenzio tutto
+                  // l'export non appena una partita aveva un vincitore segnato.
+                  style={p.winner ? { background: 'rgba(248,250,252,0.05)' } : undefined}
                 >
                   {/* mr-2.5 invece di `gap` sulla riga: html2canvas (usato per
                       esportare l'immagine) non supporta bene `gap` nel flexbox
@@ -354,7 +387,14 @@ export default function GameList({ userId, onEdit }: GameListProps) {
 
           <div className="mt-3.5 flex flex-wrap items-center gap-2.5">
             <Button onClick={() => handleExport(selectedGame)} disabled={exporting}>
-              {exporting ? 'Genero immagine…' : '🖼️ Esporta Risultati'}
+              {exporting ? (
+                'Genero immagine…'
+              ) : (
+                <>
+                  <JpgBadge />
+                  Esporta Risultati
+                </>
+              )}
             </Button>
 
             {canEdit(selectedGame.createdBy, userId) && (
