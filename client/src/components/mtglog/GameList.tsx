@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import html2canvas from 'html2canvas';
+import { toCanvas } from 'html-to-image';
 import { canEdit, subscribeToTable, supabase, TABLE_GAMES } from '../../services/supabase';
 import { ManaIcons } from './ManaIcon';
 import { dateLabel, durationLabel, rowToGame, timeLabel } from './stats';
@@ -385,7 +385,17 @@ export default function GameList({ userId, onEdit }: GameListProps) {
     setExporting(true);
     setError('');
     try {
-      const canvas = await html2canvas(shareCardRef.current, { backgroundColor: '#1e293b', scale: 2 });
+      // html-to-image invece di html2canvas: non reinterpreta a modo suo gli
+      // stili come faceva html2canvas (da cui venivano sia il taglio del nome
+      // mazzo che lo sfondo del vincitore da riscrivere a mano), ma chiede
+      // al browser stesso di disegnare la pagina — compreso, si spera, il
+      // font delle icone mana, che qui proviamo di nuovo vero (`LiveManaSymbols`
+      // anche nella copia nascosta, vedi sotto) invece del simbolo di riserva.
+      const canvas = await toCanvas(shareCardRef.current, {
+        backgroundColor: '#1e293b',
+        pixelRatio: 2,
+        cacheBust: true,
+      });
       canvas.toBlob(
         (blob) => {
           if (!blob) {
@@ -505,11 +515,13 @@ export default function GameList({ userId, onEdit }: GameListProps) {
           />
 
           {/* Copia identica, ma fuori schermo e invisibile: è da QUESTA che
-              generiamo il JPG (vedi handleExport), con i simboli mana di
-              riserva al posto del font — quello vero qui sopra è perfetto a
-              schermo, ma html2canvas (la libreria che genera l'immagine) non
-              lo legge bene e tagliava il nome del mazzo. Così chi usa l'app
-              vede sempre e solo le belle icone del font. */}
+              generiamo il JPG (vedi handleExport). In prova: con la nuova
+              libreria (html-to-image al posto di html2canvas) usiamo qui le
+              icone mana VERE (`LiveManaSymbols`, le stesse della copia
+              visibile sopra) invece del simbolo di riserva disegnato a mano
+              (`ExportManaSymbols`, tenuto pronto più sopra nel file come
+              ripiego: se il font non dovesse venire bene nell'immagine
+              esportata, basta rimetterlo qui). */}
           <div className="pointer-events-none fixed left-[-9999px] top-0" aria-hidden="true">
             <div ref={shareCardRef} className="w-[440px] bg-zaff-surface">
               <ShareCardBody
@@ -517,7 +529,7 @@ export default function GameList({ userId, onEdit }: GameListProps) {
                 orderedPlayerIndices={orderedPlayerIndices}
                 playerTags={playerTags}
                 hasWinner={hasWinner}
-                ManaDisplay={ExportManaSymbols}
+                ManaDisplay={LiveManaSymbols}
               />
             </div>
           </div>
