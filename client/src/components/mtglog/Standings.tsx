@@ -70,10 +70,38 @@ export default function Standings({ rows, showPie }: StandingsProps) {
             Come si dividono tutte le {totalWins} vittorie registrate, tra i giocatori:
           </p>
           <div className="flex flex-wrap items-center gap-5">
-            <svg viewBox="0 0 140 140" width="140" height="140" className="shrink-0">
-              {slices.map((s) => (
-                <path key={s.name} d={s.path} fill={s.color} />
-              ))}
+            {/* Ombra sotto il cerchio (elevazione) + lucentezza e ombreggiatura
+                sopra le fette (rilievo), per un aspetto più "da app" invece
+                che piatto. Le torte piccole nelle tessere restano come sono. */}
+            <svg
+              viewBox="0 0 140 140"
+              width="140"
+              height="140"
+              className="shrink-0 drop-shadow-[0_10px_18px_rgba(0,0,0,0.45)]"
+            >
+              <defs>
+                <radialGradient id="pieGloss" cx="34%" cy="26%" r="80%">
+                  <stop offset="0%" stopColor="#ffffff" stopOpacity="0.38" />
+                  <stop offset="45%" stopColor="#ffffff" stopOpacity="0.1" />
+                  <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
+                </radialGradient>
+                <radialGradient id="pieShade" cx="50%" cy="50%" r="50%">
+                  <stop offset="70%" stopColor="#000000" stopOpacity="0" />
+                  <stop offset="100%" stopColor="#000000" stopOpacity="0.32" />
+                </radialGradient>
+                <clipPath id="pieClip">
+                  <circle cx="70" cy="70" r="68" />
+                </clipPath>
+              </defs>
+              <g clipPath="url(#pieClip)">
+                {slices.map((s) => (
+                  <path key={s.name} d={s.path} fill={s.color} stroke="#1e293b" strokeWidth="1.5" />
+                ))}
+                {/* rilievo: più scuro verso il bordo, lucido in alto a sinistra */}
+                <circle cx="70" cy="70" r="68" fill="url(#pieShade)" />
+                <circle cx="70" cy="70" r="68" fill="url(#pieGloss)" />
+              </g>
+              <circle cx="70" cy="70" r="68" fill="none" stroke="#120E20" strokeWidth="1.5" opacity="0.5" />
             </svg>
             <div className="flex flex-col gap-1.5 text-sm text-zaff-muted">
               {slices.map((s) => (
