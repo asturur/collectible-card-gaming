@@ -56,7 +56,7 @@ function JpgBadge() {
   );
 }
 
-const MANA_DOT_COLOR: Record<string, string> = {
+const MANA_SYMBOL_COLOR: Record<string, string> = {
   W: '#EDE6CC',
   U: '#5B9BD9',
   B: '#3B2A4A',
@@ -64,28 +64,90 @@ const MANA_DOT_COLOR: Record<string, string> = {
   G: '#4C8A5B',
 };
 
-/** Pallini mana semplici (niente font di icone) per il dettaglio/immagine
- *  esportata: il font mana-font usato altrove (`ManaIcons`) è un font
- *  personalizzato, e html2canvas non ne calcola sempre bene altezza e
- *  posizione del glifo — nella JPG i simboli risultavano scentrati dentro
- *  i pallini e facevano sballare l'altezza della riga, tagliando il nome
- *  del mazzo sotto. Pallini pieni invece del simbolo preciso, ma sempre
- *  ben centrati e di altezza prevedibile. */
-function ExportManaDots({ colors }: { colors: string[] | undefined }) {
+/** Simboli mana disegnati a mano (niente font di icone, niente pallino di
+ *  sfondo) per il dettaglio/immagine esportata: il font mana-font usato
+ *  altrove (`ManaIcons`) non viene centrato in modo affidabile da
+ *  html2canvas, e un pallino colorato pieno (primo tentativo) risultava
+ *  illeggibile. Qui ogni colore è un simbolo stilizzato (sole, goccia,
+ *  teschio, fiamma, foglia) disegnato in SVG puro: forma fissa, sempre
+ *  ben centrata, nessun font coinvolto. */
+function ManaSymbolIcon({ color }: { color: string }) {
+  const fill = MANA_SYMBOL_COLOR[color] ?? '#9CA3AF';
+  switch (color) {
+    case 'W':
+      return (
+        <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="5.5" fill={fill} stroke="#00000055" strokeWidth="1" />
+          <line x1="19.5" y1="12" x2="22.5" y2="12" stroke={fill} strokeWidth="1.6" strokeLinecap="round" />
+          <line x1="17.3" y1="17.3" x2="19.4" y2="19.4" stroke={fill} strokeWidth="1.6" strokeLinecap="round" />
+          <line x1="12" y1="19.5" x2="12" y2="22.5" stroke={fill} strokeWidth="1.6" strokeLinecap="round" />
+          <line x1="6.7" y1="17.3" x2="4.6" y2="19.4" stroke={fill} strokeWidth="1.6" strokeLinecap="round" />
+          <line x1="4.5" y1="12" x2="1.5" y2="12" stroke={fill} strokeWidth="1.6" strokeLinecap="round" />
+          <line x1="6.7" y1="6.7" x2="4.6" y2="4.6" stroke={fill} strokeWidth="1.6" strokeLinecap="round" />
+          <line x1="12" y1="4.5" x2="12" y2="1.5" stroke={fill} strokeWidth="1.6" strokeLinecap="round" />
+          <line x1="17.3" y1="6.7" x2="19.4" y2="4.6" stroke={fill} strokeWidth="1.6" strokeLinecap="round" />
+        </svg>
+      );
+    case 'U':
+      return (
+        <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 2C12 2 5 11 5 16a7 7 0 0 0 14 0c0-5-7-14-7-14z" fill={fill} stroke="#00000033" strokeWidth="0.5" />
+        </svg>
+      );
+    case 'B':
+      return (
+        <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+          <path
+            d="M12 3a7 7 0 0 0-7 7c0 2.8 1.4 4.8 3 6.2V19a1 1 0 0 0 1 1h1.5v-2.2h1v2.2h1v-2.2h1v2.2H16a1 1 0 0 0 1-1v-2.8c1.6-1.4 3-3.4 3-6.2a7 7 0 0 0-7-7z"
+            fill={fill}
+            stroke="#1a1030"
+            strokeWidth="0.5"
+          />
+          {/* occhi/naso "vuoti": colore fisso uguale allo sfondo della card,
+              non trasparenza, perché è sempre questo lo sfondo su cui compaiono. */}
+          <circle cx="9.3" cy="10.5" r="1.7" fill="#1e293b" />
+          <circle cx="14.7" cy="10.5" r="1.7" fill="#1e293b" />
+          <rect x="11.3" y="13" width="1.4" height="1.8" fill="#1e293b" />
+        </svg>
+      );
+    case 'R':
+      return (
+        <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+          <path
+            d="M12 2c2 3-1 5-1 7 0 1 .8 1.8 1.8 1.8S14.6 9 14.6 8c1.4 1.6 2.4 3.6 2.4 5.8a5 5 0 1 1-10 0C7 9.8 9.5 6 12 2z"
+            fill={fill}
+            stroke="#00000033"
+            strokeWidth="0.5"
+          />
+        </svg>
+      );
+    case 'G':
+      return (
+        <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+          <path
+            d="M20 4C10 4 4 10 4 18c0 1 .5 2 1.5 2 .3-3 1.8-5.8 4-8-1 2.5-1.3 5-1 7.5 5-1 10-6 10.5-15.5C19 4 20 4 20 4z"
+            fill={fill}
+            stroke="#00000033"
+            strokeWidth="0.5"
+          />
+        </svg>
+      );
+    default:
+      return <span className="inline-block h-[14px] w-[14px] rounded-full" style={{ background: fill }} />;
+  }
+}
+
+/** Riga di simboli mana per il dettaglio/immagine esportata (vedi
+ *  `ManaSymbolIcon`): usata al posto di `ManaIcons` solo qui, dove deve
+ *  restare leggibile e ben centrata dentro l'immagine generata. */
+function ExportManaSymbols({ colors }: { colors: string[] | undefined }) {
   if (!colors || colors.length === 0) return null;
   return (
-    <span className="mb-1.5 inline-flex items-center">
+    <span className="inline-flex items-center">
       {colors.map((c, i) => (
-        <span
-          key={c + i}
-          className="ml-1 inline-block h-[15px] w-[15px] shrink-0 rounded-full first:ml-0"
-          // Colore via style, non con una classe Tailwind con opacità tipo
-          // "border-black/25": su Tailwind v4 genera un color-mix() che
-          // html2canvas (la libreria con cui generiamo l'immagine) non sa
-          // interpretare (vedi lo stesso problema già risolto più sopra).
-          style={{ background: MANA_DOT_COLOR[c] ?? '#9CA3AF', border: '1px solid rgba(0,0,0,0.25)' }}
-          title={c}
-        />
+        <span key={c + i} className="ml-1 inline-flex first:ml-0" title={c}>
+          <ManaSymbolIcon color={c} />
+        </span>
       ))}
     </span>
   );
@@ -361,29 +423,28 @@ export default function GameList({ userId, onEdit }: GameListProps) {
             </p>
 
             <div>
-              {/* Intestazione della colonna numerica: senza, "0"/"4" ecc.
-                  sembrano punteggi a caso invece di punti vita rimasti. */}
-              <div className="flex items-center pb-1">
-                <div className="min-w-0 flex-1" />
-                <div className="max-w-[210px] shrink-0" />
-                <div className="w-11 shrink-0 text-right text-[10px] uppercase tracking-wide text-zaff-muted">PV</div>
+              {/* 3 colonne di uguale larghezza (grid, non flex con pesi diversi),
+                  ciascuna con intestazione e contenuto centrati al suo interno. */}
+              <div className="grid grid-cols-3 pb-1">
+                <div className="text-center text-[10px] uppercase tracking-wide text-zaff-muted">Nome Giocatore</div>
+                <div className="text-center text-[10px] uppercase tracking-wide text-zaff-muted">Mazzo Utilizzato</div>
+                <div className="text-center text-[10px] uppercase tracking-wide text-zaff-muted">
+                  Punti Vita Rimasti
+                </div>
               </div>
               {orderedPlayerIndices.map((i) => {
                 const p = selectedGame.players[i];
                 return (
                 <div
                   key={i}
-                  className="flex items-center border-b border-zaff-border py-2.5 last:border-b-0"
+                  className="grid grid-cols-3 items-center border-b border-zaff-border py-2.5 last:border-b-0"
                   // Sfondo via style, non con la classe Tailwind "bg-zaff-text/5": quella
                   // genera un color-mix() che html2canvas (la libreria con cui generiamo
                   // l'immagine) non sa interpretare, e piantava in silenzio tutto
                   // l'export non appena una partita aveva un vincitore segnato.
                   style={p.winner ? { background: 'rgba(248,250,252,0.05)' } : undefined}
                 >
-                  {/* mr-2.5 invece di `gap` sulla riga: html2canvas (usato per
-                      esportare l'immagine) non supporta bene `gap` nel flexbox
-                      e le colonne finivano per sovrapporsi nell'immagine. */}
-                  <div className="min-w-0 flex-1 pr-2.5">
+                  <div className="flex flex-col items-center px-1 text-center">
                     <span className={`text-[15px] ${p.winner ? 'font-bold text-zaff-text' : 'italic text-zaff-muted'}`}>
                       {p.winner && '🎉 '}
                       {!p.winner && hasWinner && '😵 '}
@@ -391,7 +452,7 @@ export default function GameList({ userId, onEdit }: GameListProps) {
                     </span>
                     {playerTags[i] && (
                       <span
-                        className={`block text-xs ${p.winner ? 'text-zaff-gold' : 'italic text-zaff-muted opacity-75'}`}
+                        className={`text-xs ${p.winner ? 'text-zaff-gold' : 'italic text-zaff-muted opacity-75'}`}
                       >
                         {p.winner ? 'vincitore — ' : ''}
                         {playerTags[i]}
@@ -399,13 +460,13 @@ export default function GameList({ userId, onEdit }: GameListProps) {
                     )}
                   </div>
                   <div
-                    className="flex max-w-[210px] shrink-0 flex-col items-end pr-2.5 text-right text-[13px] text-zaff-muted"
+                    className="flex flex-col items-center px-1 text-center text-[13px] text-zaff-muted"
                     title={p.deck || ''}
                   >
-                    <ExportManaDots colors={p.colors} />
-                    <span className="max-w-[210px] truncate leading-snug">{p.deck || '—'}</span>
+                    <ExportManaSymbols colors={p.colors} />
+                    <span className="mt-1 max-w-full truncate leading-snug">{p.deck || '—'}</span>
                   </div>
-                  <div className="w-11 shrink-0 text-right text-[17px] tabular-nums text-zaff-text">
+                  <div className="text-center text-[17px] tabular-nums text-zaff-text">
                     {p.life === null || p.life === undefined ? '–' : p.life}
                   </div>
                 </div>
