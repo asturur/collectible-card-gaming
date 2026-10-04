@@ -56,85 +56,77 @@ function JpgBadge() {
   );
 }
 
-const MANA_SYMBOL_COLOR: Record<string, string> = {
+/** Stesso schema di colori dei simboli mana "ufficiali": pallino chiaro con
+ *  simbolo scuro per i colori chiari, pallino nero con simbolo chiaro per il
+ *  nero (altrimenti il teschio scuro su pallino scuro sparisce sullo sfondo
+ *  scuro dell'app — questo è esattamente quello che non andava bene prima). */
+const MANA_BG_COLOR: Record<string, string> = {
   W: '#EDE6CC',
   U: '#5B9BD9',
-  B: '#3B2A4A',
+  B: '#241B2E',
   R: '#C9453B',
   G: '#4C8A5B',
 };
 
-/** Simboli mana disegnati a mano (niente font di icone, niente pallino di
- *  sfondo) per il dettaglio/immagine esportata: il font mana-font usato
- *  altrove (`ManaIcons`) non viene centrato in modo affidabile da
- *  html2canvas, e un pallino colorato pieno (primo tentativo) risultava
- *  illeggibile. Qui ogni colore è un simbolo stilizzato (sole, goccia,
- *  teschio, fiamma, foglia) disegnato in SVG puro: forma fissa, sempre
- *  ben centrata, nessun font coinvolto. */
+function manaInk(color: string): string {
+  return color === 'B' ? '#F3EEE3' : '#171220';
+}
+
+/** Simboli mana disegnati a mano, con lo stesso stile "pallino colorato +
+ *  simbolo" delle altre schermate (Gestisci Mazzi, Nuova Partita), dove usano
+ *  il font di icone `ManaIcons`: qui invece sono SVG puro, niente font,
+ *  perché nel dettaglio/immagine esportata il font non viene centrato in modo
+ *  affidabile da html2canvas (vedi commento su `ManaIcons` altrove nel file).
+ *  Forma e posizione quindi sempre fisse e prevedibili, pallino colorato per
+ *  restare leggibili come nel resto dell'app. */
 function ManaSymbolIcon({ color }: { color: string }) {
-  const fill = MANA_SYMBOL_COLOR[color] ?? '#9CA3AF';
-  switch (color) {
-    case 'W':
-      return (
-        <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
-          <circle cx="12" cy="12" r="5.5" fill={fill} stroke="#00000055" strokeWidth="1" />
-          <line x1="19.5" y1="12" x2="22.5" y2="12" stroke={fill} strokeWidth="1.6" strokeLinecap="round" />
-          <line x1="17.3" y1="17.3" x2="19.4" y2="19.4" stroke={fill} strokeWidth="1.6" strokeLinecap="round" />
-          <line x1="12" y1="19.5" x2="12" y2="22.5" stroke={fill} strokeWidth="1.6" strokeLinecap="round" />
-          <line x1="6.7" y1="17.3" x2="4.6" y2="19.4" stroke={fill} strokeWidth="1.6" strokeLinecap="round" />
-          <line x1="4.5" y1="12" x2="1.5" y2="12" stroke={fill} strokeWidth="1.6" strokeLinecap="round" />
-          <line x1="6.7" y1="6.7" x2="4.6" y2="4.6" stroke={fill} strokeWidth="1.6" strokeLinecap="round" />
-          <line x1="12" y1="4.5" x2="12" y2="1.5" stroke={fill} strokeWidth="1.6" strokeLinecap="round" />
-          <line x1="17.3" y1="6.7" x2="19.4" y2="4.6" stroke={fill} strokeWidth="1.6" strokeLinecap="round" />
-        </svg>
-      );
-    case 'U':
-      return (
-        <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M12 2C12 2 5 11 5 16a7 7 0 0 0 14 0c0-5-7-14-7-14z" fill={fill} stroke="#00000033" strokeWidth="0.5" />
-        </svg>
-      );
-    case 'B':
-      return (
-        <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+  const bg = MANA_BG_COLOR[color] ?? '#6B7280';
+  const ink = manaInk(color);
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="12" cy="12" r="11" fill={bg} stroke="rgba(0,0,0,0.35)" strokeWidth="1" />
+      {color === 'W' && (
+        <>
+          <circle cx="12" cy="12" r="3" fill={ink} />
+          <line x1="16.5" y1="12" x2="19.5" y2="12" stroke={ink} strokeWidth="1.5" strokeLinecap="round" />
+          <line x1="15.18" y1="15.18" x2="17.3" y2="17.3" stroke={ink} strokeWidth="1.5" strokeLinecap="round" />
+          <line x1="12" y1="16.5" x2="12" y2="19.5" stroke={ink} strokeWidth="1.5" strokeLinecap="round" />
+          <line x1="8.82" y1="15.18" x2="6.7" y2="17.3" stroke={ink} strokeWidth="1.5" strokeLinecap="round" />
+          <line x1="7.5" y1="12" x2="4.5" y2="12" stroke={ink} strokeWidth="1.5" strokeLinecap="round" />
+          <line x1="8.82" y1="8.82" x2="6.7" y2="6.7" stroke={ink} strokeWidth="1.5" strokeLinecap="round" />
+          <line x1="12" y1="7.5" x2="12" y2="4.5" stroke={ink} strokeWidth="1.5" strokeLinecap="round" />
+          <line x1="15.18" y1="8.82" x2="17.3" y2="6.7" stroke={ink} strokeWidth="1.5" strokeLinecap="round" />
+        </>
+      )}
+      {color === 'U' && (
+        <path d="M12 5C12 5 7.5 11 7.5 14.5a4.5 4.5 0 0 0 9 0C16.5 11 12 5 12 5z" fill={ink} />
+      )}
+      {color === 'B' && (
+        <>
           <path
-            d="M12 3a7 7 0 0 0-7 7c0 2.8 1.4 4.8 3 6.2V19a1 1 0 0 0 1 1h1.5v-2.2h1v2.2h1v-2.2h1v2.2H16a1 1 0 0 0 1-1v-2.8c1.6-1.4 3-3.4 3-6.2a7 7 0 0 0-7-7z"
-            fill={fill}
-            stroke="#1a1030"
-            strokeWidth="0.5"
+            d="M12 6a5 5 0 0 0-5 5c0 2 1 3.4 2 4.3V17a.8.8 0 0 0 .8.8h1v-1.4h.8v1.4h.8v-1.4h.8v1.4h1a.8.8 0 0 0 .8-.8v-1.7c1-.9 2-2.3 2-4.3a5 5 0 0 0-5-5z"
+            fill={ink}
           />
-          {/* occhi/naso "vuoti": colore fisso uguale allo sfondo della card,
-              non trasparenza, perché è sempre questo lo sfondo su cui compaiono. */}
-          <circle cx="9.3" cy="10.5" r="1.7" fill="#1e293b" />
-          <circle cx="14.7" cy="10.5" r="1.7" fill="#1e293b" />
-          <rect x="11.3" y="13" width="1.4" height="1.8" fill="#1e293b" />
-        </svg>
-      );
-    case 'R':
-      return (
-        <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
-          <path
-            d="M12 2c2 3-1 5-1 7 0 1 .8 1.8 1.8 1.8S14.6 9 14.6 8c1.4 1.6 2.4 3.6 2.4 5.8a5 5 0 1 1-10 0C7 9.8 9.5 6 12 2z"
-            fill={fill}
-            stroke="#00000033"
-            strokeWidth="0.5"
-          />
-        </svg>
-      );
-    case 'G':
-      return (
-        <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
-          <path
-            d="M20 4C10 4 4 10 4 18c0 1 .5 2 1.5 2 .3-3 1.8-5.8 4-8-1 2.5-1.3 5-1 7.5 5-1 10-6 10.5-15.5C19 4 20 4 20 4z"
-            fill={fill}
-            stroke="#00000033"
-            strokeWidth="0.5"
-          />
-        </svg>
-      );
-    default:
-      return <span className="inline-block h-[14px] w-[14px] rounded-full" style={{ background: fill }} />;
-  }
+          <circle cx="10.1" cy="10.6" r="1.1" fill={bg} />
+          <circle cx="13.9" cy="10.6" r="1.1" fill={bg} />
+          <rect x="11.4" y="12.2" width="1.2" height="1.3" fill={bg} />
+        </>
+      )}
+      {color === 'R' && (
+        <path
+          d="M12 5c1.3 2-.6 3.3-.6 4.6 0 .7.5 1.2 1.2 1.2s1.2-.5 1.2-1.2c.9 1.1 1.6 2.4 1.6 3.9a3.4 3.4 0 1 1-6.8 0C8.6 10.5 10.3 8 12 5z"
+          fill={ink}
+        />
+      )}
+      {color === 'G' && (
+        <path
+          d="M12 5.3C9 6.5 7.3 9.3 7.3 12.5c3 .8 6.2-.7 7.3-3.6.6-1.7-.7-3.6-2.6-3.6z"
+          fill={ink}
+        />
+      )}
+      {!['W', 'U', 'B', 'R', 'G'].includes(color) && <circle cx="12" cy="12" r="4" fill={ink} />}
+    </svg>
+  );
 }
 
 /** Riga di simboli mana per il dettaglio/immagine esportata (vedi
@@ -145,7 +137,7 @@ function ExportManaSymbols({ colors }: { colors: string[] | undefined }) {
   return (
     <span className="inline-flex items-center">
       {colors.map((c, i) => (
-        <span key={c + i} className="ml-1 inline-flex first:ml-0" title={c}>
+        <span key={c + i} className="ml-1.5 inline-flex first:ml-0" title={c}>
           <ManaSymbolIcon color={c} />
         </span>
       ))}
