@@ -129,9 +129,10 @@ function ManaSymbolIcon({ color }: { color: string }) {
   );
 }
 
-/** Riga di simboli mana per il dettaglio/immagine esportata (vedi
- *  `ManaSymbolIcon`): usata al posto di `ManaIcons` solo qui, dove deve
- *  restare leggibile e ben centrata dentro l'immagine generata. */
+/** Riga di simboli mana usata SOLO nella copia nascosta della scheda
+ *  (vedi `ShareCardBody`/`ExportCopy` più sotto) che genera l'immagine:
+ *  quella visibile a schermo usa sempre le vere icone `ManaIcons`, identiche
+ *  al resto dell'app. */
 function ExportManaSymbols({ colors }: { colors: string[] | undefined }) {
   if (!colors || colors.length === 0) return null;
   return (
@@ -142,6 +143,108 @@ function ExportManaSymbols({ colors }: { colors: string[] | undefined }) {
         </span>
       ))}
     </span>
+  );
+}
+
+/** Icone mana "vere" (font ufficiale), per la scheda visibile a schermo: le
+ *  stesse di elenco partite, Nuova Partita e Gestisci Mazzi. */
+function LiveManaSymbols({ colors }: { colors: string[] | undefined }) {
+  return <ManaIcons colors={colors} className="text-[19px]" />;
+}
+
+interface ShareCardBodyProps {
+  game: Game;
+  orderedPlayerIndices: number[];
+  playerTags: (string | null)[];
+  hasWinner: boolean;
+  /** `LiveManaSymbols` per la scheda a schermo, `ExportManaSymbols` per la
+   *  copia nascosta da cui generiamo il JPG (vedi sopra). */
+  ManaDisplay: (props: { colors: string[] | undefined }) => ReactNode;
+}
+
+/** Contenuto della scheda risultato partita (testata, 3 colonne, note):
+ *  reso due volte, una visibile e una nascosta solo per l'esportazione (vedi
+ *  `GameList` più sotto) — stesso identico markup, cambia solo come vengono
+ *  disegnati i simboli mana. */
+function ShareCardBody({ game, orderedPlayerIndices, playerTags, hasWinner, ManaDisplay }: ShareCardBodyProps) {
+  return (
+    <div className="px-0.5 py-1.5">
+      <p className="mb-0.5 text-[11px] uppercase tracking-[0.06em] text-zaff-muted">Registro partite di Magic</p>
+      <h2 className={HEADING_SECTION}>{dateLabel(game.date)}</h2>
+      <p className={`mb-3 ${TEXT_MINI}`}>
+        {game.format || 'formato non indicato'} · {game.players.length} giocatori
+        {(() => {
+          const start = timeLabel(game.startedAt);
+          const end = timeLabel(game.endedAt);
+          const duration = durationLabel(game.startedAt, game.endedAt);
+          if (!start && !end) return null;
+          return (
+            <>
+              {' · '}
+              {start && <>Inizio {start}</>}
+              {end && <>{start && ' · '}Fine {end}</>}
+              {duration && <> · Durata {duration}</>}
+            </>
+          );
+        })()}
+      </p>
+
+      <div>
+        {/* 3 colonne di uguale larghezza (grid, non flex con pesi diversi),
+            ciascuna con intestazione e contenuto centrati al suo interno. */}
+        <div className="grid grid-cols-3 pb-1">
+          <div className="text-center text-[10px] uppercase tracking-wide text-zaff-muted">Nome Giocatore</div>
+          <div className="text-center text-[10px] uppercase tracking-wide text-zaff-muted">Mazzo Utilizzato</div>
+          <div className="text-center text-[10px] uppercase tracking-wide text-zaff-muted">Punti Vita Rimasti</div>
+        </div>
+        {orderedPlayerIndices.map((i) => {
+          const p = game.players[i];
+          return (
+            <div
+              key={i}
+              // Riga alta e con parecchio margine verticale: al massimo 4
+              // giocatori per partita, quindi ce n'è ampiamente lo spazio, e
+              // così il nome del mazzo ha sempre abbastanza altezza libera
+              // intorno a sé da non finire mai tagliato nell'immagine esportata.
+              className="grid min-h-[86px] grid-cols-3 items-center border-b border-zaff-border py-5 last:border-b-0"
+              // Sfondo via style, non con la classe Tailwind "bg-zaff-text/5": quella
+              // genera un color-mix() che html2canvas (la libreria con cui generiamo
+              // l'immagine) non sa interpretare, e piantava in silenzio tutto
+              // l'export non appena una partita aveva un vincitore segnato.
+              style={p.winner ? { background: 'rgba(248,250,252,0.05)' } : undefined}
+            >
+              <div className="flex flex-col items-center px-1 text-center">
+                <span className={`text-[15px] ${p.winner ? 'font-bold text-zaff-text' : 'italic text-zaff-muted'}`}>
+                  {p.winner && '🎉 '}
+                  {!p.winner && hasWinner && '😵 '}
+                  {p.name}
+                </span>
+                {playerTags[i] && (
+                  <span className={`mt-0.5 text-xs ${p.winner ? 'text-zaff-gold' : 'italic text-zaff-muted opacity-75'}`}>
+                    {p.winner ? 'vincitore — ' : ''}
+                    {playerTags[i]}
+                  </span>
+                )}
+              </div>
+              <div
+                className="flex flex-col items-center px-1 text-center text-[13px] text-zaff-muted"
+                title={p.deck || ''}
+              >
+                <ManaDisplay colors={p.colors} />
+                <span className="mt-2.5 max-w-full truncate pb-0.5 leading-[1.8]">{p.deck || '—'}</span>
+              </div>
+              <div className="text-center text-[17px] tabular-nums text-zaff-text">
+                {p.life === null || p.life === undefined ? '–' : p.life}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {game.notes && (
+        <p className="mt-3 whitespace-pre-wrap rounded bg-zaff-bg px-3 py-2.5 text-sm text-zaff-text">{game.notes}</p>
+      )}
+    </div>
   );
 }
 
@@ -393,88 +496,30 @@ export default function GameList({ userId, onEdit }: GameListProps) {
             });
           }}
         >
-          <div ref={shareCardRef} className="px-0.5 py-1.5">
-            <p className="mb-0.5 text-[11px] uppercase tracking-[0.06em] text-zaff-muted">Registro partite di Magic</p>
-            <h2 className={HEADING_SECTION}>{dateLabel(selectedGame.date)}</h2>
-            <p className={`mb-3 ${TEXT_MINI}`}>
-              {selectedGame.format || 'formato non indicato'} · {selectedGame.players.length} giocatori
-              {(() => {
-                const start = timeLabel(selectedGame.startedAt);
-                const end = timeLabel(selectedGame.endedAt);
-                const duration = durationLabel(selectedGame.startedAt, selectedGame.endedAt);
-                if (!start && !end) return null;
-                return (
-                  <>
-                    {' · '}
-                    {start && <>Inizio {start}</>}
-                    {end && <>{start && ' · '}Fine {end}</>}
-                    {duration && <> · Durata {duration}</>}
-                  </>
-                );
-              })()}
-            </p>
+          <ShareCardBody
+            game={selectedGame}
+            orderedPlayerIndices={orderedPlayerIndices}
+            playerTags={playerTags}
+            hasWinner={hasWinner}
+            ManaDisplay={LiveManaSymbols}
+          />
 
-            <div>
-              {/* 3 colonne di uguale larghezza (grid, non flex con pesi diversi),
-                  ciascuna con intestazione e contenuto centrati al suo interno. */}
-              <div className="grid grid-cols-3 pb-1">
-                <div className="text-center text-[10px] uppercase tracking-wide text-zaff-muted">Nome Giocatore</div>
-                <div className="text-center text-[10px] uppercase tracking-wide text-zaff-muted">Mazzo Utilizzato</div>
-                <div className="text-center text-[10px] uppercase tracking-wide text-zaff-muted">
-                  Punti Vita Rimasti
-                </div>
-              </div>
-              {orderedPlayerIndices.map((i) => {
-                const p = selectedGame.players[i];
-                return (
-                <div
-                  key={i}
-                  // Riga alta e con parecchio margine verticale: al massimo 4
-                  // giocatori per partita, quindi ce n'è ampiamente lo spazio, e
-                  // così il nome del mazzo ha sempre abbastanza altezza libera
-                  // intorno a sé da non finire mai tagliato nell'immagine esportata.
-                  className="grid min-h-[86px] grid-cols-3 items-center border-b border-zaff-border py-5 last:border-b-0"
-                  // Sfondo via style, non con la classe Tailwind "bg-zaff-text/5": quella
-                  // genera un color-mix() che html2canvas (la libreria con cui generiamo
-                  // l'immagine) non sa interpretare, e piantava in silenzio tutto
-                  // l'export non appena una partita aveva un vincitore segnato.
-                  style={p.winner ? { background: 'rgba(248,250,252,0.05)' } : undefined}
-                >
-                  <div className="flex flex-col items-center px-1 text-center">
-                    <span className={`text-[15px] ${p.winner ? 'font-bold text-zaff-text' : 'italic text-zaff-muted'}`}>
-                      {p.winner && '🎉 '}
-                      {!p.winner && hasWinner && '😵 '}
-                      {p.name}
-                    </span>
-                    {playerTags[i] && (
-                      <span
-                        className={`mt-0.5 text-xs ${p.winner ? 'text-zaff-gold' : 'italic text-zaff-muted opacity-75'}`}
-                      >
-                        {p.winner ? 'vincitore — ' : ''}
-                        {playerTags[i]}
-                      </span>
-                    )}
-                  </div>
-                  <div
-                    className="flex flex-col items-center px-1 text-center text-[13px] text-zaff-muted"
-                    title={p.deck || ''}
-                  >
-                    <ExportManaSymbols colors={p.colors} />
-                    <span className="mt-2.5 max-w-full truncate pb-0.5 leading-[1.8]">{p.deck || '—'}</span>
-                  </div>
-                  <div className="text-center text-[17px] tabular-nums text-zaff-text">
-                    {p.life === null || p.life === undefined ? '–' : p.life}
-                  </div>
-                </div>
-                );
-              })}
+          {/* Copia identica, ma fuori schermo e invisibile: è da QUESTA che
+              generiamo il JPG (vedi handleExport), con i simboli mana di
+              riserva al posto del font — quello vero qui sopra è perfetto a
+              schermo, ma html2canvas (la libreria che genera l'immagine) non
+              lo legge bene e tagliava il nome del mazzo. Così chi usa l'app
+              vede sempre e solo le belle icone del font. */}
+          <div className="pointer-events-none fixed left-[-9999px] top-0" aria-hidden="true">
+            <div ref={shareCardRef} className="w-[440px] bg-zaff-surface">
+              <ShareCardBody
+                game={selectedGame}
+                orderedPlayerIndices={orderedPlayerIndices}
+                playerTags={playerTags}
+                hasWinner={hasWinner}
+                ManaDisplay={ExportManaSymbols}
+              />
             </div>
-
-            {selectedGame.notes && (
-              <p className="mt-3 whitespace-pre-wrap rounded bg-zaff-bg px-3 py-2.5 text-sm text-zaff-text">
-                {selectedGame.notes}
-              </p>
-            )}
           </div>
 
           <div className="mt-3.5 flex flex-wrap items-center gap-2.5">
