@@ -259,15 +259,18 @@ export default function DeckList({ userId, onCreate, onEdit, onImportFile }: Dec
                 </div>
                 <div className="flex shrink-0 gap-1.5 whitespace-nowrap">
                   {canEdit(d.createdBy, userId) ? (
+                    // Cancella, modifica, visualizza (in quest'ordine): così l'occhio
+                    // "Visualizza" è sempre l'ultimo tasto a destra, incolonnato con
+                    // quello dei mazzi altrui, che hanno solo quello.
                     <>
-                      <IconButton label="Visualizza mazzo" onClick={() => setSelectedId(d.id)}>
-                        👁️
+                      <IconButton label="Cancella mazzo" tone="danger" onClick={() => handleDelete(d.id)}>
+                        🗑️
                       </IconButton>
                       <IconButton label="Modifica mazzo" onClick={() => onEdit(d.id)}>
                         ✏️
                       </IconButton>
-                      <IconButton label="Cancella mazzo" tone="danger" onClick={() => handleDelete(d.id)}>
-                        🗑️
+                      <IconButton label="Visualizza mazzo" onClick={() => setSelectedId(d.id)}>
+                        👁️
                       </IconButton>
                     </>
                   ) : (
