@@ -59,6 +59,7 @@ export function GridTile({ icon, graphic, label, sublabel, onClick }: GridTilePr
 function TileArtBackdrop({ seed, children }: { seed: string; children: ReactNode }) {
   const glow = `tileGlow-${seed}`;
   const fade = `tileFade-${seed}`;
+  const vignette = `tileVignette-${seed}`;
   return (
     <svg viewBox="0 0 100 100" className="h-full w-full" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
       <defs>
@@ -66,6 +67,14 @@ function TileArtBackdrop({ seed, children }: { seed: string; children: ReactNode
           <stop offset="0%" stopColor="#4B3F7A" />
           <stop offset="55%" stopColor="#241B3E" />
           <stop offset="100%" stopColor="#120E20" />
+        </radialGradient>
+        {/* Sfuma tutt'intorno (non solo in basso) verso il colore di sfondo
+            del bottone, cosí il riquadro dell'illustrazione non si vede come
+            un "adesivo" con un bordo netto. */}
+        <radialGradient id={vignette} cx="50%" cy="50%" r="72%">
+          <stop offset="0%" stopColor="#1e293b" stopOpacity="0" />
+          <stop offset="65%" stopColor="#1e293b" stopOpacity="0" />
+          <stop offset="100%" stopColor="#1e293b" stopOpacity="1" />
         </radialGradient>
         <linearGradient id={fade} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#1e293b" stopOpacity="0" />
@@ -77,6 +86,7 @@ function TileArtBackdrop({ seed, children }: { seed: string; children: ReactNode
           (mai tagliata dal bottone), anche quando il rapporto larghezza/altezza
           della tessera cambia molto (desktop molto più largo che smartphone). */}
       <g transform="translate(50,40) scale(0.8) translate(-50,-40)">{children}</g>
+      <rect x="0" y="0" width="100" height="100" fill={`url(#${vignette})`} />
       <rect x="0" y="0" width="100" height="100" fill={`url(#${fade})`} />
     </svg>
   );
