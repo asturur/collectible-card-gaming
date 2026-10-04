@@ -227,7 +227,7 @@ export default function MtgLog({ onOpenZaff }: MtgLogProps) {
           subtitle="Classifica generale: partite vinte da ciascuno e come si dividono tutte le vittorie."
           onClose={closeModal}
         >
-          <Standings rows={standings} showPie />
+          <Standings rows={standings} games={games} showPie />
         </Modal>
       )}
 
