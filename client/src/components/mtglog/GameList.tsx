@@ -515,13 +515,13 @@ export default function GameList({ userId, onEdit }: GameListProps) {
           />
 
           {/* Copia identica, ma fuori schermo e invisibile: è da QUESTA che
-              generiamo il JPG (vedi handleExport). In prova: con la nuova
-              libreria (html-to-image al posto di html2canvas) usiamo qui le
-              icone mana VERE (`LiveManaSymbols`, le stesse della copia
-              visibile sopra) invece del simbolo di riserva disegnato a mano
-              (`ExportManaSymbols`, tenuto pronto più sopra nel file come
-              ripiego: se il font non dovesse venire bene nell'immagine
-              esportata, basta rimetterlo qui). */}
+              generiamo il JPG (vedi handleExport). Provato anche qui il font
+              vero (`LiveManaSymbols`) con la nuova libreria html-to-image:
+              tutto il resto (impaginazione, colonne, nome mazzo troncato coi
+              puntini invece che tagliato) viene benissimo, ma il simbolo
+              mana esce vuoto (il font non viene incorporato nell'immagine).
+              Per ora torniamo al simbolo di riserva disegnato a mano, solo
+              qui — la scheda visibile sopra resta con le icone vere. */}
           <div className="pointer-events-none fixed left-[-9999px] top-0" aria-hidden="true">
             <div ref={shareCardRef} className="w-[440px] bg-zaff-surface">
               <ShareCardBody
@@ -529,7 +529,7 @@ export default function GameList({ userId, onEdit }: GameListProps) {
                 orderedPlayerIndices={orderedPlayerIndices}
                 playerTags={playerTags}
                 hasWinner={hasWinner}
-                ManaDisplay={LiveManaSymbols}
+                ManaDisplay={ExportManaSymbols}
               />
             </div>
           </div>
