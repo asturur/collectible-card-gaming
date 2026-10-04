@@ -1,11 +1,38 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import html2canvas from 'html2canvas';
 import { canEdit, subscribeToTable, supabase, TABLE_GAMES } from '../../services/supabase';
 import { ManaIcons } from './ManaIcon';
 import { dateLabel, rowToGame } from './stats';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
-import { HEADING_SECTION, TEXT_MINI, TEXT_MUTED } from '../ui/styles';
+import { cx, HEADING_SECTION, TEXT_MINI, TEXT_MUTED } from '../ui/styles';
+
+interface IconButtonProps {
+  label: string;
+  onClick: () => void;
+  tone?: 'default' | 'danger';
+  children: ReactNode;
+}
+
+/** Bottone quadrato con solo un'icona (emoji) e un'etichetta accessibile
+ *  (title + aria-label): stesso stile usato in "Gestisci Mazzi" e "Gestisci
+ *  Giocatori". */
+function IconButton({ label, onClick, tone = 'default', children }: IconButtonProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={label}
+      aria-label={label}
+      className={cx(
+        'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-zaff-border bg-zaff-bg text-base leading-none text-zaff-muted transition',
+        tone === 'danger' ? 'hover:border-red-400 hover:text-red-400' : 'hover:border-zaff-gold hover:text-zaff-gold'
+      )}
+    >
+      {children}
+    </button>
+  );
+}
 
 export interface GamePlayer {
   name: string;
@@ -125,17 +152,20 @@ export default function GameList({ userId, onEdit }: GameListProps) {
   async function handleExport(g: Game) {
     if (!shareCardRef.current) return;
     setExporting(true);
+    setError('');
     try {
       const canvas = await html2canvas(shareCardRef.current, { backgroundColor: '#1e293b', scale: 2 });
       canvas.toBlob((blob) => {
-        if (!blob) return;
+        if (!blob) {
+          setError("Non sono riuscito a generare l'immagine: riprova.");
+          return;
+        }
         const time = idTimeSuffix(g.id);
         const fileName = `partita_${g.date || 'magic'}${time ? '_' + time : ''}.png`;
         const file = new File([blob], fileName, { type: 'image/png' });
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          navigator.share({ files: [file], title: 'Partita di Magic', text: 'Risultato della partita del ' + dateLabel(g.date) }).catch(() => {});
-        } else {
-          const url = URL.createObjectURL(blob);
+
+        function downloadFile() {
+          const url = URL.createObjectURL(blob!);
           const a = document.createElement('a');
           a.href = url;
           a.download = fileName;
@@ -143,6 +173,22 @@ export default function GameList({ userId, onEdit }: GameListProps) {
           a.click();
           a.remove();
           URL.revokeObjectURL(url);
+        }
+
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          navigator
+            .share({ files: [file], title: 'Partita di Magic', text: 'Risultato della partita del ' + dateLabel(g.date) })
+            // Su iOS la condivisione può venire rifiutata in silenzio se passa un
+            // attimo di troppo tra il tocco del bottone e l'apertura del foglio di
+            // condivisione (qui, il tempo di generare l'immagine): se non è stato
+            // l'utente ad annullarla, scarico il file come alternativa, così non
+            // sembra che il tasto non abbia fatto nulla.
+            .catch((err: unknown) => {
+              if (err instanceof DOMException && err.name === 'AbortError') return;
+              downloadFile();
+            });
+        } else {
+          downloadFile();
         }
       });
     } finally {
@@ -178,11 +224,13 @@ export default function GameList({ userId, onEdit }: GameListProps) {
                     {g.players.map((p, i) => (
                       <span
                         key={i}
-                        className={`whitespace-nowrap text-sm ${p.winner ? 'font-semibold text-zaff-highlight' : 'text-zaff-text'}`}
+                        className={`whitespace-nowrap text-sm ${
+                          p.winner ? 'font-bold text-zaff-text' : 'italic text-zaff-muted'
+                        }`}
                       >
-                        {p.winner && '🏆 '}
+                        {p.winner && '🎉 '}
                         {p.name}
-                        <ManaIcons colors={p.colors} className="text-[13px]" />
+                        <ManaIcons colors={p.colors} className="ml-1.5 text-[13px]" />
                       </span>
                     ))}
                   </span>
@@ -213,11 +261,14 @@ export default function GameList({ userId, onEdit }: GameListProps) {
                 <div
                   key={i}
                   className={`flex items-center gap-2.5 border-b border-zaff-border py-2.5 last:border-b-0 ${
-                    p.winner ? 'bg-zaff-highlight/10' : ''
+                    p.winner ? 'bg-zaff-text/5' : ''
                   }`}
                 >
                   <div className="min-w-0 flex-1">
-                    <span className="text-[15px] text-zaff-text">{p.name}</span>
+                    <span className={`text-[15px] ${p.winner ? 'font-bold text-zaff-text' : 'italic text-zaff-muted'}`}>
+                      {p.winner && '🎉 '}
+                      {p.name}
+                    </span>
                     {playerTags[i] && (
                       <span
                         className={`block text-xs ${p.winner ? 'text-zaff-gold' : 'italic text-zaff-muted opacity-75'}`}
@@ -255,12 +306,12 @@ export default function GameList({ userId, onEdit }: GameListProps) {
 
             {canEdit(selectedGame.createdBy, userId) && (
               <>
-                <Button variant="link" size="sm" onClick={() => onEdit(selectedGame)}>
-                  Modifica
-                </Button>
-                <Button variant="danger" size="sm" onClick={() => handleDelete(selectedGame.id)}>
-                  Cancella
-                </Button>
+                <IconButton label="Modifica partita" onClick={() => onEdit(selectedGame)}>
+                  ✏️
+                </IconButton>
+                <IconButton label="Cancella partita" tone="danger" onClick={() => handleDelete(selectedGame.id)}>
+                  🗑️
+                </IconButton>
               </>
             )}
           </div>

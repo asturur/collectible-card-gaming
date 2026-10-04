@@ -176,12 +176,6 @@ export default function MtgLog({ onOpenZaff }: MtgLogProps) {
             </div>
           </div>
 
-          <div className="mt-4">
-            <span className="inline-block rounded-lg border border-zaff-text bg-zaff-text px-3 py-1.5 text-[13px] text-zaff-bg">
-              Tutte le partite
-            </span>
-          </div>
-
           <Standings rows={standings} showPie />
           <MatchupStats games={games} />
         </header>
