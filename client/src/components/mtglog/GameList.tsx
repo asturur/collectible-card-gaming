@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import html2canvas from 'html2canvas';
 import { canEdit, subscribeToTable, supabase, TABLE_GAMES } from '../../services/supabase';
 import { ManaIcons } from './ManaIcon';
-import { dateLabel, rowToGame } from './stats';
+import { dateLabel, durationLabel, rowToGame, timeLabel } from './stats';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import { cx, HEADING_SECTION, TEXT_MINI, TEXT_MUTED } from '../ui/styles';
@@ -52,6 +52,10 @@ export interface Game {
   players: GamePlayer[];
   group: string;
   createdBy: string | null;
+  /** Orario preciso di inizio/fine partita (timestamp ISO), se registrato:
+   *  `null` per le partite salvate prima di questo campo. */
+  startedAt: string | null;
+  endedAt: string | null;
 }
 
 interface GameListProps {
@@ -254,6 +258,20 @@ export default function GameList({ userId, onEdit }: GameListProps) {
             <h2 className={HEADING_SECTION}>{dateLabel(selectedGame.date)}</h2>
             <p className={`mb-3 ${TEXT_MINI}`}>
               {selectedGame.format || 'formato non indicato'} · {selectedGame.players.length} giocatori
+              {(() => {
+                const start = timeLabel(selectedGame.startedAt);
+                const end = timeLabel(selectedGame.endedAt);
+                const duration = durationLabel(selectedGame.startedAt, selectedGame.endedAt);
+                if (!start && !end) return null;
+                return (
+                  <>
+                    {' · '}
+                    {start && <>Inizio {start}</>}
+                    {end && <>{start && ' · '}Fine {end}</>}
+                    {duration && <> · Durata {duration}</>}
+                  </>
+                );
+              })()}
             </p>
 
             <div>

@@ -1,5 +1,6 @@
 import type { TallyRow } from './stats';
 import { PIE_COLORS, pctColor, pieSlicePath } from './stats';
+import { TILE_GRID } from '../ui/Tile';
 
 interface StandingsProps {
   rows: TallyRow[];
@@ -34,14 +35,14 @@ export default function Standings({ rows, showPie }: StandingsProps) {
 
   return (
     <>
-      <div className="mt-4 flex flex-wrap gap-2.5">
+      <div className={`mt-4 ${TILE_GRID}`}>
         {rows.map((t, i) => {
           const color = pctColor(pcts[i], minPct, maxPct);
           const slice = pcts[i] > 0 ? pieSlicePath(15, 15, 13, 0, Math.min(pcts[i] * 3.6, 359.9)) : '';
           return (
             <div
               key={t.name}
-              className={`flex min-w-[150px] flex-1 items-center justify-between gap-2.5 rounded-lg border bg-zaff-surface px-3 py-2 sm:flex-none ${
+              className={`flex items-center justify-between gap-2.5 rounded-lg border bg-zaff-surface px-3 py-2 ${
                 t.w === top && top > 0 ? 'border-zaff-highlight' : 'border-zaff-border'
               }`}
             >

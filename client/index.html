@@ -3,7 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- viewport-fit=cover: lascia che la pagina disegni anche sotto il notch/la
+         barra di stato (zona "safe area"), invece di lasciarla bianca come
+         sfondo di sistema; il colore/gradiente in quella zona lo mette index.css. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <!-- Colore della barra di stato quando il browser non usa la pagina stessa
+         per disegnarla (es. a pagina ferma, fuori dalla modalità "cover"). -->
+    <meta name="theme-color" content="#0f172a" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link

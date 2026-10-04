@@ -13,6 +13,7 @@ import MatchupStats from './mtglog/MatchupStats';
 import { computeTally, rowToGame } from './mtglog/stats';
 import Modal from './ui/Modal';
 import Button, { ButtonLink } from './ui/Button';
+import { GridTile, TILE_GRID } from './ui/Tile';
 import { cx, HEADING_PAGE, PANEL, TEXT_MUTED } from './ui/styles';
 import { navLinkProps } from '../router';
 
@@ -139,42 +140,38 @@ export default function MtgLog({ onOpenZaff }: MtgLogProps) {
               </p>
             </div>
 
-            <div className="flex w-full flex-col items-stretch gap-0.5 sm:w-auto sm:items-end">
-              <div className="flex flex-wrap items-center gap-3 sm:justify-end">
-                <span className="truncate text-xs text-zaff-muted">{session.user.email}</span>
-                <Button variant="ghost" onClick={() => supabase?.auth.signOut()}>
-                  Esci
-                </Button>
-                <ButtonLink {...navLinkProps('zaff', onOpenZaff)} variant="ghost">
-                  Vai a ZAFF →
-                </ButtonLink>
-              </div>
-
-              <div className="mtg-sep" />
-
-              <div className="flex flex-wrap gap-2.5 sm:justify-end">
-                <Button
-                  onClick={() => {
-                    setEditingGame(null);
-                    setOpenModal('newGame');
-                  }}
-                >
-                  ➕ Nuova partita
-                </Button>
-                <Button onClick={() => setOpenModal('games')}>📜 Partite salvate</Button>
-                <Button onClick={() => setOpenModal('stats')}>📊 Statistiche mazzi</Button>
-              </div>
-
-              <div className="mtg-sep" />
-
-              <div className="flex flex-wrap gap-2.5 sm:justify-end">
-                <Button onClick={() => setOpenModal('players')}>👤 Gestisci giocatori</Button>
-                <Button onClick={() => setOpenModal('decks')}>
-                  <DeckIcon /> Gestisci mazzi
-                </Button>
-              </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="truncate text-xs text-zaff-muted">{session.user.email}</span>
+              <Button variant="ghost" onClick={() => supabase?.auth.signOut()}>
+                Esci
+              </Button>
+              <ButtonLink {...navLinkProps('zaff', onOpenZaff)} variant="ghost">
+                Vai a ZAFF →
+              </ButtonLink>
             </div>
           </div>
+
+          <div className="mtg-sep" />
+
+          {/* 5 tasti principali: stessa misura e forma per tutti (a prescindere dal
+              testo), come le tessere delle statistiche qui sotto — più facili da
+              individuare e "toccare" col dito su schermo piccolo. */}
+          <div className={TILE_GRID}>
+            <GridTile
+              icon="➕"
+              label="Nuova partita"
+              onClick={() => {
+                setEditingGame(null);
+                setOpenModal('newGame');
+              }}
+            />
+            <GridTile icon="📜" label="Partite salvate" onClick={() => setOpenModal('games')} />
+            <GridTile icon="📊" label="Statistiche mazzi" onClick={() => setOpenModal('stats')} />
+            <GridTile icon="👤" label="Gestisci giocatori" onClick={() => setOpenModal('players')} />
+            <GridTile icon={<DeckIcon />} label="Gestisci mazzi" onClick={() => setOpenModal('decks')} />
+          </div>
+
+          <div className="mtg-sep" />
 
           <Standings rows={standings} showPie />
           <MatchupStats games={games} />

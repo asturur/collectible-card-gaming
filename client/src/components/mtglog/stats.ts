@@ -49,6 +49,27 @@ export function dateLabel(iso: string): string {
   return `${d}/${m}/${y}`;
 }
 
+/** Ora (HH:mm, fuso locale) di un timestamp ISO salvato da `started_at`/`ended_at`. */
+export function timeLabel(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+/** Durata tra inizio e fine partita, come "1h 22min" o "45min". `null` se manca
+ *  uno dei due orari (partite salvate prima di questa funzione, per esempio). */
+export function durationLabel(startIso: string | null | undefined, endIso: string | null | undefined): string | null {
+  if (!startIso || !endIso) return null;
+  const ms = new Date(endIso).getTime() - new Date(startIso).getTime();
+  if (!(ms > 0)) return null;
+  const totalMin = Math.round(ms / 60000);
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  return h > 0 ? `${h}h ${m}min` : `${m}min`;
+}
+
 export interface MatchupPlayerRow {
   name: string;
   w: number;
@@ -108,5 +129,9 @@ export function rowToGame(row: Record<string, unknown>): Game {
     players: (row.players as Game['players']) ?? [],
     group: (row.gruppo as string) ?? 'Generale',
     createdBy: (row.created_by as string) ?? null,
+    // Partite salvate prima di queste due colonne restano senza orario: non
+    // è un errore, semplicemente il dettaglio non mostrerà inizio/fine/durata.
+    startedAt: (row.started_at as string) ?? null,
+    endedAt: (row.ended_at as string) ?? null,
   };
 }

@@ -45,6 +45,13 @@ interface PlayerRow {
   rejectingMatch?: boolean;
 }
 
+/** Valore per un `<input type="datetime-local">`, in ora locale (non UTC:
+ *  `toISOString()` darebbe l'ora sbagliata a chi non è su fuso UTC). */
+function toLocalDateTimeValue(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 function emptyPlayerRow(): PlayerRow {
   return {
     name: '',
@@ -66,7 +73,10 @@ export default function GameForm({ editingGame, onBack, onSaved }: GameFormProps
   const [decks, setDecks] = useState<DeckOption[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  // Data E ORA di inizio partita: precompilata con "adesso", modificabile per
+  // registrare partite passate. L'orario di fine si registra da solo al
+  // salvataggio (vedi handleSaveClick), non va chiesto qui.
+  const [startedAt, setStartedAt] = useState(toLocalDateTimeValue(new Date()));
   const [format, setFormat] = useState('');
   const [notes, setNotes] = useState('');
   const [startLife, setStartLife] = useState(20);
@@ -98,7 +108,15 @@ export default function GameForm({ editingGame, onBack, onSaved }: GameFormProps
     }
     loadOptions().then((deckList) => {
       if (editingGame) {
-        setDate(editingGame.date);
+        // Partite salvate prima di `started_at` non hanno un orario preciso:
+        // uso mezzogiorno della data che avevano come punto di partenza neutro.
+        setStartedAt(
+          editingGame.startedAt
+            ? toLocalDateTimeValue(new Date(editingGame.startedAt))
+            : editingGame.date
+              ? `${editingGame.date}T12:00`
+              : toLocalDateTimeValue(new Date())
+        );
         setFormat(editingGame.format);
         setNotes(editingGame.notes);
         setPlayers(
@@ -243,11 +261,21 @@ export default function GameForm({ editingGame, onBack, onSaved }: GameFormProps
       .filter((p) => p.name || p.deck || p.desc || p.life !== null || p.colors.length)
       .map((p) => ({ ...p, name: p.name || 'Giocatore ' + p.seat }));
 
+    // `startedAt` è "YYYY-MM-DDTHH:mm" in ora locale: new Date(...) lo legge
+    // come locale, .toISOString() lo converte nel timestamp UTC da salvare.
+    // `date` (solo giorno) resta per l'ordinamento/etichetta già in uso altrove.
+    const startedAtIso = new Date(startedAt).toISOString();
+
     const row = {
-      date,
+      date: startedAt.slice(0, 10),
       format: format.trim(),
       notes: notes.trim(),
       players: readPlayers,
+      started_at: startedAtIso,
+      // L'orario di fine si registra da solo al momento del salvataggio, solo
+      // per una partita nuova: modificare una partita già salvata in seguito
+      // non deve spostare quando "è davvero finita".
+      ...(editingGame ? {} : { ended_at: new Date().toISOString() }),
     };
 
     setSaving(true);
@@ -268,7 +296,7 @@ export default function GameForm({ editingGame, onBack, onSaved }: GameFormProps
     }
 
     setMessage('Partita salvata.');
-    setDate(new Date().toISOString().slice(0, 10));
+    setStartedAt(toLocalDateTimeValue(new Date()));
     setFormat('');
     setNotes('');
     setPlayers([emptyPlayerRow(), emptyPlayerRow()]);
@@ -292,13 +320,17 @@ export default function GameForm({ editingGame, onBack, onSaved }: GameFormProps
   return (
     <>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {/* min-w-0: senza, su iPhone il riquadro nativo data/ora può uscire dallo
+            schermo invece di restringersi dentro la sua colonna della griglia. */}
         <TextField
           id="date"
-          label="Data"
+          label="Data e ora di inizio"
           density="compact"
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
+          type="datetime-local"
+          value={startedAt}
+          onChange={(e) => setStartedAt(e.target.value)}
+          fieldClassName="min-w-0"
+          className="min-w-0"
         />
         <div className="mb-4">
           <label className={FIELD_LABEL} htmlFor="fmt">

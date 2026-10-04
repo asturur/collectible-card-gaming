@@ -18,6 +18,30 @@
 }
 
 /* ---------------------------------------------------------------------------
+   Notch/barra di stato su iPhone: con "viewport-fit=cover" (vedi index.html)
+   la pagina disegna anche sotto quella zona invece di lasciarla bianca, ma
+   va colorata esplicitamente. Sfondo scuro di base (niente bianco nemmeno
+   durante il "rimbalzo" dello scroll su iOS) più una sfumatura che, proprio
+   nella fascia più in alto, vira dallo sfondo della pagina al nero, così il
+   notch/la barra di stato si "fondono" invece di avere uno stacco netto.
+--------------------------------------------------------------------------- */
+html,
+body {
+  background: var(--color-zaff-bg);
+}
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: env(safe-area-inset-top, 0px);
+  background: linear-gradient(to bottom, #000 0%, var(--color-zaff-bg) 100%);
+  pointer-events: none;
+  z-index: 100;
+}
+
+/* ---------------------------------------------------------------------------
    Registro partite: pezzi di stile ripresi dall'app HTML originale
    (plans/registro-partite-mtg.html) che Tailwind da solo non copre.
 --------------------------------------------------------------------------- */

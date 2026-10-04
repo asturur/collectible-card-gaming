@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import type { Game } from './GameList';
 import { computeMatchups, PIE_COLORS, pieSlicePath } from './stats';
 import Modal from '../ui/Modal';
+import { GridTile, TILE_GRID } from '../ui/Tile';
 import { cx, FIELD_LABEL, TEXT_MINI, TEXT_MUTED } from '../ui/styles';
 
 interface MatchupStatsProps {
@@ -37,16 +38,15 @@ export default function MatchupStats({ games }: MatchupStatsProps) {
   return (
     <div className="mt-5">
       <span className={FIELD_LABEL}>Statistiche per sfida</span>
-      <div className="flex flex-wrap gap-2">
+      <div className={TILE_GRID}>
         {matchups.map((m) => (
-          <button
+          <GridTile
             key={m.key}
-            type="button"
+            icon="⚔️"
+            label={m.label}
+            sublabel={`${m.games} partite`}
             onClick={() => setOpenKey(m.key)}
-            className="rounded-lg border border-zaff-border bg-zaff-surface px-3 py-1.5 text-[13px] text-zaff-muted transition hover:border-zaff-primary hover:text-zaff-text"
-          >
-            {m.label} <span className="opacity-70">· {m.games}</span>
-          </button>
+          />
         ))}
       </div>
 

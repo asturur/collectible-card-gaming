@@ -21,13 +21,22 @@ interface ModalProps {
  */
 export default function Modal({ title, subtitle, wide = false, level = 1, onClose, children }: ModalProps) {
   const token = useRef({});
+  // `onClose` quasi sempre è una funzione creata di nuovo a ogni render del
+  // genitore (es. `onClose={() => setOpenModal(null)}`): tenerla qui con un
+  // ref, invece che nelle dipendenze dell'effetto sotto, evita di rifare il
+  // blocco/sblocco dello scroll della pagina a ogni aggiornamento mentre il
+  // popup è aperto (es. mentre carica l'elenco mazzi/giocatori). Senza
+  // questo, con due popup uno sopra l'altro il blocco poteva restare attivo
+  // anche dopo aver chiuso tutto, impedendo di scorrere la pagina col dito.
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   useEffect(() => {
     const self = token.current;
     openModals.push(self);
 
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape' && openModals[openModals.length - 1] === self) onClose();
+      if (e.key === 'Escape' && openModals[openModals.length - 1] === self) onCloseRef.current();
     }
     document.addEventListener('keydown', onKeyDown);
     const previousOverflow = document.body.style.overflow;
@@ -38,7 +47,9 @@ export default function Modal({ title, subtitle, wide = false, level = 1, onClos
       document.removeEventListener('keydown', onKeyDown);
       document.body.style.overflow = previousOverflow;
     };
-  }, [onClose]);
+    // Solo apertura/chiusura vera del popup: vedi commento sopra su onCloseRef.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div
