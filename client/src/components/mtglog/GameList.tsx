@@ -230,18 +230,24 @@ export default function GameList({ userId, onEdit }: GameListProps) {
                   </span>
                   <span className="flex min-w-0 flex-1 flex-wrap gap-x-3.5 gap-y-1.5">
                     {/* Il/i vincitore/i sempre per primo/i, a sinistra. */}
-                    {[...g.players].sort((a, b) => Number(b.winner) - Number(a.winner)).map((p, i) => (
-                      <span
-                        key={i}
-                        className={`whitespace-nowrap text-sm ${
-                          p.winner ? 'font-bold text-zaff-text' : 'italic text-zaff-muted'
-                        }`}
-                      >
-                        {p.winner && '🎉 '}
-                        {p.name}
-                        <ManaIcons colors={p.colors} className="ml-1.5 text-[13px]" />
-                      </span>
-                    ))}
+                    {(() => {
+                      const gHasWinner = g.players.some((pl) => pl.winner);
+                      return [...g.players]
+                        .sort((a, b) => Number(b.winner) - Number(a.winner))
+                        .map((p, i) => (
+                          <span
+                            key={i}
+                            className={`whitespace-nowrap text-sm ${
+                              p.winner ? 'font-bold text-zaff-text' : 'italic text-zaff-muted'
+                            }`}
+                          >
+                            {p.winner && '🎉 '}
+                            {!p.winner && gHasWinner && '🪦 '}
+                            {p.name}
+                            <ManaIcons colors={p.colors} className="ml-1.5 text-[13px]" />
+                          </span>
+                        ));
+                    })()}
                   </span>
                 </button>
               </li>
@@ -312,6 +318,7 @@ export default function GameList({ userId, onEdit }: GameListProps) {
                   <div className="min-w-0 flex-1 pr-2.5">
                     <span className={`text-[15px] ${p.winner ? 'font-bold text-zaff-text' : 'italic text-zaff-muted'}`}>
                       {p.winner && '🎉 '}
+                      {!p.winner && hasWinner && '🪦 '}
                       {p.name}
                     </span>
                     {playerTags[i] && (
