@@ -48,6 +48,29 @@ interface PlayerRow {
   rejectingMatch?: boolean;
 }
 
+/** I punti vita iniziali non fanno parte dei dati della partita su Supabase:
+ *  li ricordo solo su questo dispositivo, per partita, così "Rivincita" può
+ *  riproporre lo stesso valore (es. 40 a Commander). Mai bloccante: se lo
+ *  storage non c'è o è vuoto si torna al valore di default. */
+const startLifeKey = (gameId: string) => `mtglog:startLife:${gameId}`;
+
+function readStartLife(gameId: string): number | null {
+  try {
+    const n = Number(localStorage.getItem(startLifeKey(gameId)));
+    return Number.isFinite(n) && n >= 1 ? n : null;
+  } catch {
+    return null;
+  }
+}
+
+function rememberStartLife(gameId: string, value: number) {
+  try {
+    localStorage.setItem(startLifeKey(gameId), String(value));
+  } catch {
+    /* storage non disponibile: pazienza */
+  }
+}
+
 /** Valore per un `<input type="datetime-local">`, in ora locale (non UTC:
  *  `toISOString()` darebbe l'ora sbagliata a chi non è su fuso UTC). */
 function toLocalDateTimeValue(d: Date): string {
@@ -139,6 +162,8 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved }: 
         );
       } else if (rematchFrom) {
         setFormat(rematchFrom.format);
+        const previousStartLife = readStartLife(rematchFrom.id);
+        if (previousStartLife) setStartLife(previousStartLife);
         setPlayers(
           rematchFrom.players.map((p) => {
             const manual = Boolean(p.deck) && !deckList.some((d) => d.name === p.deck);
@@ -301,17 +326,17 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved }: 
       ...(editingGame ? {} : { ended_at: new Date().toISOString() }),
     };
 
+    const gameId = editingGame ? editingGame.id : 'g' + Date.now() + Math.random().toString(36).slice(2, 7);
     setSaving(true);
     const { error: saveError } = editingGame
-      ? await supabase.from(TABLE_GAMES).update(row).eq('id', editingGame.id)
-      : await supabase
-          .from(TABLE_GAMES)
-          .insert({ id: 'g' + Date.now() + Math.random().toString(36).slice(2, 7), ...row });
+      ? await supabase.from(TABLE_GAMES).update(row).eq('id', gameId)
+      : await supabase.from(TABLE_GAMES).insert({ id: gameId, ...row });
     setSaving(false);
     if (saveError) {
       setError('Salvataggio partita non riuscito: ' + saveError.message);
       return;
     }
+    rememberStartLife(gameId, startLife);
 
     if (onSaved) {
       onSaved();
