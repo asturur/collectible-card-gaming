@@ -47,7 +47,7 @@ function rollHighRoll(names: string[]): RollResult[] {
   return rolls;
 }
 
-/** Zona di tocco: una fascia (±5, sottile) o il riquadro grande (±1). Niente
+/** Zona di tocco (metà scheda, ±1). Niente
  *  evidenziazione al tocco di sistema (iOS la mostra come un flash grigio
  *  posizionato male sotto transform); il feedback è tutto nostro. */
 function tapClass(extra = '') {
@@ -59,8 +59,7 @@ const TAP_HIGHLIGHT_OFF = { WebkitTapHighlightColor: 'transparent' } as const;
 /**
  * Contatore punti vita a tutto schermo. Scheda a colore pieno per ciascun
  * giocatore (come nei contatori punti vita dedicati): zona centrale grande
- * divisa −1/+1 per i tocchi frequenti, due fasce sottili in alto/basso per
- * ±5. Chi siede dal lato opposto del tavolo vede la propria scheda ruotata
+ * divisa a metà: sinistra −1, destra +1 (come in Lotus). Chi siede dal lato opposto del tavolo vede la propria scheda ruotata
  * di 180°, così legge dritto senza girare il telefono. High Roll (d20) per
  * decidere chi inizia.
  */
@@ -118,40 +117,26 @@ export default function LifeCounter({ players, startLife, onCancel, onFinish }: 
               className="relative overflow-hidden rounded-2xl"
               style={{ background: color, transform: rotated ? 'rotate(180deg)' : undefined }}
             >
-              <div className="absolute inset-0 flex flex-col">
+              {/* Come in Lotus: metà sinistra = −1, metà destra = +1, su tutta
+                  la scheda. Il simbolo sta vicino al bordo, il punteggio al centro. */}
+              <div className="absolute inset-0 flex">
                 <button
                   type="button"
-                  onClick={() => adjust(i, 5)}
+                  onClick={() => adjust(i, -1)}
                   style={TAP_HIGHLIGHT_OFF}
-                  className={tapClass('h-[18%] border-b border-white/15 text-[clamp(14px,2.6vw,20px)] font-semibold')}
+                  aria-label={`${p.name}: togli 1 punto vita`}
+                  className={tapClass('flex-1 justify-start pl-[8%] text-[clamp(28px,6vw,44px)] font-light')}
                 >
-                  +5
+                  −
                 </button>
-
-                <div className="flex flex-1">
-                  <button
-                    type="button"
-                    onClick={() => adjust(i, -1)}
-                    style={TAP_HIGHLIGHT_OFF}
-                    aria-label={`${p.name}: togli 1 punto vita`}
-                    className={tapClass('flex-1 border-r border-white/15')}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => adjust(i, 1)}
-                    style={TAP_HIGHLIGHT_OFF}
-                    aria-label={`${p.name}: aggiungi 1 punto vita`}
-                    className={tapClass('flex-1')}
-                  />
-                </div>
-
                 <button
                   type="button"
-                  onClick={() => adjust(i, -5)}
+                  onClick={() => adjust(i, 1)}
                   style={TAP_HIGHLIGHT_OFF}
-                  className={tapClass('h-[18%] border-t border-white/15 text-[clamp(14px,2.6vw,20px)] font-semibold')}
+                  aria-label={`${p.name}: aggiungi 1 punto vita`}
+                  className={tapClass('flex-1 justify-end pr-[8%] text-[clamp(28px,6vw,44px)] font-light')}
                 >
-                  −5
+                  +
                 </button>
               </div>
 
