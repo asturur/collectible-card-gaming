@@ -142,7 +142,7 @@ export default function LifeCounter({ players, startLife, onCancel, onFinish }: 
 
               <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
                 <p
-                  className="mb-0.5 max-w-[85%] truncate text-[clamp(13px,2vw,17px)] font-medium text-white/85"
+                  className="mb-0.5 max-w-[85%] truncate text-[clamp(18px,3.4vw,28px)] font-semibold text-white/90"
                   style={{ textShadow: '0 1px 4px rgba(0,0,0,.4)' }}
                 >
                   {p.name}
