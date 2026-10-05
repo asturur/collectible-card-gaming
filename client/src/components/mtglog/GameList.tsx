@@ -221,6 +221,11 @@ function ShareCardBody({ game, orderedPlayerIndices, playerTags, playerEmojis, h
                   {playerEmojis[i] && `${playerEmojis[i]} `}
                   {p.name}
                 </span>
+                {p.loss && p.loss.length > 0 && (
+                  <span className="mt-0.5 text-[11px] font-bold uppercase tracking-wider text-red-400">
+                    {p.loss.map((l) => l.toUpperCase()).join(' · ')}
+                  </span>
+                )}
                 {playerTags[i] && (
                   <span className={`mt-0.5 text-xs ${p.winner ? 'text-zaff-gold' : 'text-zaff-muted opacity-75'}`}>
                     {p.winner ? 'vincitore — ' : ''}
@@ -250,6 +255,9 @@ function ShareCardBody({ game, orderedPlayerIndices, playerTags, playerEmojis, h
   );
 }
 
+/** Come ha perso un giocatore: finiti i punti vita (anche per veleno) o le carte. */
+export type LossCause = 'kill' | 'mill';
+
 export interface GamePlayer {
   name: string;
   deck: string;
@@ -258,6 +266,8 @@ export interface GamePlayer {
   winner: boolean;
   colors: string[];
   seat?: number;
+  /** Segnato dal segna-punti: KILL e/o MILL (il veleno conta come KILL). */
+  loss?: LossCause[];
 }
 
 export interface Game {

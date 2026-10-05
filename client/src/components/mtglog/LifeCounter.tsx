@@ -2,17 +2,34 @@ import { useState } from 'react';
 import Button from '../ui/Button';
 import { PIE_COLORS } from './stats';
 import { HEADING_SECTION } from '../ui/styles';
+import type { LossCause } from './GameList';
 
 interface LifeCounterProps {
   players: string[];
   startLife: number;
   onCancel: () => void;
-  onFinish: (lives: Record<string, number>) => void;
+  onFinish: (lives: Record<string, number>, causes: Record<string, LossCause[]>) => void;
 }
 
 interface LcPlayer {
   name: string;
   life: number;
+  kill: boolean;
+  mill: boolean;
+  /** Il contatore veleno compare solo se acceso dalle opzioni del giocatore. */
+  poisonOn: boolean;
+  poison: number;
+}
+
+/** Con 10 o più segnalini veleno si perde. */
+const POISON_LIMIT = 10;
+
+/** Come ha perso, da salvare con la partita: il veleno conta come KILL. */
+function lossCauses(p: LcPlayer): LossCause[] {
+  const causes: LossCause[] = [];
+  if (p.kill || (p.poisonOn && p.poison >= POISON_LIMIT)) causes.push('kill');
+  if (p.mill) causes.push('mill');
+  return causes;
 }
 
 interface RollResult {
@@ -64,7 +81,11 @@ const TAP_HIGHLIGHT_OFF = { WebkitTapHighlightColor: 'transparent' } as const;
  * decidere chi inizia.
  */
 export default function LifeCounter({ players, startLife, onCancel, onFinish }: LifeCounterProps) {
-  const [lives, setLives] = useState<LcPlayer[]>(players.map((name) => ({ name, life: startLife })));
+  const [lives, setLives] = useState<LcPlayer[]>(
+    players.map((name) => ({ name, life: startLife, kill: false, mill: false, poisonOn: false, poison: 0 }))
+  );
+  /** Scheda di cui è aperto il pannello opzioni (una alla volta). */
+  const [optionsFor, setOptionsFor] = useState<number | null>(null);
   const [highRollOpen, setHighRollOpen] = useState(false);
   const [rolls, setRolls] = useState<RollResult[]>([]);
 
@@ -73,6 +94,10 @@ export default function LifeCounter({ players, startLife, onCancel, onFinish }: 
 
   function adjust(index: number, delta: number) {
     setLives((prev) => prev.map((p, i) => (i === index ? { ...p, life: p.life + delta } : p)));
+  }
+
+  function patchPlayer(index: number, patch: Partial<LcPlayer>) {
+    setLives((prev) => prev.map((p, i) => (i === index ? { ...p, ...patch } : p)));
   }
 
   function openHighRoll() {
@@ -99,7 +124,14 @@ export default function LifeCounter({ players, startLife, onCancel, onFinish }: 
         <Button variant="ghost" onClick={openHighRoll}>
           🎲 High Roll
         </Button>
-        <Button onClick={() => onFinish(Object.fromEntries(lives.map((p) => [p.name, p.life])))}>
+        <Button
+          onClick={() =>
+            onFinish(
+              Object.fromEntries(lives.map((p) => [p.name, p.life])),
+              Object.fromEntries(lives.map((p) => [p.name, lossCauses(p)]))
+            )
+          }
+        >
           Fine Partita
         </Button>
       </div>
@@ -140,6 +172,19 @@ export default function LifeCounter({ players, startLife, onCancel, onFinish }: 
                 </button>
               </div>
 
+              {/* Opzioni giocatore (KILL / MILL / veleno): tasto in basso al centro,
+                  sopra le due metà −1/+1. Il pannello sta DENTRO la scheda, quindi
+                  ruota insieme a lei per chi siede dall'altra parte. */}
+              <button
+                type="button"
+                onClick={() => setOptionsFor(i)}
+                style={TAP_HIGHLIGHT_OFF}
+                aria-label={`${p.name}: opzioni`}
+                className="absolute bottom-2 left-1/2 z-10 flex h-10 w-10 -translate-x-1/2 select-none items-center justify-center rounded-full bg-black/25 text-lg text-white/85 active:bg-black/45"
+              >
+                ⚙️
+              </button>
+
               <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
                 <p
                   className="mb-0.5 max-w-[85%] truncate text-[clamp(18px,3.4vw,28px)] font-semibold text-white/90"
@@ -147,6 +192,16 @@ export default function LifeCounter({ players, startLife, onCancel, onFinish }: 
                 >
                   {p.name}
                 </p>
+                {(p.kill || p.mill || p.poisonOn) && (
+                  <p
+                    className="mb-1 flex flex-wrap justify-center gap-x-2.5 text-[clamp(12px,2.6vw,17px)] font-bold uppercase tracking-wider text-white"
+                    style={{ textShadow: '0 1px 4px rgba(0,0,0,.5)' }}
+                  >
+                    {p.kill && <span>KILL</span>}
+                    {p.mill && <span>MILL</span>}
+                    {p.poisonOn && <span>POISON {p.poison}</span>}
+                  </p>
+                )}
                 <p
                   className="text-[clamp(40px,9vw,80px)] font-bold leading-none tabular-nums text-white"
                   style={{ textShadow: '0 2px 8px rgba(0,0,0,.4)' }}
@@ -154,6 +209,77 @@ export default function LifeCounter({ players, startLife, onCancel, onFinish }: 
                   {p.life}
                 </p>
               </div>
+
+              {optionsFor === i && (
+                <div className="absolute inset-0 z-20 flex flex-col justify-center gap-2 bg-black/85 px-4 py-3 text-white">
+                  <label className="flex items-center justify-between gap-3 text-[15px] font-bold tracking-wider">
+                    <span>KILL</span>
+                    <span className="relative">
+                      <input
+                        type="checkbox"
+                        checked={p.kill}
+                        onChange={(e) => patchPlayer(i, { kill: e.target.checked })}
+                        className="mtg-switch-input absolute h-0 w-0 opacity-0"
+                      />
+                      <span className="mtg-switch" />
+                    </span>
+                  </label>
+                  <label className="flex items-center justify-between gap-3 text-[15px] font-bold tracking-wider">
+                    <span>MILL</span>
+                    <span className="relative">
+                      <input
+                        type="checkbox"
+                        checked={p.mill}
+                        onChange={(e) => patchPlayer(i, { mill: e.target.checked })}
+                        className="mtg-switch-input absolute h-0 w-0 opacity-0"
+                      />
+                      <span className="mtg-switch" />
+                    </span>
+                  </label>
+                  <label className="flex items-center justify-between gap-3 text-[15px] font-bold tracking-wider">
+                    <span>VELENO</span>
+                    <span className="relative">
+                      <input
+                        type="checkbox"
+                        checked={p.poisonOn}
+                        onChange={(e) => patchPlayer(i, { poisonOn: e.target.checked })}
+                        className="mtg-switch-input absolute h-0 w-0 opacity-0"
+                      />
+                      <span className="mtg-switch" />
+                    </span>
+                  </label>
+                  {p.poisonOn && (
+                    <div className="flex items-center justify-between gap-2">
+                      <button
+                        type="button"
+                        onClick={() => patchPlayer(i, { poison: Math.max(0, p.poison - 1) })}
+                        aria-label={`${p.name}: togli 1 segnalino veleno`}
+                        className="h-10 w-10 rounded-lg border border-white/30 text-xl active:bg-white/20"
+                      >
+                        −
+                      </button>
+                      <span className="text-lg font-bold tabular-nums">
+                        {p.poison}/{POISON_LIMIT}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => patchPlayer(i, { poison: p.poison + 1 })}
+                        aria-label={`${p.name}: aggiungi 1 segnalino veleno`}
+                        className="h-10 w-10 rounded-lg border border-white/30 text-xl active:bg-white/20"
+                      >
+                        +
+                      </button>
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setOptionsFor(null)}
+                    className="mt-1 rounded-lg border border-white/30 py-2 text-sm font-semibold active:bg-white/20"
+                  >
+                    Chiudi
+                  </button>
+                </div>
+              )}
             </div>
           );
         })}

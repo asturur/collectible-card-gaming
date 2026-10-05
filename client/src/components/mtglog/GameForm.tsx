@@ -11,6 +11,7 @@ import {
 } from '../../services/supabase';
 import type { Game } from './GameList';
 import LifeCounter from './LifeCounter';
+import type { LossCause } from './GameList';
 import { ManaPips } from './ManaIcon';
 import Button from '../ui/Button';
 import NumberStepper from '../ui/NumberStepper';
@@ -42,6 +43,8 @@ interface PlayerRow {
   life: string;
   winner: boolean;
   colors: Set<string>;
+  /** KILL/MILL segnati dal segna-punti (vuoto se non indicato). */
+  loss: LossCause[];
   /** True dopo aver cliccato "No, è un'altra persona": finché il nome resta
    *  identico (a parte maiuscole/spazi) a uno già in elenco, mostra l'avviso
    *  "scegli un nome diverso" invece della domanda "è la stessa persona?". */
@@ -88,6 +91,7 @@ function emptyPlayerRow(): PlayerRow {
     life: '',
     winner: false,
     colors: new Set(),
+    loss: [],
   };
 }
 
@@ -157,6 +161,7 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved }: 
               life: p.life === null || p.life === undefined ? '' : String(p.life),
               winner: Boolean(p.winner),
               colors: new Set(p.colors || []),
+              loss: p.loss ?? [],
             };
           })
         );
@@ -176,6 +181,7 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved }: 
               life: '',
               winner: false,
               colors: new Set(p.colors || []),
+              loss: [],
             };
           })
         );
@@ -268,8 +274,13 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved }: 
     setLifeCounterOpen(true);
   }
 
-  function handleLifeCounterFinish(lives: Record<string, number>) {
-    setPlayers((prev) => prev.map((p) => (p.name.trim() in lives ? { ...p, life: String(lives[p.name.trim()]) } : p)));
+  function handleLifeCounterFinish(lives: Record<string, number>, causes: Record<string, LossCause[]>) {
+    setPlayers((prev) =>
+      prev.map((p) => {
+        const key = p.name.trim();
+        return key in lives ? { ...p, life: String(lives[key]), loss: causes[key] ?? [] } : p;
+      })
+    );
     setLifeCounterOpen(false);
   }
 
@@ -304,6 +315,7 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved }: 
           winner: p.winner,
           colors: [...p.colors],
           seat: i + 1,
+          ...(p.loss.length ? { loss: p.loss } : {}),
         };
       })
       .filter((p) => p.name || p.deck || p.desc || p.life !== null || p.colors.length)
