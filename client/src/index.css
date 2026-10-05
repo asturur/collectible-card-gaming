@@ -136,6 +136,24 @@ body::before {
   appearance: textfield;
 }
 
+/* Campi data/ora: su iPhone il controllo nativo di Safari ha una larghezza
+   sua e sbordava dal modulo. Senza lo stile nativo la larghezza la decide la
+   pagina; il valore resta allineato a sinistra e con altezza stabile. */
+.mtg-datetime-input {
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  text-align: left;
+}
+.mtg-datetime-input::-webkit-date-and-time-value {
+  text-align: left;
+  min-height: 1.5em;
+}
+
 /* Angolo "Fork me on GitHub" (github-corners): il braccio dell'octocat saluta. */
 .github-corner .octo-arm {
   transform-origin: 130px 106px;

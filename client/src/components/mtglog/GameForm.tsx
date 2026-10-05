@@ -385,13 +385,13 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved }: 
               type="date"
               value={startedAt.slice(0, 10)}
               onChange={(e) => setStartedAt(`${e.target.value}T${startedAt.slice(11, 16) || '00:00'}`)}
-              className={cx(FIELD_CONTROL_SM, 'min-w-0')}
+              className={cx(FIELD_CONTROL_SM, 'min-w-0 mtg-datetime-input')}
             />
             <input
               type="time"
               value={startedAt.slice(11, 16)}
               onChange={(e) => setStartedAt(`${startedAt.slice(0, 10)}T${e.target.value || '00:00'}`)}
-              className={cx(FIELD_CONTROL_SM, 'min-w-0')}
+              className={cx(FIELD_CONTROL_SM, 'min-w-0 mtg-datetime-input')}
             />
           </div>
         </div>
