@@ -214,13 +214,13 @@ function ShareCardBody({ game, orderedPlayerIndices, playerTags, hasWinner, Mana
               style={p.winner ? { background: 'rgba(248,250,252,0.05)' } : undefined}
             >
               <div className="flex flex-col items-center px-1 text-center">
-                <span className={`text-[15px] ${p.winner ? 'font-bold text-zaff-text' : 'italic text-zaff-muted'}`}>
+                <span className={`text-[15px] ${p.winner ? 'font-bold text-zaff-text' : 'text-zaff-muted'}`}>
                   {p.winner && '🎉 '}
                   {!p.winner && hasWinner && '😵 '}
                   {p.name}
                 </span>
                 {playerTags[i] && (
-                  <span className={`mt-0.5 text-xs ${p.winner ? 'text-zaff-gold' : 'italic text-zaff-muted opacity-75'}`}>
+                  <span className={`mt-0.5 text-xs ${p.winner ? 'text-zaff-gold' : 'text-zaff-muted opacity-75'}`}>
                     {p.winner ? 'vincitore — ' : ''}
                     {playerTags[i]}
                   </span>
@@ -470,7 +470,7 @@ export default function GameList({ userId, onEdit }: GameListProps) {
                           <span
                             key={i}
                             className={`whitespace-nowrap text-sm ${
-                              p.winner ? 'font-bold text-zaff-text' : 'italic text-zaff-muted'
+                              p.winner ? 'font-bold text-zaff-text' : 'text-zaff-muted'
                             }`}
                           >
                             {p.winner && '🎉 '}
