@@ -19,6 +19,9 @@ import { cx, FIELD_CONTROL_SM, FIELD_LABEL, TEXT_MINI, TEXT_MUTED } from '../ui/
 
 interface GameFormProps {
   editingGame?: Game | null;
+  /** "Rivincita": parte con gli stessi giocatori, mazzi e formato di questa
+   *  partita (senza vita, vincitore e note) e apre subito il segna-punti. */
+  rematchFrom?: Game | null;
   onBack: () => void;
   onSaved?: () => void;
 }
@@ -68,7 +71,7 @@ function emptyPlayerRow(): PlayerRow {
 /** Form "Nuova partita"/"Modifica partita": giocatori dinamici, select mazzo/nome,
  *  punti vita, vincitore, note. Salva (insert) o aggiorna (update) su `partite`.
  *  Va mostrato dentro un `Modal` (titolo e chiusura li mette il riquadro). */
-export default function GameForm({ editingGame, onBack, onSaved }: GameFormProps) {
+export default function GameForm({ editingGame, rematchFrom, onBack, onSaved }: GameFormProps) {
   const [playerNames, setPlayerNames] = useState<string[]>([]);
   const [decks, setDecks] = useState<DeckOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -134,6 +137,26 @@ export default function GameForm({ editingGame, onBack, onSaved }: GameFormProps
             };
           })
         );
+      } else if (rematchFrom) {
+        setFormat(rematchFrom.format);
+        setPlayers(
+          rematchFrom.players.map((p) => {
+            const manual = Boolean(p.deck) && !deckList.some((d) => d.name === p.deck);
+            return {
+              name: p.name,
+              deckMode: manual ? 'manual' : 'select',
+              deckSelect: manual ? '' : p.deck || '',
+              deckManual: manual ? p.deck || '' : '',
+              desc: p.desc || '',
+              life: '',
+              winner: false,
+              colors: new Set(p.colors || []),
+            };
+          })
+        );
+        // Un solo tap: il segna-punti parte subito. Se lo si chiude resta il
+        // modulo già compilato.
+        setLifeCounterOpen(true);
       }
       setLoading(false);
     });

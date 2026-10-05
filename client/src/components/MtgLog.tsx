@@ -54,6 +54,8 @@ export default function MtgLog({ onOpenZaff }: MtgLogProps) {
     }
   >(null);
   const [editingGame, setEditingGame] = useState<Game | null>(null);
+  /** Partita da cui ripartire con "Rivincita" (stessi giocatori e mazzi). */
+  const [rematchFrom, setRematchFrom] = useState<Game | null>(null);
   const [games, setGames] = useState<Game[]>([]);
 
   useEffect(() => {
@@ -125,6 +127,7 @@ export default function MtgLog({ onOpenZaff }: MtgLogProps) {
   function closeModal() {
     setOpenModal(null);
     setEditingGame(null);
+    setRematchFrom(null);
   }
 
   return (
@@ -163,6 +166,7 @@ export default function MtgLog({ onOpenZaff }: MtgLogProps) {
               label="Nuova Partita"
               onClick={() => {
                 setEditingGame(null);
+                setRematchFrom(null);
                 setOpenModal('newGame');
               }}
             />
@@ -188,9 +192,11 @@ export default function MtgLog({ onOpenZaff }: MtgLogProps) {
         <Modal wide title={editingGame ? 'Modifica Partita' : 'Nuova Partita'} onClose={closeModal}>
           <GameForm
             editingGame={editingGame}
+            rematchFrom={rematchFrom}
             onBack={closeModal}
             onSaved={() => {
               setEditingGame(null);
+              setRematchFrom(null);
               setOpenModal('games');
             }}
           />
@@ -203,6 +209,12 @@ export default function MtgLog({ onOpenZaff }: MtgLogProps) {
             userId={userId}
             onEdit={(game) => {
               setEditingGame(game);
+              setRematchFrom(null);
+              setOpenModal('newGame');
+            }}
+            onRematch={(game) => {
+              setEditingGame(null);
+              setRematchFrom(game);
               setOpenModal('newGame');
             }}
           />

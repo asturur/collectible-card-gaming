@@ -277,6 +277,8 @@ export interface Game {
 interface GameListProps {
   userId: string;
   onEdit: (game: Game) => void;
+  /** Avvia una nuova partita con gli stessi giocatori e gli stessi mazzi. */
+  onRematch: (game: Game) => void;
 }
 
 const WINNER_TAGS = [
@@ -321,7 +323,7 @@ function idTimeSuffix(id: string): string {
 /** Storico partite: lista + dettaglio, appellativi scherzosi random per
  *  vincitore/perdenti nel dettaglio.
  *  Va mostrata dentro un `Modal`; il dettaglio partita si apre come riquadro sopra. */
-export default function GameList({ userId, onEdit }: GameListProps) {
+export default function GameList({ userId, onEdit, onRematch }: GameListProps) {
   const [games, setGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -557,6 +559,10 @@ export default function GameList({ userId, onEdit }: GameListProps) {
                   Esporta Risultati
                 </>
               )}
+            </Button>
+
+            <Button variant="ghost" onClick={() => onRematch(selectedGame)}>
+              🔄 Rivincita
             </Button>
 
             {canEdit(selectedGame.createdBy, userId) && (
