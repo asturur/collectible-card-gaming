@@ -156,6 +156,8 @@ interface ShareCardBodyProps {
   game: Game;
   orderedPlayerIndices: number[];
   playerTags: (string | null)[];
+  /** Faccina triste (a caso) di ogni perdente, indicizzata come `playerTags`. */
+  playerEmojis: (string | null)[];
   hasWinner: boolean;
   /** `LiveManaSymbols` per la scheda a schermo, `ExportManaSymbols` per la
    *  copia nascosta da cui generiamo il JPG (vedi sopra). */
@@ -166,7 +168,7 @@ interface ShareCardBodyProps {
  *  reso due volte, una visibile e una nascosta solo per l'esportazione (vedi
  *  `GameList` più sotto) — stesso identico markup, cambia solo come vengono
  *  disegnati i simboli mana. */
-function ShareCardBody({ game, orderedPlayerIndices, playerTags, hasWinner, ManaDisplay }: ShareCardBodyProps) {
+function ShareCardBody({ game, orderedPlayerIndices, playerTags, playerEmojis, hasWinner, ManaDisplay }: ShareCardBodyProps) {
   return (
     <div className="px-0.5 py-1.5">
       <p className="mb-0.5 text-[11px] uppercase tracking-[0.06em] text-zaff-muted">Registro partite di Magic</p>
@@ -216,7 +218,7 @@ function ShareCardBody({ game, orderedPlayerIndices, playerTags, hasWinner, Mana
               <div className="flex flex-col items-center px-1 text-center">
                 <span className={`text-[15px] ${p.winner ? 'font-bold text-zaff-text' : 'text-zaff-muted'}`}>
                   {p.winner && '🎉 '}
-                  {!p.winner && hasWinner && '😵 '}
+                  {playerEmojis[i] && `${playerEmojis[i]} `}
                   {p.name}
                 </span>
                 {playerTags[i] && (
@@ -298,6 +300,12 @@ const LOSER_TAGS = [
   'Skill Issue', 'Git Gud', 'Il Sagoma',
 ];
 
+/** Solo faccine gialle "tristi" (niente gatti, niente altri colori). */
+const LOSER_EMOJIS = [
+  '😞', '😔', '😟', '😕', '🙁', '😣', '😖', '😫', '😩',
+  '😢', '😭', '😥', '😓', '😰', '😨', '😧', '😦', '🥺', '😵',
+];
+
 function randomFrom<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
@@ -357,6 +365,11 @@ export default function GameList({ userId, onEdit }: GameListProps) {
   const playerTags = useMemo(() => {
     if (!selectedGame) return [];
     return selectedGame.players.map((p) => (p.winner ? randomFrom(WINNER_TAGS) : hasWinner ? randomFrom(LOSER_TAGS) : null));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId]);
+  const playerEmojis = useMemo(() => {
+    if (!selectedGame) return [];
+    return selectedGame.players.map((p) => (!p.winner && hasWinner ? randomFrom(LOSER_EMOJIS) : null));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId]);
   /** Indici dei giocatori ordinati col/i vincitore/i per primo/i (a sinistra/in
@@ -463,7 +476,6 @@ export default function GameList({ userId, onEdit }: GameListProps) {
                   <span className="flex min-w-0 flex-1 flex-wrap gap-x-3.5 gap-y-1.5">
                     {/* Il/i vincitore/i sempre per primo/i, a sinistra. */}
                     {(() => {
-                      const gHasWinner = g.players.some((pl) => pl.winner);
                       return [...g.players]
                         .sort((a, b) => Number(b.winner) - Number(a.winner))
                         .map((p, i) => (
@@ -474,7 +486,6 @@ export default function GameList({ userId, onEdit }: GameListProps) {
                             }`}
                           >
                             {p.winner && '🎉 '}
-                            {!p.winner && gHasWinner && '😵 '}
                             {p.name}
                             <ManaIcons colors={p.colors} className="ml-1.5 text-[13px]" />
                           </span>
@@ -510,6 +521,7 @@ export default function GameList({ userId, onEdit }: GameListProps) {
             game={selectedGame}
             orderedPlayerIndices={orderedPlayerIndices}
             playerTags={playerTags}
+            playerEmojis={playerEmojis}
             hasWinner={hasWinner}
             ManaDisplay={LiveManaSymbols}
           />
@@ -528,6 +540,7 @@ export default function GameList({ userId, onEdit }: GameListProps) {
                 game={selectedGame}
                 orderedPlayerIndices={orderedPlayerIndices}
                 playerTags={playerTags}
+                playerEmojis={playerEmojis}
                 hasWinner={hasWinner}
                 ManaDisplay={ExportManaSymbols}
               />
