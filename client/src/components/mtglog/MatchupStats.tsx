@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { Game } from './GameList';
+import GlossyPie from './GlossyPie';
 import { computeMatchups, PIE_COLORS, pieSlicePath } from './stats';
 import Modal from '../ui/Modal';
 import { GridTile, TILE_GRID } from '../ui/Tile';
@@ -32,14 +33,18 @@ export default function MatchupStats({ games }: MatchupStatsProps) {
 
   const totalWins = selected ? selected.players.reduce((sum, p) => sum + p.w, 0) : 0;
   let angle = 0;
+  // Il colore di ogni giocatore dipende dalla sua posizione nell'elenco
+  // completo (come il pallino nella lista), non da quella tra i soli
+  // vincitori: altrimenti, se qualcuno ha 0 vittorie, i colori slittano.
   const slices = selected
     ? selected.players
-        .filter((p) => p.w > 0)
-        .map((p, i) => {
+        .map((p, i) => ({ p, color: PIE_COLORS[i % PIE_COLORS.length] }))
+        .filter(({ p }) => p.w > 0)
+        .map(({ p, color }) => {
           const share = (p.w / totalWins) * 360;
           const path = pieSlicePath(70, 70, 68, angle, angle + share);
           angle += share;
-          return { path, color: PIE_COLORS[i % PIE_COLORS.length], name: p.name, w: p.w };
+          return { path, color, name: p.name, w: p.w, key: p.name };
         })
     : [];
 
@@ -87,11 +92,7 @@ export default function MatchupStats({ games }: MatchupStatsProps) {
 
           {totalWins > 0 ? (
             <div className="mt-4 flex flex-wrap items-center gap-5">
-              <svg viewBox="0 0 140 140" width="140" height="140" className="shrink-0">
-                {slices.map((s) => (
-                  <path key={s.name} d={s.path} fill={s.color} />
-                ))}
-              </svg>
+              <GlossyPie slices={slices} idSuffix="matchup" />
               <div className="flex flex-col gap-1.5 text-sm text-zaff-muted">
                 {slices.map((s) => (
                   <div key={s.name} className="text-zaff-text">
