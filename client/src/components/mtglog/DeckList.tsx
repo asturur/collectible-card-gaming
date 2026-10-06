@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
 import { canEdit, MAX_DECK_NAME_LENGTH, supabase, TABLE_DECKS } from '../../services/supabase';
 import { ManaIcons, ManaPips } from './ManaIcon';
+import DeckCardsView from './DeckCards';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import Badge from '../ui/Badge';
-import { cx, FIELD_LABEL, TEXT_MINI, TEXT_MUTED } from '../ui/styles';
+import { cx, TEXT_MINI, TEXT_MUTED } from '../ui/styles';
 
 interface IconButtonProps {
   label: string;
@@ -133,10 +134,6 @@ interface Deck {
 
 function deckTotal(d: Deck): number {
   return d.cards.reduce((sum, c) => sum + c.qty, 0);
-}
-
-function sectionTotal(cards: DeckCard[]): number {
-  return cards.reduce((sum, c) => sum + c.qty, 0);
 }
 
 function sourceLabel(source: string): string | null {
@@ -362,40 +359,7 @@ export default function DeckList({ userId, onCreate, onEdit, onImportFile }: Dec
             </div>
           )}
 
-          {selectedDeck.cards.length === 0 ? (
-            <p className="text-sm text-zaff-muted">Nessuna carta.</p>
-          ) : (
-            (() => {
-              const main = selectedDeck.cards.filter((c) => c.section !== 'side');
-              const side = selectedDeck.cards.filter((c) => c.section === 'side');
-              return (
-                <>
-                  <span className={FIELD_LABEL}>Main Deck · {sectionTotal(main)} carte</span>
-                  <ul className="mb-3 max-h-[40vh] overflow-y-auto">
-                    {main.map((c) => (
-                      <li key={c.name} className="border-b border-zaff-border py-1.5 text-sm text-zaff-text last:border-b-0">
-                        {c.qty}× {c.name}
-                      </li>
-                    ))}
-                  </ul>
-
-                  {side.length > 0 && (
-                    <>
-                      <hr className="mb-3 border-zaff-border" />
-                      <span className={FIELD_LABEL}>Sideboard · {sectionTotal(side)} carte</span>
-                      <ul className="max-h-[30vh] overflow-y-auto">
-                        {side.map((c) => (
-                          <li key={c.name} className="border-b border-zaff-border py-1.5 text-sm text-zaff-text last:border-b-0">
-                            {c.qty}× {c.name}
-                          </li>
-                        ))}
-                      </ul>
-                    </>
-                  )}
-                </>
-              );
-            })()
-          )}
+          <DeckCardsView cards={selectedDeck.cards} />
         </Modal>
       )}
     </>

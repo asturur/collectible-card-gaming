@@ -1,6 +1,7 @@
 import { ManaPips } from './ManaIcon';
+import DeckCardsView from './DeckCards';
 import Badge from '../ui/Badge';
-import { FIELD_LABEL, TEXT_MINI } from '../ui/styles';
+import { TEXT_MINI } from '../ui/styles';
 
 /** Una carta di un mazzo salvato; `section` distingue main deck e sideboard
  *  (i mazzi salvati prima di questa distinzione non hanno il campo: main). */
@@ -37,8 +38,6 @@ export default function DeckViewContents({
   colors: string[];
   cards: DeckViewCard[];
 }) {
-  const main = cards.filter((c) => c.section !== 'side');
-  const side = cards.filter((c) => c.section === 'side');
   const label = source === 'precon' ? 'Precon' : source === 'brew' ? 'Homebrew' : null;
 
   return (
@@ -54,34 +53,7 @@ export default function DeckViewContents({
         </div>
       )}
 
-      {cards.length === 0 ? (
-        <p className="text-sm text-zaff-muted">Nessuna carta.</p>
-      ) : (
-        <>
-          <span className={FIELD_LABEL}>Main Deck · {total(main)} carte</span>
-          <ul className="mb-3 max-h-[40vh] overflow-y-auto">
-            {main.map((c) => (
-              <li key={c.name} className="border-b border-zaff-border py-1.5 text-sm text-zaff-text last:border-b-0">
-                {c.qty}× {c.name}
-              </li>
-            ))}
-          </ul>
-
-          {side.length > 0 && (
-            <>
-              <hr className="mb-3 border-zaff-border" />
-              <span className={FIELD_LABEL}>Sideboard · {total(side)} carte</span>
-              <ul className="max-h-[30vh] overflow-y-auto">
-                {side.map((c) => (
-                  <li key={c.name} className="border-b border-zaff-border py-1.5 text-sm text-zaff-text last:border-b-0">
-                    {c.qty}× {c.name}
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-        </>
-      )}
+      <DeckCardsView cards={cards} />
     </>
   );
 }
