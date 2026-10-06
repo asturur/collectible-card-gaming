@@ -147,7 +147,7 @@ export default function GameStats() {
   const [decks, setDecks] = useState<DeckSourceRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [sort, setSort] = useState<DeckSort>('winrate');
+  const [sort, setSort] = useState<DeckSort>('games');
   /** Nome del mazzo aperto in sola visualizzazione (tocco su una riga). */
   const [openDeck, setOpenDeck] = useState<string | null>(null);
   const exporter = useImageExport();

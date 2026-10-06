@@ -203,7 +203,9 @@ export default function DeckList({ userId, onCreate, onEdit, onImportFile }: Dec
       return;
     }
     setDecks(
-      (data ?? []).map((r) => ({
+      [...(data ?? [])]
+        .sort((a, b) => String(a.name ?? '').localeCompare(String(b.name ?? ''), 'it', { sensitivity: 'base' }))
+        .map((r) => ({
         id: r.id,
         name: r.name,
         cards: (r.cards ?? []).map((c: { name: string; qty: number; section?: unknown }) => ({

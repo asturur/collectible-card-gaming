@@ -94,7 +94,10 @@ function PlayerRows({
 }) {
   return (
     <ul className={tight ? '' : 'mt-4'}>
-      {rows.map((t) => {
+      {/* Più partite giocate in alto; a parità, % di vittorie più alta. */}
+      {[...rows]
+        .sort((a, b) => b.g - a.g || (b.g ? b.w / b.g : 0) - (a.g ? a.w / a.g : 0) || a.name.localeCompare(b.name, 'it'))
+        .map((t) => {
         const pct = t.g ? (t.w / t.g) * 100 : 0;
         const content = (
           <>

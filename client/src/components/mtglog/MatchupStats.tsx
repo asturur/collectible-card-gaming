@@ -13,7 +13,7 @@ import {
 } from './ImageExport';
 import { computeMatchups, PIE_COLORS, pieSlicePath, type MatchupRow } from './stats';
 import Modal from '../ui/Modal';
-import { GridTile, TILE_GRID } from '../ui/Tile';
+import { CrossedSwordsIcon, GridTile, TILE_GRID } from '../ui/Tile';
 import { cx, TEXT_MINI, TEXT_MUTED } from '../ui/styles';
 
 interface MatchupStatsProps {
@@ -123,7 +123,7 @@ export default function MatchupStats({ games }: MatchupStatsProps) {
         {matchups.map((m) => (
           <GridTile
             key={m.key}
-            icon="⚔️"
+            graphic={<CrossedSwordsIcon />}
             label={m.label}
             sublabel={`${m.games} partite`}
             onClick={() => openMatchup(m.key)}
