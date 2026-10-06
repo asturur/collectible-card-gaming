@@ -83,7 +83,7 @@ function WinRateBar({ pct }: { pct: number }) {
 function DeckRow({ r }: { r: DeckStatRow }) {
   return (
     <div className="border-b border-zaff-border py-3 last:border-b-0">
-      <b className="block break-words text-[16px] font-semibold text-zaff-text">{r.deck}</b>
+      <b className="block truncate text-[16px] font-semibold text-zaff-text">{r.deck}</b>
       <div className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[13px] text-zaff-muted">
         {r.source && <Badge tone={r.source === 'brew' ? 'brew' : 'precon'}>{r.source === 'brew' ? 'Homebrew' : 'Precon'}</Badge>}
         <span>
