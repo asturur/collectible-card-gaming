@@ -8,6 +8,7 @@ import {
   ExportCardHost,
   ExportedImage,
   ExportHeader,
+  safeFileName,
   todayIso,
   todayLabel,
   useImageExport,
@@ -126,6 +127,109 @@ function PlayersStatsCard({ rows, showPie }: { rows: TallyRow[]; showPie: boolea
   );
 }
 
+interface PlayerDeckStat {
+  deck: string;
+  g: number;
+  w: number;
+  pct: number;
+}
+
+/** Dettaglio di un giocatore (torta personale, partite giocate/vinte, mazzi
+ *  usati con percentuale SUA): lo stesso, identico, a schermo e nell'immagine
+ *  esportata. `idSuffix` tiene distinti gli id dei gradienti della torta. */
+function PlayerDetail({
+  row,
+  deckStats,
+  idSuffix,
+}: {
+  row: TallyRow;
+  deckStats: PlayerDeckStat[];
+  idSuffix: string;
+}) {
+  const pct = row.g ? Math.round((row.w / row.g) * 100) : 0;
+  const slices = row.g
+    ? [
+        row.w > 0 ? { path: pieSlicePath(60, 60, 58, 0, Math.min(pct * 3.6, 359.9)), color: WIN_COLOR, key: 'w' } : null,
+        row.w < row.g
+          ? { path: pieSlicePath(60, 60, 58, Math.min(pct * 3.6, 359.9), 360), color: LOSS_COLOR, key: 'l' }
+          : null,
+      ].filter((s): s is { path: string; color: string; key: string } => s !== null)
+    : [];
+
+  return (
+    <>
+      <div className="flex flex-wrap items-center gap-5">
+        <GlossyPie slices={slices} size={120} idSuffix={idSuffix} />
+        <div className="text-sm text-zaff-muted">
+          <p className={HEADING_SECTION}>{pct}%</p>
+          <p>
+            {row.g} partite giocate · {row.w} vinte
+          </p>
+        </div>
+      </div>
+
+      <p className={cx('mb-1.5 mt-5', TEXT_MINI)}>Mazzi usati</p>
+      {deckStats.length === 0 ? (
+        <p className={TEXT_MUTED}>Nessun mazzo indicato nelle sue partite.</p>
+      ) : (
+        <div>
+          {deckStats.map((d) => (
+            <div key={d.deck} className="border-b border-zaff-border py-2.5 last:border-b-0">
+              <div className="flex items-baseline justify-between gap-2.5">
+                <b className="min-w-0 truncate text-[15px] font-semibold text-zaff-text">{d.deck}</b>
+                <span className="shrink-0 whitespace-nowrap text-[13px] text-zaff-muted">
+                  {d.g} partite · {d.w} vinte · {d.pct}%
+                </span>
+              </div>
+              <div className="mt-1.5 h-[7px] overflow-hidden rounded bg-zaff-bg">
+                <div className="h-full rounded bg-zaff-gold" style={{ width: `${d.pct}%` }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
+
+/** Riquadro del dettaglio giocatore, con il suo bottone di esportazione in
+ *  immagine (ha un proprio meccanismo, separato da quello dell'elenco). */
+function PlayerDetailModal({
+  row,
+  deckStats,
+  onClose,
+}: {
+  row: TallyRow;
+  deckStats: PlayerDeckStat[];
+  onClose: () => void;
+}) {
+  const exporter = useImageExport();
+  return (
+    <Modal level={2} title={row.name} onClose={onClose}>
+      <PlayerDetail row={row} deckStats={deckStats} idSuffix="player" />
+
+      <div className="mt-4">
+        <ExportButton
+          exporting={exporter.exporting}
+          onClick={() =>
+            exporter.exportImage({
+              fileName: `giocatore_${safeFileName(row.name) || 'magic'}_${todayIso()}.jpg`,
+              shareTitle: row.name,
+              shareText: 'Statistiche di ' + row.name,
+            })
+          }
+        />
+      </div>
+      <ExportedImage image={exporter.image} error={exporter.error} alt={`Statistiche di ${row.name}, da salvare`} />
+
+      <ExportCardHost cardRef={exporter.cardRef}>
+        <ExportHeader title={row.name} subtitle={`Statistiche Giocatore · aggiornato al ${todayLabel()}`} />
+        <PlayerDetail row={row} deckStats={deckStats} idSuffix="player-export" />
+      </ExportCardHost>
+    </Modal>
+  );
+}
+
 /**
  * Statistiche giocatori: in cima la torta di gruppo (come si dividono tutte
  * le vittorie), poi l'elenco dei giocatori — una riga ciascuno, solo nome e
@@ -139,19 +243,6 @@ export default function Standings({ rows, games, showPie }: StandingsProps) {
   const exporter = useImageExport();
 
   const selectedRow = rows.find((r) => r.name === selectedName) ?? null;
-  const selectedPct = selectedRow && selectedRow.g ? Math.round((selectedRow.w / selectedRow.g) * 100) : 0;
-  const selectedSlices =
-    selectedRow && selectedRow.g
-      ? [
-          selectedRow.w > 0
-            ? { path: pieSlicePath(60, 60, 58, 0, Math.min(selectedPct * 3.6, 359.9)), color: WIN_COLOR, key: 'w' }
-            : null,
-          selectedRow.w < selectedRow.g
-            ? { path: pieSlicePath(60, 60, 58, Math.min(selectedPct * 3.6, 359.9), 360), color: LOSS_COLOR, key: 'l' }
-            : null,
-        ].filter((s): s is { path: string; color: string; key: string } => s !== null)
-      : [];
-
   /** Mazzi usati dal giocatore aperto, solo le SUE partite: stesso identico
    *  calcolo di `computeDeckStats` in GameStats.tsx ma filtrato su un solo
    *  giocatore, così un mazzo condiviso col gruppo mostra qui solo quanto è
@@ -201,38 +292,7 @@ export default function Standings({ rows, games, showPie }: StandingsProps) {
       </ExportCardHost>
 
       {selectedRow && (
-        <Modal level={2} title={selectedRow.name} onClose={() => setSelectedName(null)}>
-          <div className="flex flex-wrap items-center gap-5">
-            <GlossyPie slices={selectedSlices} size={120} idSuffix="player" />
-            <div className="text-sm text-zaff-muted">
-              <p className={HEADING_SECTION}>{selectedPct}%</p>
-              <p>
-                {selectedRow.g} partite giocate · {selectedRow.w} vinte
-              </p>
-            </div>
-          </div>
-
-          <p className={cx('mb-1.5 mt-5', TEXT_MINI)}>Mazzi usati</p>
-          {selectedDeckStats.length === 0 ? (
-            <p className={TEXT_MUTED}>Nessun mazzo indicato nelle sue partite.</p>
-          ) : (
-            <div>
-              {selectedDeckStats.map((d) => (
-                <div key={d.deck} className="border-b border-zaff-border py-2.5 last:border-b-0">
-                  <div className="flex items-baseline justify-between gap-2.5">
-                    <b className="min-w-0 truncate text-[15px] font-semibold text-zaff-text">{d.deck}</b>
-                    <span className="shrink-0 whitespace-nowrap text-[13px] text-zaff-muted">
-                      {d.g} partite · {d.w} vinte · {d.pct}%
-                    </span>
-                  </div>
-                  <div className="mt-1.5 h-[7px] overflow-hidden rounded bg-zaff-bg">
-                    <div className="h-full rounded bg-zaff-gold" style={{ width: `${d.pct}%` }} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </Modal>
+        <PlayerDetailModal row={selectedRow} deckStats={selectedDeckStats} onClose={() => setSelectedName(null)} />
       )}
     </>
   );
