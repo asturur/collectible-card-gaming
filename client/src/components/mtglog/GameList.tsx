@@ -485,7 +485,7 @@ export default function GameList({ userId, onEdit, onRematch }: GameListProps) {
                   <span className="shrink-0 whitespace-nowrap border-r border-zaff-border pr-3 text-sm text-zaff-muted">
                     {dateLabel(g.date)}
                   </span>
-                  <span className="flex min-w-0 flex-1 flex-wrap gap-x-3.5 gap-y-1.5">
+                  <span className="flex min-w-0 flex-1 flex-col gap-1.5">
                     {/* Il/i vincitore/i sempre per primo/i, a sinistra. */}
                     {(() => {
                       return [...g.players]
@@ -503,6 +503,9 @@ export default function GameList({ userId, onEdit, onRematch }: GameListProps) {
                           </span>
                         ));
                     })()}
+                  </span>
+                  <span className="shrink-0 text-2xl leading-none text-zaff-muted" aria-hidden="true">
+                    ›
                   </span>
                 </button>
               </li>
