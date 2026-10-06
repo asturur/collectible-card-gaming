@@ -82,29 +82,44 @@ function GroupPieSection({ rows, idSuffix }: { rows: TallyRow[]; idSuffix: strin
 /** Elenco giocatori: una riga ciascuno, solo nome e mini-torta. Con `onSelect`
  *  le righe sono toccabili (apre il dettaglio); senza, è la versione statica
  *  per l'immagine esportata. */
-function PlayerRows({ rows, onSelect }: { rows: TallyRow[]; onSelect?: (name: string) => void }) {
+function PlayerRows({
+  rows,
+  onSelect,
+  tight = false,
+}: {
+  rows: TallyRow[];
+  onSelect?: (name: string) => void;
+  /** Senza il margine sopra (quando sopra c'è già una scritta). */
+  tight?: boolean;
+}) {
   return (
-    <ul className="mt-4">
+    <ul className={tight ? '' : 'mt-4'}>
       {rows.map((t) => {
         const pct = t.g ? (t.w / t.g) * 100 : 0;
         const content = (
           <>
-            <span className="min-w-0 truncate text-[15px] font-medium text-zaff-text">{t.name}</span>
+            <span className="min-w-0 flex-1 truncate text-[15px] font-medium text-zaff-text">{t.name}</span>
             <MiniWinLossPie pct={pct} />
           </>
         );
         return (
           <li key={t.name}>
             {onSelect ? (
+              // Riquadro con bordo, come le righe di "Partite Salvate": si vede
+              // che è un tasto e si illumina al passaggio/tocco. La freccia
+              // a destra dice che si apre il dettaglio.
               <button
                 type="button"
                 onClick={() => onSelect(t.name)}
-                className="flex w-full items-center justify-between gap-3 border-b border-zaff-border py-2.5 text-left transition last:border-b-0 hover:border-zaff-primary"
+                className="mb-2 flex w-full items-center gap-3 rounded-lg border border-zaff-border bg-zaff-bg px-3.5 py-3 text-left transition hover:border-zaff-primary active:border-zaff-primary"
               >
                 {content}
+                <span className="shrink-0 text-xl leading-none text-zaff-muted" aria-hidden="true">
+                  ›
+                </span>
               </button>
             ) : (
-              <div className="flex w-full items-center justify-between gap-3 border-b border-zaff-border py-2.5 last:border-b-0">
+              <div className="mb-2 flex w-full items-center gap-3 rounded-lg border border-zaff-border bg-zaff-bg px-3.5 py-3">
                 {content}
               </div>
             )}
@@ -272,7 +287,8 @@ export default function Standings({ rows, games, showPie }: StandingsProps) {
     <>
       {showPie && <GroupPieSection rows={rows} idSuffix="group" />}
 
-      <PlayerRows rows={rows} onSelect={setSelectedName} />
+      <p className={cx('mb-2 mt-4', TEXT_MINI)}>Tocca un giocatore per vedere le sue statistiche.</p>
+      <PlayerRows rows={rows} onSelect={setSelectedName} tight />
 
       <div className="mt-4">
         <ExportButton

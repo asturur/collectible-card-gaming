@@ -75,13 +75,15 @@ export default function Modal({ title, subtitle, wide = false, xl = false, level
           onClick={onClose}
           title="Chiudi"
           aria-label="Chiudi"
-          className="absolute right-2.5 top-2.5 rounded px-2 py-1 text-xl leading-none text-zaff-muted transition hover:text-red-400"
+          className="absolute right-2.5 top-2.5 flex h-11 w-11 items-center justify-center rounded-full border border-zaff-border bg-zaff-bg text-zaff-muted transition hover:border-red-400 hover:text-red-400 active:border-red-400 active:text-red-400"
         >
-          ×
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+            <path d="M4 4 L16 16 M16 4 L4 16" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+          </svg>
         </button>
 
         {title && (
-          <h2 className={cx(HEADING_SECTION, 'mb-3 truncate border-b border-zaff-border pb-1.5 pr-8')} title={typeof title === 'string' ? title : undefined}>
+          <h2 className={cx(HEADING_SECTION, 'mb-3 truncate border-b border-zaff-border pb-1.5 pr-12')} title={typeof title === 'string' ? title : undefined}>
             {title}
           </h2>
         )}
