@@ -1,6 +1,6 @@
 import { useEffect, useReducer, useRef, useState } from 'react';
 import { cardKey, getCard, isMissing, requestCards, subscribeCards, type ScryCard } from '../../services/scryfall';
-import { groupCards, type GroupedColor } from './cardGroups';
+import { groupCards, type GroupedColor, type GroupMode } from './cardGroups';
 import { ManaIcons } from './ManaIcon';
 import { cx } from '../ui/styles';
 
@@ -20,6 +20,15 @@ export interface DeckCardsEditable {
 
 type ViewMode = 'grid' | 'list';
 const VIEW_KEY = 'mtg-deck-view-mode';
+const GROUP_KEY = 'mtg-deck-group-mode';
+
+function readGroupMode(): GroupMode {
+  try {
+    return localStorage.getItem(GROUP_KEY) === 'type' ? 'type' : 'color';
+  } catch {
+    return 'color';
+  }
+}
 
 function readMode(): ViewMode {
   try {
@@ -281,7 +290,7 @@ function CardList({ cards, onOpen, editable }: ViewProps) {
         return (
           <li key={c.name} className="flex items-center gap-2.5 border-b border-zaff-border py-1.5 last:border-b-0">
             {missing && editable ? (
-              <FixTile card={c} onFix={editable.onFix} className="h-14 w-10 shrink-0 !p-0 text-[0px]" />
+              <FixTile card={c} onFix={editable.onFix} className="h-14 w-14 shrink-0 !p-0 text-[0px]" />
             ) : (
               <button
                 type="button"
@@ -289,9 +298,9 @@ function CardList({ cards, onOpen, editable }: ViewProps) {
                 className="flex min-w-0 flex-1 items-center gap-3 text-left text-sm text-zaff-text"
               >
                 {img ? (
-                  <img src={img.small} alt="" loading="lazy" decoding="async" className="h-14 w-10 shrink-0 rounded object-cover" />
+                  <img src={img.art} alt="" loading="lazy" decoding="async" className="h-14 w-14 shrink-0 rounded object-cover" />
                 ) : (
-                  <span className="h-14 w-10 shrink-0 rounded border border-zaff-border bg-zaff-surface" />
+                  <span className="h-14 w-14 shrink-0 rounded border border-zaff-border bg-zaff-surface" />
                 )}
                 <span className="min-w-0 flex-1 truncate">
                   {editable ? c.name : `${c.qty}× ${c.name}`}
@@ -377,11 +386,12 @@ export default function DeckCardsView({
 }) {
   const [mode, setMode] = useState<ViewMode>(readMode);
   const [openIndex, setOpenIndex] = useState<number | null>(null);
+  const [groupMode, setGroupMode] = useState<GroupMode>(readGroupMode);
 
   const main = cards.filter((c) => c.section !== 'side');
   const side = cards.filter((c) => c.section === 'side');
-  const mainGroups = groupCards(main, getCard);
-  const sideGroups = groupCards(side, getCard);
+  const mainGroups = groupCards(main, getCard, groupMode);
+  const sideGroups = groupCards(side, getCard, groupMode);
   const ordered = [...mainGroups, ...sideGroups].flatMap((g) => g.types.flatMap((t) => t.items));
 
   useDeckImages(cards.map((c) => c.name));
@@ -395,20 +405,36 @@ export default function DeckCardsView({
     }
   }
 
+  function chooseGroupMode(m: GroupMode) {
+    setGroupMode(m);
+    try {
+      localStorage.setItem(GROUP_KEY, m);
+    } catch {
+      /* non salvabile: vale solo per ora */
+    }
+  }
+
   function open(c: DeckCardsItem) {
     const i = ordered.indexOf(c);
     if (i >= 0) setOpenIndex(i);
   }
 
+  const toggleClass = (active: boolean) =>
+    cx(
+      'rounded-lg border px-4 py-2 text-sm font-semibold transition',
+      active ? 'border-zaff-text bg-zaff-text text-zaff-bg' : 'border-zaff-border text-zaff-muted'
+    );
   const toggleBtn = (m: ViewMode, label: string) => (
+    <button type="button" onClick={() => chooseMode(m)} aria-pressed={mode === m} className={toggleClass(mode === m)}>
+      {label}
+    </button>
+  );
+  const groupBtn = (m: GroupMode, label: string) => (
     <button
       type="button"
-      onClick={() => chooseMode(m)}
-      aria-pressed={mode === m}
-      className={cx(
-        'rounded-lg border px-4 py-2 text-sm font-semibold transition',
-        mode === m ? 'border-zaff-text bg-zaff-text text-zaff-bg' : 'border-zaff-border text-zaff-muted'
-      )}
+      onClick={() => chooseGroupMode(m)}
+      aria-pressed={groupMode === m}
+      className={toggleClass(groupMode === m)}
     >
       {label}
     </button>
@@ -430,9 +456,13 @@ export default function DeckCardsView({
         </div>
       )}
 
-      <div className="mb-4 grid grid-cols-2 gap-2.5">
+      <div className="mb-2.5 grid grid-cols-2 gap-2.5">
         {toggleBtn('grid', 'Griglia')}
         {toggleBtn('list', 'Lista')}
+      </div>
+      <div className="mb-4 grid grid-cols-2 gap-2.5">
+        {groupBtn('color', 'Colore')}
+        {groupBtn('type', 'Tipo')}
       </div>
 
       <Section title="Main Deck" groups={mainGroups} total={mainTotal} mode={mode} onOpen={open} editable={editable} />

@@ -10,6 +10,8 @@
 export interface ScryFace {
   small: string;
   normal: string;
+  /** Solo l'illustrazione centrale della carta (formato quasi quadrato). */
+  art: string;
 }
 
 export interface ScryCard {
@@ -23,7 +25,7 @@ export interface ScryCard {
   typeLine: string;
 }
 
-const STORAGE_KEY = 'mtg-scryfall-cache-v2';
+const STORAGE_KEY = 'mtg-scryfall-cache-v3';
 const MAX_STORED = 3000;
 const BATCH = 75;
 const PAUSE_MS = 110;
@@ -47,7 +49,9 @@ function loadStorage() {
     if (!raw) return;
     const entries = JSON.parse(raw) as [string, ScryCard][];
     entries.forEach(([k, v]) => {
-      if (v && Array.isArray(v.faces) && v.faces.length > 0 && Array.isArray(v.colors) && typeof v.typeLine === 'string') {
+      if (v && Array.isArray(v.faces) && v.faces.length > 0 && Array.isArray(v.colors) &&
+        typeof v.typeLine === 'string' &&
+        typeof v.faces[0].art === 'string') {
         found.set(k, v);
       }
     });
@@ -68,6 +72,7 @@ function saveStorage() {
 interface RawFaceImages {
   small?: string;
   normal?: string;
+  art_crop?: string;
 }
 
 interface RawCard {
@@ -81,13 +86,19 @@ interface RawCard {
 function toFaces(raw: RawCard): ScryFace[] {
   // Carte normali (e split/aftermath/adventure): immagine unica in cima.
   if (raw.image_uris?.small && raw.image_uris?.normal) {
-    return [{ small: raw.image_uris.small, normal: raw.image_uris.normal }];
+    return [
+      {
+        small: raw.image_uris.small,
+        normal: raw.image_uris.normal,
+        art: raw.image_uris.art_crop ?? raw.image_uris.small,
+      },
+    ];
   }
   // Doppia faccia (transform, modal DFC…): un'immagine per faccia.
   return (raw.card_faces ?? [])
     .map((f) => f.image_uris)
     .filter((u): u is RawFaceImages => !!u?.small && !!u?.normal)
-    .map((u) => ({ small: u.small as string, normal: u.normal as string }));
+    .map((u) => ({ small: u.small as string, normal: u.normal as string, art: u.art_crop ?? (u.small as string) }));
 }
 
 function toCard(raw: RawCard): ScryCard | null {
