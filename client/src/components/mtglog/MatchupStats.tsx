@@ -1,7 +1,17 @@
 import { useMemo, useState } from 'react';
 import type { Game } from './GameList';
 import GlossyPie from './GlossyPie';
-import { computeMatchups, PIE_COLORS, pieSlicePath } from './stats';
+import {
+  ExportButton,
+  ExportCardHost,
+  ExportedImage,
+  ExportHeader,
+  safeFileName,
+  todayIso,
+  todayLabel,
+  useImageExport,
+} from './ImageExport';
+import { computeMatchups, PIE_COLORS, pieSlicePath, type MatchupRow } from './stats';
 import Modal from '../ui/Modal';
 import { GridTile, TILE_GRID } from '../ui/Tile';
 import { cx, TEXT_MINI, TEXT_MUTED } from '../ui/styles';
@@ -10,10 +20,80 @@ interface MatchupStatsProps {
   games: Game[];
 }
 
+/** Contenuto del dettaglio di una sfida (partite, vittorie di ciascuno, torta):
+ *  lo stesso, identico, sia nel riquadro a schermo che nell'immagine esportata.
+ *  `idSuffix` tiene distinti gli id dei gradienti della torta tra le due copie. */
+function MatchupDetail({ selected, idSuffix }: { selected: MatchupRow; idSuffix: string }) {
+  const totalWins = selected.players.reduce((sum, p) => sum + p.w, 0);
+  // Il colore di ogni giocatore dipende dalla sua posizione nell'elenco
+  // completo (come il pallino nella lista), non da quella tra i soli
+  // vincitori: altrimenti, se qualcuno ha 0 vittorie, i colori slittano.
+  let angle = 0;
+  const slices = selected.players
+    .map((p, i) => ({ p, color: PIE_COLORS[i % PIE_COLORS.length] }))
+    .filter(({ p }) => p.w > 0)
+    .map(({ p, color }) => {
+      const share = (p.w / totalWins) * 360;
+      const path = pieSlicePath(70, 70, 68, angle, angle + share);
+      angle += share;
+      return { path, color, name: p.name, w: p.w, key: p.name };
+    });
+
+  return (
+    <>
+      <p className={TEXT_MINI}>{selected.games} partite giocate tra queste formazioni</p>
+
+      <div className="mt-3.5">
+        {selected.players.map((p, i) => {
+          const losses = selected.games - p.w;
+          const pct = selected.games ? Math.round((p.w / selected.games) * 100) : 0;
+          return (
+            <div
+              key={p.name}
+              className="flex items-center justify-between gap-2.5 border-b border-zaff-border py-2 last:border-b-0"
+            >
+              <span className="flex items-center gap-2 text-[15px] text-zaff-text">
+                <span
+                  className="inline-block h-[11px] w-[11px] shrink-0 rounded-full"
+                  style={{ background: PIE_COLORS[i % PIE_COLORS.length] }}
+                />
+                {p.name}
+              </span>
+              <span className={cx('shrink-0 whitespace-nowrap', TEXT_MINI)}>
+                {p.w} vittorie · {losses} sconfitte · {pct}%
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      {totalWins > 0 ? (
+        <div className="mt-4 flex flex-wrap items-center gap-5">
+          <GlossyPie slices={slices} idSuffix={idSuffix} />
+          <div className="flex flex-col gap-1.5 text-sm text-zaff-muted">
+            {slices.map((s) => (
+              <div key={s.name} className="text-zaff-text">
+                <span
+                  className="mr-1.5 inline-block h-[11px] w-[11px] rounded-full align-[-1px]"
+                  style={{ background: s.color }}
+                />
+                {s.name} — {Math.round((s.w / totalWins) * 100)}% ({s.w}/{totalWins})
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <p className={cx('mt-3.5', TEXT_MUTED)}>Nessuna partita ha ancora un vincitore segnato.</p>
+      )}
+    </>
+  );
+}
+
 /**
  * Statistiche per ogni combinazione di giocatori che si è davvero sfidata
  * (2 o più, esattamente quella formazione): un bottone per combinazione,
- * che apre il dettaglio con partite totali, vittorie di ciascuno e torta.
+ * che apre il dettaglio con partite totali, vittorie di ciascuno e torta,
+ * esportabile in immagine (una sfida alla volta).
  * Le combinazioni mai giocate non compaiono: derivano solo dalle partite salvate.
  * Pensato per stare dentro il proprio `Modal` (titolo "Statistiche per
  * Sfida" già lì), quindi qui non c'è una propria intestazione.
@@ -21,7 +101,13 @@ interface MatchupStatsProps {
 export default function MatchupStats({ games }: MatchupStatsProps) {
   const matchups = useMemo(() => computeMatchups(games), [games]);
   const [openKey, setOpenKey] = useState<string | null>(null);
+  const exporter = useImageExport();
   const selected = matchups.find((m) => m.key === openKey) ?? null;
+
+  function openMatchup(key: string | null) {
+    exporter.reset();
+    setOpenKey(key);
+  }
 
   if (matchups.length === 0) {
     return (
@@ -30,23 +116,6 @@ export default function MatchupStats({ games }: MatchupStatsProps) {
       </p>
     );
   }
-
-  const totalWins = selected ? selected.players.reduce((sum, p) => sum + p.w, 0) : 0;
-  let angle = 0;
-  // Il colore di ogni giocatore dipende dalla sua posizione nell'elenco
-  // completo (come il pallino nella lista), non da quella tra i soli
-  // vincitori: altrimenti, se qualcuno ha 0 vittorie, i colori slittano.
-  const slices = selected
-    ? selected.players
-        .map((p, i) => ({ p, color: PIE_COLORS[i % PIE_COLORS.length] }))
-        .filter(({ p }) => p.w > 0)
-        .map(({ p, color }) => {
-          const share = (p.w / totalWins) * 360;
-          const path = pieSlicePath(70, 70, 68, angle, angle + share);
-          angle += share;
-          return { path, color, name: p.name, w: p.w, key: p.name };
-        })
-    : [];
 
   return (
     <>
@@ -57,57 +126,33 @@ export default function MatchupStats({ games }: MatchupStatsProps) {
             icon="⚔️"
             label={m.label}
             sublabel={`${m.games} partite`}
-            onClick={() => setOpenKey(m.key)}
+            onClick={() => openMatchup(m.key)}
           />
         ))}
       </div>
 
       {selected && (
-        <Modal level={2} title={selected.label} onClose={() => setOpenKey(null)}>
-          <p className={TEXT_MINI}>{selected.games} partite giocate tra queste formazioni</p>
+        <Modal level={2} title={selected.label} onClose={() => openMatchup(null)}>
+          <MatchupDetail selected={selected} idSuffix="matchup" />
 
-          <div className="mt-3.5">
-            {selected.players.map((p, i) => {
-              const losses = selected.games - p.w;
-              const pct = selected.games ? Math.round((p.w / selected.games) * 100) : 0;
-              return (
-                <div
-                  key={p.name}
-                  className="flex items-center justify-between gap-2.5 border-b border-zaff-border py-2 last:border-b-0"
-                >
-                  <span className="flex items-center gap-2 text-[15px] text-zaff-text">
-                    <span
-                      className="inline-block h-[11px] w-[11px] shrink-0 rounded-full"
-                      style={{ background: PIE_COLORS[i % PIE_COLORS.length] }}
-                    />
-                    {p.name}
-                  </span>
-                  <span className={cx('shrink-0 whitespace-nowrap', TEXT_MINI)}>
-                    {p.w} vittorie · {losses} sconfitte · {pct}%
-                  </span>
-                </div>
-              );
-            })}
+          <div className="mt-4">
+            <ExportButton
+              exporting={exporter.exporting}
+              onClick={() =>
+                exporter.exportImage({
+                  fileName: `sfida_${safeFileName(selected.label) || 'magic'}_${todayIso()}.jpg`,
+                  shareTitle: selected.label,
+                  shareText: 'Statistiche della sfida ' + selected.label,
+                })
+              }
+            />
           </div>
+          <ExportedImage image={exporter.image} error={exporter.error} alt={`Statistiche della sfida ${selected.label}`} />
 
-          {totalWins > 0 ? (
-            <div className="mt-4 flex flex-wrap items-center gap-5">
-              <GlossyPie slices={slices} idSuffix="matchup" />
-              <div className="flex flex-col gap-1.5 text-sm text-zaff-muted">
-                {slices.map((s) => (
-                  <div key={s.name} className="text-zaff-text">
-                    <span
-                      className="mr-1.5 inline-block h-[11px] w-[11px] rounded-full align-[-1px]"
-                      style={{ background: s.color }}
-                    />
-                    {s.name} — {Math.round((s.w / totalWins) * 100)}% ({s.w}/{totalWins})
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <p className={cx('mt-3.5', TEXT_MUTED)}>Nessuna partita ha ancora un vincitore segnato.</p>
-          )}
+          <ExportCardHost cardRef={exporter.cardRef}>
+            <ExportHeader title={selected.label} subtitle={`Statistiche per Sfida · aggiornato al ${todayLabel()}`} />
+            <MatchupDetail selected={selected} idSuffix="matchup-export" />
+          </ExportCardHost>
         </Modal>
       )}
     </>

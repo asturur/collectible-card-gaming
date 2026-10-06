@@ -3,8 +3,16 @@ import { subscribeToTable, supabase, TABLE_DECKS, TABLE_GAMES } from '../../serv
 import type { Game } from './GameList';
 import { rowToGame } from './stats';
 import Badge from '../ui/Badge';
-import FilterTabs from '../ui/FilterTabs';
-import { FIELD_LABEL, TEXT_MINI, TEXT_MUTED } from '../ui/styles';
+import {
+  ExportButton,
+  ExportCardHost,
+  ExportedImage,
+  ExportHeader,
+  todayIso,
+  todayLabel,
+  useImageExport,
+} from './ImageExport';
+import { cx, FIELD_LABEL, TEXT_MINI, TEXT_MUTED } from '../ui/styles';
 
 interface DeckSourceRow {
   name: string;
@@ -42,27 +50,78 @@ function computeDeckStats(games: Game[], decks: DeckSourceRow[]): DeckStatRow[] 
   }));
 }
 
-const SOURCE_FILTERS = [
-  { value: 'all', label: 'Tutti' },
-  { value: 'brew', label: 'Homebrew' },
-  { value: 'precon', label: 'Precon' },
-  { value: 'unclassified', label: 'Non classificato' },
+type DeckSort = 'winrate' | 'games';
+
+const SORT_OPTIONS: { value: DeckSort; label: string }[] = [
+  { value: 'winrate', label: '% di vittoria' },
+  { value: 'games', label: 'Partite giocate' },
 ];
 
-type DeckSort = 'winrate' | 'games' | 'name';
+/** Barra della percentuale di vittoria: sfumatura rosso → verde che copre
+ *  tutta la scala (rosso puro = 0%, verde puro = 100%); la parte riempita
+ *  mostra solo il tratto fino alla percentuale del mazzo, quindi il colore
+ *  in punta dice a colpo d'occhio se il mazzo va bene. */
+const WIN_GRADIENT = 'linear-gradient(to right, #ef4444, #facc15, #22c55e)';
+
+function WinRateBar({ pct }: { pct: number }) {
+  return (
+    <div className="h-[9px] overflow-hidden rounded bg-zaff-bg">
+      <div
+        className="h-full rounded"
+        style={{
+          width: `${pct}%`,
+          backgroundImage: WIN_GRADIENT,
+          backgroundSize: `${pct > 0 ? 10000 / pct : 100}% 100%`,
+          backgroundRepeat: 'no-repeat',
+        }}
+      />
+    </div>
+  );
+}
+
+/** Un mazzo, su tre righe: nome / origine + partite, vittorie, % / barra. */
+function DeckRow({ r }: { r: DeckStatRow }) {
+  return (
+    <div className="border-b border-zaff-border py-3 last:border-b-0">
+      <b className="block break-words text-[16px] font-semibold text-zaff-text">{r.deck}</b>
+      <div className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[13px] text-zaff-muted">
+        {r.source && <Badge tone={r.source === 'brew' ? 'brew' : 'precon'}>{r.source === 'brew' ? 'Homebrew' : 'Precon'}</Badge>}
+        <span>
+          {r.g} partite · {r.w} vittorie · {r.pct}%
+        </span>
+      </div>
+      <div className="mt-2">
+        <WinRateBar pct={r.pct} />
+      </div>
+    </div>
+  );
+}
+
+/** Elenco mazzi: lo stesso identico a schermo e nell'immagine esportata. */
+function DeckStatsList({ rows }: { rows: DeckStatRow[] }) {
+  if (rows.length === 0) return <p className={TEXT_MINI}>Nessun mazzo con partite registrate.</p>;
+  return (
+    <div>
+      {rows.map((r) => (
+        <DeckRow key={r.deck} r={r} />
+      ))}
+    </div>
+  );
+}
 
 /**
- * Statistiche mazzi: riepilogo Homebrew/Precon, filtro per origine, ordinamento
- * e barra della percentuale di vittoria per ogni mazzo.
- * Va mostrata dentro un `Modal` (la classifica giocatori sta in testata).
+ * Statistiche mazzi: due tasti per l'ordinamento (percentuale di vittoria o
+ * partite giocate) e l'elenco dei mazzi con la barra della percentuale di
+ * vittoria; esportabile in immagine.
+ * Va mostrata dentro un `Modal` (la classifica giocatori ha la sua schermata).
  */
 export default function GameStats() {
   const [games, setGames] = useState<Game[]>([]);
   const [decks, setDecks] = useState<DeckSourceRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [sourceFilter, setSourceFilter] = useState('all');
   const [sort, setSort] = useState<DeckSort>('winrate');
+  const exporter = useImageExport();
 
   async function loadData() {
     if (!supabase) return;
@@ -95,107 +154,61 @@ export default function GameStats() {
 
   const deckStats = useMemo(() => computeDeckStats(games, decks), [games, decks]);
 
-  const summary = useMemo(() => {
-    const totals: Record<string, { g: number; w: number; n: number }> = {
-      brew: { g: 0, w: 0, n: 0 },
-      precon: { g: 0, w: 0, n: 0 },
-      '': { g: 0, w: 0, n: 0 },
-    };
-    deckStats.forEach((r) => {
-      const key = totals[r.source] !== undefined ? r.source : '';
-      totals[key].g += r.g;
-      totals[key].w += r.w;
-      totals[key].n++;
-    });
-    return totals;
-  }, [deckStats]);
-
-  const rows = [...deckStats]
-    .filter((r) => {
-      if (sourceFilter === 'all') return true;
-      if (sourceFilter === 'unclassified') return !r.source;
-      return r.source === sourceFilter;
-    })
-    .sort((a, b) => {
-      if (sort === 'games') return b.g - a.g || b.pct - a.pct;
-      if (sort === 'name') return a.deck.localeCompare(b.deck);
-      return b.pct - a.pct || b.g - a.g;
-    });
+  const rows = [...deckStats].sort((a, b) =>
+    sort === 'games' ? b.g - a.g || b.pct - a.pct : b.pct - a.pct || b.g - a.g
+  );
 
   if (loading) {
     return <p className={TEXT_MUTED}>Caricamento…</p>;
   }
 
+  const sortLabel = SORT_OPTIONS.find((o) => o.value === sort)?.label ?? '';
+
   return (
     <>
-      <div className="mt-3.5 flex flex-wrap gap-2.5">
-        {(
-          [
-            ['Homebrew', 'brew', 'border-green-400'],
-            ['Precon', 'precon', 'border-cyan-400'],
-            ['Non classificato', '', 'border-zaff-border'],
-          ] as const
-        ).map(([label, key, border]) => {
-          const s = summary[key];
-          if (!s.n) return null;
-          const pct = s.g ? Math.round((s.w / s.g) * 100) : 0;
-          return (
-            <div key={key || 'none'} className={`min-w-[140px] flex-1 rounded-lg border bg-zaff-bg px-3.5 py-2.5 ${border}`}>
-              <b className="mb-0.5 block text-sm font-semibold text-zaff-text">{label}</b>
-              <span className="text-[13px] text-zaff-muted">
-                {s.n} mazzi · {s.g} partite · {pct}% vittorie
-              </span>
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="my-3.5 flex flex-wrap items-center gap-2.5">
-        <FilterTabs options={SOURCE_FILTERS} value={sourceFilter} onChange={setSourceFilter} />
-        <div className="flex-1" />
-        <div className="flex items-center gap-2">
-          <label className={`${FIELD_LABEL} mb-0 whitespace-nowrap`} htmlFor="deckStatsSort">
-            Ordina per
-          </label>
-          <select
-            id="deckStatsSort"
-            value={sort}
-            onChange={(e) => setSort(e.target.value as DeckSort)}
-            className="rounded-lg border border-zaff-border bg-zaff-bg px-2.5 py-1.5 text-sm text-zaff-text"
+      <span className={cx(FIELD_LABEL, 'mt-3.5')}>Ordina per</span>
+      <div className="mb-3.5 grid grid-cols-2 gap-2.5">
+        {SORT_OPTIONS.map((o) => (
+          <button
+            key={o.value}
+            type="button"
+            onClick={() => setSort(o.value)}
+            aria-pressed={sort === o.value}
+            className={cx(
+              'rounded-lg border py-3.5 text-[15px] font-semibold transition',
+              sort === o.value
+                ? 'border-zaff-text bg-zaff-text text-zaff-bg'
+                : 'border-zaff-border bg-transparent text-zaff-muted active:border-zaff-muted active:text-zaff-text'
+            )}
           >
-            <option value="winrate">Percentuale di vittoria</option>
-            <option value="games">Partite giocate</option>
-            <option value="name">Nome del mazzo</option>
-          </select>
-        </div>
+            {o.label}
+          </button>
+        ))}
       </div>
 
-      {rows.length === 0 ? (
-        <p className={TEXT_MINI}>Nessun mazzo in questa categoria.</p>
-      ) : (
-        <div>
-          {rows.map((r) => (
-            <div key={r.deck} className="border-b border-zaff-border py-2.5 last:border-b-0">
-              <div className="flex items-baseline justify-between gap-2.5">
-                <b className="flex min-w-0 items-center gap-2 truncate text-[15px] font-semibold text-zaff-text">
-                  <span className="truncate">{r.deck}</span>
-                  {r.source && (
-                    <Badge tone={r.source === 'brew' ? 'brew' : 'precon'}>
-                      {r.source === 'brew' ? 'Homebrew' : 'Precon'}
-                    </Badge>
-                  )}
-                </b>
-                <span className="shrink-0 whitespace-nowrap text-[13px] text-zaff-muted">
-                  {r.g} partite · {r.w} vittorie · {r.pct}%
-                </span>
-              </div>
-              <div className="mt-1.5 h-[7px] overflow-hidden rounded bg-zaff-bg">
-                <div className="h-full rounded bg-zaff-gold" style={{ width: `${r.pct}%` }} />
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      <DeckStatsList rows={rows} />
+
+      <div className="mt-4">
+        <ExportButton
+          exporting={exporter.exporting}
+          onClick={() =>
+            exporter.exportImage({
+              fileName: `statistiche_mazzi_${todayIso()}.jpg`,
+              shareTitle: 'Statistiche Mazzi',
+              shareText: 'Statistiche mazzi del registro partite di Magic',
+            })
+          }
+        />
+      </div>
+      <ExportedImage image={exporter.image} error={exporter.error} alt="Statistiche mazzi, da salvare" />
+
+      <ExportCardHost cardRef={exporter.cardRef}>
+        <ExportHeader
+          title="Statistiche Mazzi"
+          subtitle={`Percentuale di vittoria di ogni mazzo · ordinati per ${sortLabel.toLowerCase()} · aggiornato al ${todayLabel()}`}
+        />
+        <DeckStatsList rows={rows} />
+      </ExportCardHost>
 
       {error && (
         <p className="mt-3 text-sm text-red-400" role="alert">

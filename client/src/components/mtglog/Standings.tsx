@@ -3,8 +3,17 @@ import type { Game } from './GameList';
 import type { TallyRow } from './stats';
 import { PIE_COLORS, pieSlicePath } from './stats';
 import GlossyPie from './GlossyPie';
+import {
+  ExportButton,
+  ExportCardHost,
+  ExportedImage,
+  ExportHeader,
+  todayIso,
+  todayLabel,
+  useImageExport,
+} from './ImageExport';
 import Modal from '../ui/Modal';
-import { HEADING_SECTION, TEXT_MINI, TEXT_MUTED } from '../ui/styles';
+import { cx, HEADING_SECTION, TEXT_MINI, TEXT_MUTED } from '../ui/styles';
 
 interface StandingsProps {
   rows: TallyRow[];
@@ -32,6 +41,91 @@ function MiniWinLossPie({ pct }: { pct: number }) {
   );
 }
 
+/** Torta di gruppo (come si dividono tutte le vittorie) con la sua legenda. */
+function GroupPieSection({ rows, idSuffix }: { rows: TallyRow[]; idSuffix: string }) {
+  const winners = rows.filter((t) => t.w > 0);
+  const totalWins = rows.reduce((sum, t) => sum + t.w, 0);
+  if (totalWins === 0) return null;
+
+  let angle = 0;
+  const slices = winners.map((t, i) => {
+    const share = (t.w / totalWins) * 360;
+    const path = pieSlicePath(70, 70, 68, angle, angle + share);
+    angle += share;
+    return { path, color: PIE_COLORS[i % PIE_COLORS.length], name: t.name, w: t.w, key: t.name };
+  });
+
+  return (
+    <div>
+      <p className="mb-2 text-xs text-zaff-muted">
+        Come si dividono tutte le {totalWins} vittorie registrate, tra i giocatori:
+      </p>
+      <div className="flex flex-wrap items-center gap-5">
+        <GlossyPie slices={slices} idSuffix={idSuffix} />
+        <div className="flex flex-col gap-1.5 text-sm text-zaff-muted">
+          {slices.map((s) => (
+            <div key={s.name} className="text-zaff-text">
+              <span
+                className="mr-1.5 inline-block h-[11px] w-[11px] rounded-full align-[-1px]"
+                style={{ background: s.color }}
+              />
+              {s.name} — {Math.round((s.w / totalWins) * 100)}% delle vittorie totali ({s.w} di {totalWins})
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Elenco giocatori: una riga ciascuno, solo nome e mini-torta. Con `onSelect`
+ *  le righe sono toccabili (apre il dettaglio); senza, è la versione statica
+ *  per l'immagine esportata. */
+function PlayerRows({ rows, onSelect }: { rows: TallyRow[]; onSelect?: (name: string) => void }) {
+  return (
+    <ul className="mt-4">
+      {rows.map((t) => {
+        const pct = t.g ? (t.w / t.g) * 100 : 0;
+        const content = (
+          <>
+            <span className="min-w-0 truncate text-[15px] font-medium text-zaff-text">{t.name}</span>
+            <MiniWinLossPie pct={pct} />
+          </>
+        );
+        return (
+          <li key={t.name}>
+            {onSelect ? (
+              <button
+                type="button"
+                onClick={() => onSelect(t.name)}
+                className="flex w-full items-center justify-between gap-3 border-b border-zaff-border py-2.5 text-left transition last:border-b-0 hover:border-zaff-primary"
+              >
+                {content}
+              </button>
+            ) : (
+              <div className="flex w-full items-center justify-between gap-3 border-b border-zaff-border py-2.5 last:border-b-0">
+                {content}
+              </div>
+            )}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+/** La schermata "Statistiche Giocatori" com'è, ma statica: è questa che
+ *  finisce nell'immagine esportata. */
+function PlayersStatsCard({ rows, showPie }: { rows: TallyRow[]; showPie: boolean }) {
+  return (
+    <>
+      <ExportHeader title="Statistiche Giocatori" subtitle={`Aggiornato al ${todayLabel()}`} />
+      {showPie && <GroupPieSection rows={rows} idSuffix="group-export" />}
+      <PlayerRows rows={rows} />
+    </>
+  );
+}
+
 /**
  * Statistiche giocatori: in cima la torta di gruppo (come si dividono tutte
  * le vittorie), poi l'elenco dei giocatori — una riga ciascuno, solo nome e
@@ -42,17 +136,7 @@ function MiniWinLossPie({ pct }: { pct: number }) {
  */
 export default function Standings({ rows, games, showPie }: StandingsProps) {
   const [selectedName, setSelectedName] = useState<string | null>(null);
-
-  const winners = rows.filter((t) => t.w > 0);
-  const totalWins = rows.reduce((sum, t) => sum + t.w, 0);
-
-  let angle = 0;
-  const groupSlices = winners.map((t, i) => {
-    const share = (t.w / totalWins) * 360;
-    const path = pieSlicePath(70, 70, 68, angle, angle + share);
-    angle += share;
-    return { path, color: PIE_COLORS[i % PIE_COLORS.length], name: t.name, w: t.w, key: t.name };
-  });
+  const exporter = useImageExport();
 
   const selectedRow = rows.find((r) => r.name === selectedName) ?? null;
   const selectedPct = selectedRow && selectedRow.g ? Math.round((selectedRow.w / selectedRow.g) * 100) : 0;
@@ -95,45 +179,26 @@ export default function Standings({ rows, games, showPie }: StandingsProps) {
 
   return (
     <>
-      {showPie && totalWins > 0 && (
-        <div>
-          <p className="mb-2 text-xs text-zaff-muted">
-            Come si dividono tutte le {totalWins} vittorie registrate, tra i giocatori:
-          </p>
-          <div className="flex flex-wrap items-center gap-5">
-            <GlossyPie slices={groupSlices} idSuffix="group" />
-            <div className="flex flex-col gap-1.5 text-sm text-zaff-muted">
-              {groupSlices.map((s) => (
-                <div key={s.name} className="text-zaff-text">
-                  <span
-                    className="mr-1.5 inline-block h-[11px] w-[11px] rounded-full align-[-1px]"
-                    style={{ background: s.color }}
-                  />
-                  {s.name} — {Math.round((s.w / totalWins) * 100)}% delle vittorie totali ({s.w} di {totalWins})
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+      {showPie && <GroupPieSection rows={rows} idSuffix="group" />}
 
-      <ul className="mt-4">
-        {rows.map((t) => {
-          const pct = t.g ? (t.w / t.g) * 100 : 0;
-          return (
-            <li key={t.name}>
-              <button
-                type="button"
-                onClick={() => setSelectedName(t.name)}
-                className="flex w-full items-center justify-between gap-3 border-b border-zaff-border py-2.5 text-left transition last:border-b-0 hover:border-zaff-primary"
-              >
-                <span className="min-w-0 truncate text-[15px] font-medium text-zaff-text">{t.name}</span>
-                <MiniWinLossPie pct={pct} />
-              </button>
-            </li>
-          );
-        })}
-      </ul>
+      <PlayerRows rows={rows} onSelect={setSelectedName} />
+
+      <div className="mt-4">
+        <ExportButton
+          exporting={exporter.exporting}
+          onClick={() =>
+            exporter.exportImage({
+              fileName: `statistiche_giocatori_${todayIso()}.jpg`,
+              shareTitle: 'Statistiche Giocatori',
+              shareText: 'Statistiche giocatori del registro partite di Magic',
+            })
+          }
+        />
+      </div>
+      <ExportedImage image={exporter.image} error={exporter.error} alt="Statistiche giocatori, da salvare" />
+      <ExportCardHost cardRef={exporter.cardRef}>
+        <PlayersStatsCard rows={rows} showPie={showPie} />
+      </ExportCardHost>
 
       {selectedRow && (
         <Modal level={2} title={selectedRow.name} onClose={() => setSelectedName(null)}>
@@ -171,8 +236,4 @@ export default function Standings({ rows, games, showPie }: StandingsProps) {
       )}
     </>
   );
-}
-
-function cx(...parts: Array<string | false | null | undefined>) {
-  return parts.filter(Boolean).join(' ');
 }
