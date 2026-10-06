@@ -137,6 +137,8 @@ export default function LifeCounter({ players, startLife, onCancel, onFinish }: 
   );
   /** Scheda di cui è aperto il pannello opzioni (una alla volta). */
   const [optionsFor, setOptionsFor] = useState<number | null>(null);
+  /** Popup delle opzioni di gioco (Annulla, High Roll, Fine Partita). */
+  const [menuOpen, setMenuOpen] = useState(false);
   const [highRollOpen, setHighRollOpen] = useState(false);
   const [rolls, setRolls] = useState<RollResult[]>([]);
 
@@ -168,25 +170,7 @@ export default function LifeCounter({ players, startLife, onCancel, onFinish }: 
         paddingRight: 'max(0.75rem, env(safe-area-inset-right))',
       }}
     >
-      <div className="mb-3 flex shrink-0 items-center justify-between gap-2">
-        <Button variant="ghost" onClick={onCancel}>
-          Annulla
-        </Button>
-        <Button variant="ghost" onClick={openHighRoll}>
-          🎲 High Roll
-        </Button>
-        <Button
-          onClick={() =>
-            onFinish(
-              Object.fromEntries(lives.map((p) => [p.name, p.life])),
-              Object.fromEntries(lives.map((p) => [p.name, lossCauses(p)]))
-            )
-          }
-        >
-          Fine Partita
-        </Button>
-      </div>
-
+      <div className="relative flex min-h-0 flex-1 flex-col">
       <div
         className="grid flex-1 gap-2.5"
         style={{ gridTemplateColumns: `repeat(${cols}, 1fr)`, gridTemplateRows: `repeat(${rows}, 1fr)` }}
@@ -233,7 +217,7 @@ export default function LifeCounter({ players, startLife, onCancel, onFinish }: 
                 aria-label={`${p.name}: opzioni`}
                 className="absolute bottom-2 left-1/2 z-10 flex h-10 w-10 -translate-x-1/2 select-none items-center justify-center rounded-full bg-black/25 text-lg text-white/85 active:bg-black/45"
               >
-                ⚙️
+                ⋯
               </button>
 
               <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
@@ -335,6 +319,66 @@ export default function LifeCounter({ players, startLife, onCancel, onFinish }: 
           );
         })}
       </div>
+
+      {/* Opzioni di gioco: un solo tasto al centro del tavolo, senza testo,
+          così si capisce da qualunque lato lo si guardi. Tra le schede (ogni
+          giocatore ha la sua), non copre punteggi né nomi. */}
+      <button
+        type="button"
+        onClick={() => setMenuOpen(true)}
+        style={TAP_HIGHLIGHT_OFF}
+        aria-label="Opzioni di gioco"
+        className={`absolute z-30 flex h-14 w-14 select-none items-center justify-center rounded-full border border-white/30 bg-black/75 text-2xl shadow-lg active:bg-black ${
+          lives.length === 1
+            ? 'bottom-3 left-1/2 -translate-x-1/2'
+            : 'left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2'
+        }`}
+      >
+        ⚙️
+      </button>
+      </div>
+
+      {menuOpen && (
+        <div
+          className="fixed inset-0 z-[55] flex items-center justify-center bg-black/60 p-4"
+          onClick={() => setMenuOpen(false)}
+        >
+          <div
+            className="flex w-full max-w-xs flex-col gap-3 rounded-2xl border border-zaff-border bg-zaff-surface p-5 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setMenuOpen(false);
+                openHighRoll();
+              }}
+            >
+              🎲 High Roll
+            </Button>
+            <Button
+              onClick={() =>
+                onFinish(
+                  Object.fromEntries(lives.map((p) => [p.name, p.life])),
+                  Object.fromEntries(lives.map((p) => [p.name, lossCauses(p)]))
+                )
+              }
+            >
+              Fine Partita
+            </Button>
+            <Button variant="ghost" onClick={onCancel}>
+              Annulla
+            </Button>
+            <button
+              type="button"
+              onClick={() => setMenuOpen(false)}
+              className="py-1 text-sm text-zaff-muted active:text-zaff-text"
+            >
+              Torna al gioco
+            </button>
+          </div>
+        </div>
+      )}
 
       {highRollOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
