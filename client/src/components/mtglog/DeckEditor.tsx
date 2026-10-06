@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react';
 import { MAX_DECK_NAME_LENGTH, supabase, TABLE_DECKS } from '../../services/supabase';
 import { ManaPips } from './ManaIcon';
 import CardPicker from './CardPicker';
-import { useDeckImages } from './DeckCards';
-import { getCard, isMissing } from '../../services/scryfall';
+import DeckCardsView, { useDeckImages } from './DeckCards';
 import Button from '../ui/Button';
 import { TextField, SelectField } from '../ui/Field';
 import { cx, FIELD_CONTROL_SM, FIELD_LABEL, TEXT_MINI, TEXT_MUTED } from '../ui/styles';
@@ -267,6 +266,18 @@ export default function DeckEditor({ deckId, initialDraft, onBack, onSaved }: De
     autoDetectColors([newName]);
   }
 
+  /** −/+ sulle carte dell'elenco; a 1 copia il "−" toglie la carta. */
+  function changeQty(card: { name: string; section?: string }, delta: number) {
+    const sec = normalizeSection(card.section);
+    setDraft((prev) =>
+      prev.flatMap((c) => {
+        if (c.name !== card.name || normalizeSection(c.section) !== sec) return [c];
+        const q = c.qty + delta;
+        return q <= 0 ? [] : [{ ...c, qty: q }];
+      })
+    );
+  }
+
   function countInDraft(cardName: string): number {
     const low = cardName.toLowerCase();
     return draft.filter((c) => c.name.toLowerCase() === low).reduce((sum, c) => sum + c.qty, 0);
@@ -339,8 +350,20 @@ export default function DeckEditor({ deckId, initialDraft, onBack, onSaved }: De
     return <p className={TEXT_MUTED}>Caricamento…</p>;
   }
 
+  const mainTotal = draft.filter((c) => normalizeSection(c.section) === 'main').reduce((sum, c) => sum + c.qty, 0);
+  const sideTotal = total - mainTotal;
+
   return (
     <>
+      {/* Totali sempre in vista mentre si scorre. */}
+      <div className="sticky top-0 z-10 -mx-1 mb-3.5 flex items-center justify-between gap-2 rounded-lg border border-zaff-primary bg-zaff-surface px-3 py-2 text-sm font-semibold text-zaff-text shadow-lg">
+        <span>Main {mainTotal}</span>
+        <span>Side {sideTotal}</span>
+        <span className="bg-gradient-to-r from-zaff-primary to-zaff-accent bg-clip-text text-lg font-bold text-transparent">
+          Totale {total}
+        </span>
+      </div>
+
       <TextField
         id="deckName"
         label="Nome mazzo"
@@ -485,78 +508,19 @@ export default function DeckEditor({ deckId, initialDraft, onBack, onSaved }: De
         </Button>
       </div>
 
-      <div className="my-3.5 flex items-center justify-between rounded-lg border border-zaff-primary bg-zaff-bg px-4 py-3">
-        <span className="text-sm text-zaff-muted">Totale carte</span>
-        <b className="bg-gradient-to-r from-zaff-primary to-zaff-accent bg-clip-text text-[26px] font-bold text-transparent">
-          {total}
-        </b>
-      </div>
-
       {draft.length === 0 ? (
         <p className={cx('mb-2.5', TEXT_MINI)}>Nessuna carta ancora aggiunta.</p>
       ) : (
-        (() => {
-          const mainDraft = draft.filter((c) => normalizeSection(c.section) === 'main');
-          const sideDraft = draft.filter((c) => normalizeSection(c.section) === 'side');
-          const renderRow = (c: DraftCard) => {
-            const scry = getCard(c.name);
-            const sec = normalizeSection(c.section);
-            return (
-            <div
-              key={sec + '|' + c.name}
-              className="flex items-center justify-between gap-2.5 border-b border-zaff-border py-1.5 text-sm text-zaff-text last:border-b-0"
-            >
-              {scry ? (
-                <img src={scry.faces[0].small} alt="" loading="lazy" decoding="async" className="h-14 w-10 shrink-0 rounded object-cover" />
-              ) : isMissing(c.name) ? (
-                <button
-                  type="button"
-                  onClick={() => setPicker({ mode: 'replace', name: c.name, section: sec, qty: c.qty })}
-                  title="Carta non riconosciuta: tocca per cercarla"
-                  aria-label={`Carta non riconosciuta: ${c.name}. Tocca per cercarla`}
-                  className="flex h-14 w-10 shrink-0 items-center justify-center rounded border-2 border-dashed border-zaff-gold bg-zaff-surface text-xl font-bold text-zaff-gold"
-                >
-                  ?
-                </button>
-              ) : (
-                <span className="h-14 w-10 shrink-0 animate-pulse rounded border border-zaff-border bg-zaff-surface" />
-              )}
-              <span className="min-w-0 flex-1 truncate">
-                {c.qty}× {c.name}
-              </span>
-              <button
-                type="button"
-                onClick={() => handleRemoveCard(c.name, normalizeSection(c.section))}
-                title="Togli carta"
-                className="shrink-0 px-1 text-zaff-muted transition hover:text-red-400"
-              >
-                ×
-              </button>
-            </div>
-            );
-          };
-          return (
-            <div className="mb-2.5">
-              <span className={FIELD_LABEL}>Main Deck · {mainDraft.reduce((s, c) => s + c.qty, 0)} carte</span>
-              <div className="mb-3 max-h-56 overflow-y-auto">
-                {mainDraft.length === 0 ? (
-                  <p className={TEXT_MINI}>Nessuna carta nel main deck.</p>
-                ) : (
-                  mainDraft.map(renderRow)
-                )}
-              </div>
-
-              <span className={FIELD_LABEL}>Sideboard · {sideDraft.reduce((s, c) => s + c.qty, 0)} carte</span>
-              <div className="max-h-56 overflow-y-auto">
-                {sideDraft.length === 0 ? (
-                  <p className={TEXT_MINI}>Nessuna carta in sideboard.</p>
-                ) : (
-                  sideDraft.map(renderRow)
-                )}
-              </div>
-            </div>
-          );
-        })()
+        <div className="mb-2.5">
+          <DeckCardsView
+            cards={draft}
+            editable={{
+              onChangeQty: changeQty,
+              onFix: (c) =>
+                setPicker({ mode: 'replace', name: c.name, section: normalizeSection(c.section), qty: c.qty }),
+            }}
+          />
+        </div>
       )}
 
       <div className="flex flex-wrap items-center gap-2.5">
@@ -588,6 +552,7 @@ export default function DeckEditor({ deckId, initialDraft, onBack, onSaved }: De
           section={cardSection}
           onSectionChange={setCardSection}
           countOf={countInDraft}
+          totals={{ main: mainTotal, side: sideTotal }}
           onPick={(card) => {
             if (picker.mode === 'add') addToDraft(card.name, 1, cardSection);
             else replaceInDraft(picker.name, picker.section, picker.qty, card.name);

@@ -16,9 +16,14 @@ export interface ScryCard {
   name: string;
   /** Una faccia per le carte normali, due per quelle a doppia faccia. */
   faces: ScryFace[];
+  /** Colori della carta (W U B R G): vuoto per incolori e terre. Per le
+   *  doppie facce conta la faccia davanti. */
+  colors: string[];
+  /** Riga dei tipi della faccia davanti, es. "Legendary Creature — Elf". */
+  typeLine: string;
 }
 
-const STORAGE_KEY = 'mtg-scryfall-cache-v1';
+const STORAGE_KEY = 'mtg-scryfall-cache-v2';
 const MAX_STORED = 3000;
 const BATCH = 75;
 const PAUSE_MS = 110;
@@ -42,7 +47,9 @@ function loadStorage() {
     if (!raw) return;
     const entries = JSON.parse(raw) as [string, ScryCard][];
     entries.forEach(([k, v]) => {
-      if (v && Array.isArray(v.faces) && v.faces.length > 0) found.set(k, v);
+      if (v && Array.isArray(v.faces) && v.faces.length > 0 && Array.isArray(v.colors) && typeof v.typeLine === 'string') {
+        found.set(k, v);
+      }
     });
   } catch {
     /* cache assente o rovinata: si riparte da vuoto */
@@ -66,7 +73,9 @@ interface RawFaceImages {
 interface RawCard {
   name: string;
   image_uris?: RawFaceImages;
-  card_faces?: { name?: string; image_uris?: RawFaceImages }[];
+  colors?: string[];
+  type_line?: string;
+  card_faces?: { name?: string; image_uris?: RawFaceImages; colors?: string[]; type_line?: string }[];
 }
 
 function toFaces(raw: RawCard): ScryFace[] {
@@ -79,6 +88,18 @@ function toFaces(raw: RawCard): ScryFace[] {
     .map((f) => f.image_uris)
     .filter((u): u is RawFaceImages => !!u?.small && !!u?.normal)
     .map((u) => ({ small: u.small as string, normal: u.normal as string }));
+}
+
+function toCard(raw: RawCard): ScryCard | null {
+  const faces = toFaces(raw);
+  if (faces.length === 0) return null;
+  const front = raw.card_faces?.[0];
+  return {
+    name: raw.name,
+    faces,
+    colors: raw.colors ?? front?.colors ?? [],
+    typeLine: (raw.type_line ?? front?.type_line ?? '').split('//')[0].trim(),
+  };
 }
 
 /** Le chiavi sotto cui una carta risolta può essere cercata: nome completo
@@ -124,9 +145,8 @@ export function searchScryfall(query: string): Promise<ScryCard[]> {
       const json = (await res.json()) as { data?: RawCard[] };
       const out: ScryCard[] = [];
       (json.data ?? []).slice(0, 60).forEach((raw) => {
-        const faces = toFaces(raw);
-        if (faces.length === 0) return;
-        const card: ScryCard = { name: raw.name, faces };
+        const card = toCard(raw);
+        if (!card) return;
         keysFor(raw).forEach((k) => found.set(k, card));
         out.push(card);
       });
@@ -154,9 +174,8 @@ async function fetchBatch(names: string[]): Promise<void> {
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const json = (await res.json()) as { data?: RawCard[] };
     (json.data ?? []).forEach((raw) => {
-      const faces = toFaces(raw);
-      if (faces.length === 0) return;
-      const card: ScryCard = { name: raw.name, faces };
+      const card = toCard(raw);
+      if (!card) return;
       keysFor(raw).forEach((k) => found.set(k, card));
     });
     // Quello che non è tornato indietro: si riprova una per una con la
@@ -167,9 +186,8 @@ async function fetchBatch(names: string[]): Promise<void> {
     for (const n of notFound.slice(0, MAX_FUZZY)) {
       await sleep(PAUSE_MS);
       const raw = await fetchFuzzy(n);
-      const faces = raw ? toFaces(raw) : [];
-      if (raw && faces.length > 0) {
-        const card: ScryCard = { name: raw.name, faces };
+      const card = raw ? toCard(raw) : null;
+      if (raw && card) {
         keysFor(raw).forEach((k) => found.set(k, card));
         found.set(cardKey(n), card);
       }

@@ -1,12 +1,21 @@
-import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import { useEffect, useReducer, useRef, useState } from 'react';
 import { cardKey, getCard, isMissing, requestCards, subscribeCards, type ScryCard } from '../../services/scryfall';
-import { cx, FIELD_LABEL } from '../ui/styles';
+import { groupCards, type GroupedColor } from './cardGroups';
+import { ManaIcons } from './ManaIcon';
+import { cx } from '../ui/styles';
 
 /** Carta di un mazzo, per questa vista (stessa forma di `DeckViewCard`). */
 export interface DeckCardsItem {
   name: string;
   qty: number;
   section?: 'main' | 'side' | string;
+}
+
+/** Modifica dell'elenco (solo nell'editor mazzi): copie con −/+ (a 1 copia il
+ *  tasto diventa × e toglie la carta) e correzione delle carte non riconosciute. */
+export interface DeckCardsEditable {
+  onChangeQty: (card: DeckCardsItem, delta: number) => void;
+  onFix: (card: DeckCardsItem) => void;
 }
 
 type ViewMode = 'grid' | 'list';
@@ -162,66 +171,135 @@ function CardViewer({
   );
 }
 
-function CardGrid({ cards, onOpen }: { cards: DeckCardsItem[]; onOpen: (c: DeckCardsItem) => void }) {
+function QtyStepper({ card, editable }: { card: DeckCardsItem; editable: DeckCardsEditable }) {
+  const btn =
+    'flex h-9 w-9 shrink-0 items-center justify-center rounded-md border text-lg font-bold leading-none active:scale-95';
   return (
-    <div className="mb-3 grid grid-cols-3 gap-2 min-[560px]:grid-cols-4 min-[800px]:grid-cols-5">
+    <div className="flex shrink-0 items-center gap-1.5">
+      <button
+        type="button"
+        onClick={() => editable.onChangeQty(card, -1)}
+        aria-label={card.qty <= 1 ? `Togli ${card.name}` : `Una copia in meno di ${card.name}`}
+        className={cx(btn, card.qty <= 1 ? 'border-red-400 text-red-400' : 'border-zaff-border text-zaff-text')}
+      >
+        {card.qty <= 1 ? '×' : '−'}
+      </button>
+      <span className="min-w-[1.25rem] text-center text-sm font-bold text-zaff-text">{card.qty}</span>
+      <button
+        type="button"
+        onClick={() => editable.onChangeQty(card, 1)}
+        aria-label={`Una copia in più di ${card.name}`}
+        className={cx(btn, 'border-zaff-border text-zaff-text')}
+      >
+        +
+      </button>
+    </div>
+  );
+}
+
+function FixTile({ card, onFix, className }: { card: DeckCardsItem; onFix: (c: DeckCardsItem) => void; className?: string }) {
+  return (
+    <button
+      type="button"
+      onClick={() => onFix(card)}
+      title="Carta non riconosciuta: tocca per cercarla"
+      aria-label={`Carta non riconosciuta: ${card.name}. Tocca per cercarla`}
+      className={cx(
+        'flex flex-col items-center justify-center gap-0.5 overflow-hidden rounded-md border-2 border-dashed border-zaff-gold bg-zaff-surface p-1 text-center text-[11px] leading-tight text-zaff-gold',
+        className
+      )}
+    >
+      <span className="text-2xl font-bold leading-none">?</span>
+      <span className="line-clamp-2 break-words">{card.name}</span>
+    </button>
+  );
+}
+
+interface ViewProps {
+  cards: DeckCardsItem[];
+  onOpen: (c: DeckCardsItem) => void;
+  editable?: DeckCardsEditable;
+}
+
+function CardGrid({ cards, onOpen, editable }: ViewProps) {
+  return (
+    <div className="grid grid-cols-3 gap-x-2 gap-y-2.5 min-[560px]:grid-cols-4 min-[800px]:grid-cols-5">
       {cards.map((c) => {
         const scry = getCard(c.name);
         const img = scry?.faces[0];
+        const missing = !scry && isMissing(c.name);
         return (
-          <button
-            key={c.name}
-            type="button"
-            onClick={() => scry && onOpen(c)}
-            className="relative block w-full text-left"
-            style={{ aspectRatio: '488 / 680' }}
-            aria-label={c.name}
-          >
-            {img ? (
-              <img
-                src={img.small}
-                alt={c.name}
-                loading="lazy"
-                decoding="async"
-                className="h-full w-full rounded-md object-cover"
-              />
-            ) : (
-              <Placeholder name={c.name} pending={!isMissing(c.name)} className="h-full w-full" />
+          <div key={c.name} className="min-w-0">
+            <div className="relative" style={{ aspectRatio: '488 / 680' }}>
+              {missing && editable ? (
+                <FixTile card={c} onFix={editable.onFix} className="h-full w-full" />
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => scry && onOpen(c)}
+                  className="block h-full w-full text-left"
+                  aria-label={c.name}
+                >
+                  {img ? (
+                    <img
+                      src={img.small}
+                      alt={c.name}
+                      loading="lazy"
+                      decoding="async"
+                      className="h-full w-full rounded-md object-cover"
+                    />
+                  ) : (
+                    <Placeholder name={c.name} pending={!missing} className="h-full w-full" />
+                  )}
+                </button>
+              )}
+              {!editable && c.qty > 1 && (
+                <span className="pointer-events-none absolute right-1 top-1 rounded-full bg-black/80 px-1.5 py-0.5 text-[12px] font-bold leading-none text-white ring-1 ring-white/50">
+                  ×{c.qty}
+                </span>
+              )}
+            </div>
+            {editable && (
+              <div className="mt-1 flex justify-center">
+                <QtyStepper card={c} editable={editable} />
+              </div>
             )}
-            {c.qty > 1 && (
-              <span className="absolute right-1 top-1 rounded-full bg-black/80 px-1.5 py-0.5 text-[12px] font-bold leading-none text-white ring-1 ring-white/50">
-                ×{c.qty}
-              </span>
-            )}
-          </button>
+          </div>
         );
       })}
     </div>
   );
 }
 
-function CardList({ cards, onOpen }: { cards: DeckCardsItem[]; onOpen: (c: DeckCardsItem) => void }) {
+function CardList({ cards, onOpen, editable }: ViewProps) {
   return (
-    <ul className="mb-3">
+    <ul>
       {cards.map((c) => {
         const scry = getCard(c.name);
         const img = scry?.faces[0];
+        const missing = !scry && isMissing(c.name);
         return (
-          <li key={c.name} className="border-b border-zaff-border last:border-b-0">
-            <button
-              type="button"
-              onClick={() => scry && onOpen(c)}
-              className="flex w-full items-center gap-3 py-1.5 text-left text-sm text-zaff-text"
-            >
-              {img ? (
-                <img src={img.small} alt="" loading="lazy" decoding="async" className="h-14 w-10 shrink-0 rounded object-cover" />
-              ) : (
-                <span className="h-14 w-10 shrink-0 rounded border border-zaff-border bg-zaff-surface" />
-              )}
-              <span className="min-w-0 flex-1 truncate">
-                {c.qty}× {c.name}
-              </span>
-            </button>
+          <li key={c.name} className="flex items-center gap-2.5 border-b border-zaff-border py-1.5 last:border-b-0">
+            {missing && editable ? (
+              <FixTile card={c} onFix={editable.onFix} className="h-14 w-10 shrink-0 !p-0 text-[0px]" />
+            ) : (
+              <button
+                type="button"
+                onClick={() => scry && onOpen(c)}
+                className="flex min-w-0 flex-1 items-center gap-3 text-left text-sm text-zaff-text"
+              >
+                {img ? (
+                  <img src={img.small} alt="" loading="lazy" decoding="async" className="h-14 w-10 shrink-0 rounded object-cover" />
+                ) : (
+                  <span className="h-14 w-10 shrink-0 rounded border border-zaff-border bg-zaff-surface" />
+                )}
+                <span className="min-w-0 flex-1 truncate">
+                  {editable ? c.name : `${c.qty}× ${c.name}`}
+                </span>
+              </button>
+            )}
+            {missing && editable && <span className="min-w-0 flex-1 truncate text-sm text-zaff-gold">{c.name}</span>}
+            {editable && <QtyStepper card={c} editable={editable} />}
           </li>
         );
       })}
@@ -229,18 +307,84 @@ function CardList({ cards, onOpen }: { cards: DeckCardsItem[]; onOpen: (c: DeckC
   );
 }
 
+/** Un blocco (Main Deck o Sideboard): gruppi per colore con intestazione
+ *  ben visibile e totale, dentro ogni colore i tipi, dentro ogni tipo le
+ *  carte in ordine alfabetico. */
+function Section({
+  title,
+  groups,
+  total,
+  mode,
+  onOpen,
+  editable,
+}: {
+  title: string;
+  groups: GroupedColor<DeckCardsItem>[];
+  total: number;
+  mode: ViewMode;
+  onOpen: (c: DeckCardsItem) => void;
+  editable?: DeckCardsEditable;
+}) {
+  const View = mode === 'grid' ? CardGrid : CardList;
+  return (
+    <div className="mb-5">
+      <h3 className="mb-3 flex items-baseline justify-between border-b-2 border-zaff-text pb-1.5 text-base font-bold text-zaff-text">
+        <span>{title}</span>
+        <span>{total} carte</span>
+      </h3>
+      {groups.length === 0 && <p className="text-sm text-zaff-muted">Nessuna carta.</p>}
+      {groups.map((g) => (
+        <div key={g.id} className="mb-5 last:mb-0">
+          <div
+            className="mb-2 flex items-center justify-between gap-2 rounded-md border border-l-[6px] border-zaff-border bg-zaff-bg px-3 py-2"
+            style={{ borderLeftColor: g.stripe }}
+          >
+            <span className="flex items-center gap-2 text-[15px] font-bold text-zaff-text">
+              {g.label}
+              {'WUBRG'.includes(g.id) && <ManaIcons colors={[g.id]} className="text-[15px]" />}
+            </span>
+            <span className="text-sm font-semibold text-zaff-muted">{g.total} carte</span>
+          </div>
+          {g.types.map((t) => (
+            <div key={t.id}>
+              {g.showTypes && (
+                <div className="mb-1 mt-3 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-zaff-muted">
+                  <span className="shrink-0">
+                    {t.label} · {t.total}
+                  </span>
+                  <span className="h-px flex-1 bg-zaff-border" />
+                </div>
+              )}
+              <View cards={t.items} onOpen={onOpen} editable={editable} />
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /** Elenco carte di un mazzo (main deck, poi sideboard) con le immagini di
- *  Scryfall: vista a griglia o a lista, "×N" per le copie multiple, tocco per
- *  ingrandire (con scorrimento tra le carte). Solo lettura. */
-export default function DeckCardsView({ cards }: { cards: DeckCardsItem[] }) {
+ *  Scryfall: vista a griglia o a lista, ordinate per colore → tipo → nome,
+ *  "×N" per le copie multiple, tocco per ingrandire (con scorrimento tra le
+ *  carte). Con `editable` serve anche per modificare il mazzo nell'editor. */
+export default function DeckCardsView({
+  cards,
+  editable,
+}: {
+  cards: DeckCardsItem[];
+  editable?: DeckCardsEditable;
+}) {
   const [mode, setMode] = useState<ViewMode>(readMode);
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
-  const main = useMemo(() => cards.filter((c) => c.section !== 'side'), [cards]);
-  const side = useMemo(() => cards.filter((c) => c.section === 'side'), [cards]);
-  const ordered = useMemo(() => [...main, ...side], [main, side]);
+  const main = cards.filter((c) => c.section !== 'side');
+  const side = cards.filter((c) => c.section === 'side');
+  const mainGroups = groupCards(main, getCard);
+  const sideGroups = groupCards(side, getCard);
+  const ordered = [...mainGroups, ...sideGroups].flatMap((g) => g.types.flatMap((t) => t.items));
 
-  useDeckImages(ordered.map((c) => c.name));
+  useDeckImages(cards.map((c) => c.name));
 
   function chooseMode(m: ViewMode) {
     setMode(m);
@@ -255,8 +399,6 @@ export default function DeckCardsView({ cards }: { cards: DeckCardsItem[] }) {
     const i = ordered.indexOf(c);
     if (i >= 0) setOpenIndex(i);
   }
-
-  const View = mode === 'grid' ? CardGrid : CardList;
 
   const toggleBtn = (m: ViewMode, label: string) => (
     <button
@@ -274,22 +416,28 @@ export default function DeckCardsView({ cards }: { cards: DeckCardsItem[] }) {
 
   if (cards.length === 0) return <p className="text-sm text-zaff-muted">Nessuna carta.</p>;
 
+  const mainTotal = total(main);
+  const sideTotal = total(side);
+
   return (
     <>
-      <div className="mb-3 grid grid-cols-2 gap-2.5">
+      {/* Nell'editor i totali stanno già nella barra fissa in cima. */}
+      {!editable && (
+        <div className="sticky top-0 z-10 -mx-1 mb-3 flex items-center justify-between gap-2 rounded-lg border border-zaff-primary bg-zaff-surface px-3 py-2 text-sm font-semibold text-zaff-text shadow-lg">
+          <span>Main {mainTotal}</span>
+          <span>Side {sideTotal}</span>
+          <span className="text-zaff-muted">Totale {mainTotal + sideTotal}</span>
+        </div>
+      )}
+
+      <div className="mb-4 grid grid-cols-2 gap-2.5">
         {toggleBtn('grid', 'Griglia')}
         {toggleBtn('list', 'Lista')}
       </div>
 
-      <span className={FIELD_LABEL}>Main Deck · {total(main)} carte</span>
-      <View cards={main} onOpen={open} />
-
-      {side.length > 0 && (
-        <>
-          <hr className="mb-3 border-zaff-border" />
-          <span className={FIELD_LABEL}>Sideboard · {total(side)} carte</span>
-          <View cards={side} onOpen={open} />
-        </>
+      <Section title="Main Deck" groups={mainGroups} total={mainTotal} mode={mode} onOpen={open} editable={editable} />
+      {(side.length > 0 || editable) && (
+        <Section title="Sideboard" groups={sideGroups} total={sideTotal} mode={mode} onOpen={open} editable={editable} />
       )}
 
       {openIndex !== null && <CardViewer items={ordered} startIndex={openIndex} onClose={() => setOpenIndex(null)} />}

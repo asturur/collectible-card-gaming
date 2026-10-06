@@ -14,6 +14,8 @@ interface CardPickerProps {
   onSectionChange?: (s: 'main' | 'side') => void;
   /** Quante copie di quella carta ci sono già nel mazzo. */
   countOf: (name: string) => number;
+  /** Totali del mazzo, sempre in vista mentre si aggiungono carte. */
+  totals?: { main: number; side: number };
   onPick: (card: ScryCard) => void;
   onClose: () => void;
 }
@@ -130,6 +132,7 @@ export default function CardPicker({
   section,
   onSectionChange,
   countOf,
+  totals,
   onPick,
   onClose,
 }: CardPickerProps) {
@@ -188,7 +191,14 @@ export default function CardPicker({
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-zaff-bg text-zaff-text">
       <div className="flex items-center justify-between gap-3 border-b border-zaff-border px-4 py-3">
-        <h2 className="text-lg font-semibold">{mode === 'add' ? 'Aggiungi carte' : 'Trova la carta giusta'}</h2>
+        <div className="min-w-0">
+          <h2 className="text-lg font-semibold">{mode === 'add' ? 'Aggiungi carte' : 'Trova la carta giusta'}</h2>
+          {totals && (
+            <p className="text-sm font-semibold text-zaff-muted">
+              Main {totals.main} · Side {totals.side} · Totale {totals.main + totals.side}
+            </p>
+          )}
+        </div>
         <button
           type="button"
           onClick={onClose}
