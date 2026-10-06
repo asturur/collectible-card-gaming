@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { getCard } from '../../services/scryfall';
-import { useDeckImages } from './useDeckImages';
+import { getCard, getToken, type ScryToken } from '../../services/scryfall';
+import { useDeckImages, useTokenImages } from './useDeckImages';
 import GlossyPie from './GlossyPie';
-import { computeDeckStats, MANA_COLORS, MANA_LABELS, type CurveKey, type Slice } from './deckMath';
+import { computeDeckStats, computeTokens, MANA_COLORS, MANA_LABELS, type CurveKey, type Slice } from './deckMath';
 import { pieSlicePath } from './stats';
 import Modal from '../ui/Modal';
 import { cx, TEXT_MINI } from '../ui/styles';
@@ -64,6 +64,15 @@ const CURVE_HEIGHT = 150;
 export default function DeckStatsContents({ cards }: { cards: DeckStatsItem[] }) {
   useDeckImages(cards.map((c) => c.name));
   const stats = computeDeckStats(cards, getCard);
+  const [openToken, setOpenToken] = useState<ScryToken | null>(null);
+
+  // I token si chiedono dopo le carte: servono prima gli id che le carte dichiarano.
+  const tokenIds = cards
+    .filter((c) => c.section !== 'side')
+    .flatMap((c) => getCard(c.name)?.tokens.map((t) => t.id) ?? []);
+  useTokenImages(tokenIds);
+  const tokens = computeTokens(cards, getCard, getToken);
+  const maxToken = Math.max(1, ...tokens.groups.map((g) => g.count));
 
   const maxBar = Math.max(1, ...stats.curve.map((b) => b.total));
   const usedKeys = new Set<CurveKey>();
@@ -150,6 +159,78 @@ export default function DeckStatsContents({ cards }: { cards: DeckStatsItem[] })
           </div>
         );
       })}
+
+      {(tokens.groups.length > 0 || tokens.pending > 0) && (
+        <>
+          <ChartTitle note="Token che le carte del Main Deck possono creare. Tocca l'immagine per vedere tutto il token.">
+            Token
+          </ChartTitle>
+          <div className="flex flex-col gap-3">
+            {tokens.groups.map((g) => (
+              <div key={g.key} className="flex items-start gap-3 rounded-lg border border-zaff-border bg-zaff-bg p-2.5">
+                <button
+                  type="button"
+                  onClick={() => setOpenToken(g.token)}
+                  aria-label={`Mostra il token ${g.label}`}
+                  className="shrink-0"
+                >
+                  <img
+                    src={g.token.art}
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                    className="h-14 w-14 rounded object-cover"
+                  />
+                </button>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="min-w-0 flex-1 truncate font-bold text-zaff-text">Token {g.label}</span>
+                    <span className="shrink-0 font-bold text-zaff-text">{g.count}</span>
+                  </div>
+                  <div className="mt-1 h-4 overflow-hidden rounded bg-black/30">
+                    <div
+                      className="h-full rounded bg-gradient-to-r from-zaff-primary to-zaff-accent"
+                      style={{ width: `${(g.count / maxToken) * 100}%` }}
+                    />
+                  </div>
+                  {g.text && <p className={cx('mt-1 line-clamp-2', TEXT_MINI)}>{g.text}</p>}
+                  <p className="mt-1 text-xs leading-snug text-zaff-muted">
+                    {g.cards.map((c) => (c.qty > 1 ? `${c.name} ×${c.qty}` : c.name)).join(' · ')}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+          {tokens.pending > 0 && <p className={cx('mt-2', TEXT_MINI)}>Carico altri token…</p>}
+        </>
+      )}
+
+      {openToken && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/90 p-4"
+          onClick={() => setOpenToken(null)}
+          role="dialog"
+          aria-label={openToken.name}
+        >
+          <button
+            type="button"
+            onClick={() => setOpenToken(null)}
+            aria-label="Chiudi"
+            className="absolute right-3 top-3 flex h-11 w-11 items-center justify-center rounded-full border-2 border-white/60 bg-black/60 text-white"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <line x1="5" y1="5" x2="19" y2="19" />
+              <line x1="19" y1="5" x2="5" y2="19" />
+            </svg>
+          </button>
+          <img
+            src={openToken.normal}
+            alt={openToken.name}
+            className="max-h-full max-w-full rounded-xl object-contain"
+            style={{ aspectRatio: '488 / 680' }}
+          />
+        </div>
+      )}
     </>
   );
 }

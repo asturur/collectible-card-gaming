@@ -1,4 +1,4 @@
-import type { ScryCard } from '../../services/scryfall';
+import type { ScryCard, ScryToken } from '../../services/scryfall';
 import { classify, TYPE_GROUPS, type TypeGroupId } from './cardGroups';
 
 /** Statistiche del Main Deck (la riserva non conta). Solo le carte già
@@ -212,4 +212,58 @@ export function computeDeckStats(
     typePie,
     subtypes,
   };
+}
+
+export interface TokenGroup {
+  key: string;
+  /** Es. "Human 2/2". */
+  label: string;
+  /** Testo del token (abilità), se ne ha. */
+  text: string;
+  token: ScryToken;
+  /** Quante carte del mazzo (con le copie) lo possono creare. */
+  count: number;
+  cards: { name: string; qty: number }[];
+}
+
+/** Token che le carte del Main Deck possono creare. Tokens uguali (stesso
+ *  nome, forza/costituzione, colori e testo) si sommano anche se vengono da
+ *  stampe diverse. `pending` = token ancora in arrivo da Scryfall. */
+export function computeTokens(
+  cards: { name: string; qty: number; section?: string }[],
+  lookup: (name: string) => ScryCard | undefined,
+  lookupToken: (id: string) => ScryToken | undefined
+): { groups: TokenGroup[]; pending: number } {
+  const groups = new Map<string, TokenGroup & { seen: Set<string> }>();
+  let pending = 0;
+  cards
+    .filter((c) => c.section !== 'side')
+    .forEach((item) => {
+      const card = lookup(item.name);
+      if (!card) return;
+      card.tokens.forEach((tk) => {
+        const tok = lookupToken(tk.id);
+        if (!tok) {
+          pending++;
+          return;
+        }
+        const key = [tok.name, tok.power, tok.toughness, tok.colors.join(''), tok.oracle].join('|');
+        let g = groups.get(key);
+        if (!g) {
+          const pt = tok.power || tok.toughness ? ` ${tok.power}/${tok.toughness}` : '';
+          g = { key, label: tok.name + pt, text: tok.oracle, token: tok, count: 0, cards: [], seen: new Set() };
+          groups.set(key, g);
+        }
+        if (g.seen.has(item.name)) return;
+        g.seen.add(item.name);
+        g.count += item.qty;
+        g.cards.push({ name: item.name, qty: item.qty });
+      });
+    });
+  const list = [...groups.values()].map(({ seen: _seen, ...rest }) => ({
+    ...rest,
+    cards: [...rest.cards].sort((a, b) => a.name.localeCompare(b.name, 'en')),
+  }));
+  list.sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, 'en'));
+  return { groups: list, pending };
 }

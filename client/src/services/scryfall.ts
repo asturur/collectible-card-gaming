@@ -29,9 +29,24 @@ export interface ScryCard {
   manaCost: string;
   /** Colori di mana che la carta può produrre (W U B R G C). */
   produced: string[];
+  /** Token che la carta può creare (id Scryfall e nome). */
+  tokens: { id: string; name: string }[];
 }
 
-const STORAGE_KEY = 'mtg-scryfall-cache-v4';
+/** Un token (es. "Human 2/2"), con l'immagine; arriva da una richiesta a parte. */
+export interface ScryToken {
+  id: string;
+  name: string;
+  typeLine: string;
+  power: string;
+  toughness: string;
+  colors: string[];
+  oracle: string;
+  art: string;
+  normal: string;
+}
+
+const STORAGE_KEY = 'mtg-scryfall-cache-v5';
 const MAX_STORED = 3000;
 const BATCH = 75;
 const PAUSE_MS = 110;
@@ -59,6 +74,7 @@ function loadStorage() {
         typeof v.typeLine === 'string' &&
         typeof v.cmc === 'number' &&
         Array.isArray(v.produced) &&
+        Array.isArray(v.tokens) &&
         typeof v.faces[0].art === 'string') {
         found.set(k, v);
       }
@@ -91,7 +107,15 @@ interface RawCard {
   cmc?: number;
   mana_cost?: string;
   produced_mana?: string[];
+  id?: string;
+  power?: string;
+  toughness?: string;
+  oracle_text?: string;
+  all_parts?: { id: string; component: string; name: string }[];
   card_faces?: {
+    power?: string;
+    toughness?: string;
+    oracle_text?: string;
     name?: string;
     image_uris?: RawFaceImages;
     colors?: string[];
@@ -132,6 +156,9 @@ function toCard(raw: RawCard): ScryCard | null {
     manaCost: raw.mana_cost || front?.mana_cost || '',
     produced:
       raw.produced_mana ?? [...new Set((raw.card_faces ?? []).flatMap((f) => f.produced_mana ?? []))],
+    tokens: (raw.all_parts ?? [])
+      .filter((p) => p.component === 'token')
+      .map((p) => ({ id: p.id, name: p.name })),
   };
 }
 
@@ -270,4 +297,91 @@ export function subscribeCards(listener: () => void): () => void {
   return () => {
     listeners.delete(listener);
   };
+}
+
+// --- Token ---------------------------------------------------------------
+
+const TOKEN_KEY = 'mtg-scryfall-tokens-v1';
+const tokensFound = new Map<string, ScryToken>();
+const tokensMissing = new Set<string>();
+let loadedTokens = false;
+
+function loadTokens() {
+  if (loadedTokens) return;
+  loadedTokens = true;
+  try {
+    const raw = localStorage.getItem(TOKEN_KEY);
+    if (!raw) return;
+    (JSON.parse(raw) as [string, ScryToken][]).forEach(([k, v]) => {
+      if (v && typeof v.art === 'string' && typeof v.name === 'string') tokensFound.set(k, v);
+    });
+  } catch {
+    /* cache assente o rovinata */
+  }
+}
+
+function saveTokens() {
+  try {
+    localStorage.setItem(TOKEN_KEY, JSON.stringify([...tokensFound.entries()].slice(-1500)));
+  } catch {
+    /* spazio finito o storage bloccato */
+  }
+}
+
+function toToken(raw: RawCard): ScryToken | null {
+  const front = raw.card_faces?.[0];
+  const img = raw.image_uris ?? (raw.card_faces ?? []).map((f) => f.image_uris).find((u) => !!u?.normal);
+  if (!raw.id || !img?.normal) return null;
+  return {
+    id: raw.id,
+    name: raw.name.split('//')[0].trim(),
+    typeLine: (raw.type_line ?? front?.type_line ?? '').split('//')[0].trim(),
+    power: raw.power ?? front?.power ?? '',
+    toughness: raw.toughness ?? front?.toughness ?? '',
+    colors: raw.colors ?? front?.colors ?? [],
+    oracle: (raw.oracle_text ?? front?.oracle_text ?? '').trim(),
+    art: img.art_crop ?? img.small ?? img.normal,
+    normal: img.normal,
+  };
+}
+
+async function fetchTokenBatch(ids: string[]): Promise<void> {
+  try {
+    const res = await fetch('https://api.scryfall.com/cards/collection', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ identifiers: ids.map((id) => ({ id })) }),
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const json = (await res.json()) as { data?: RawCard[] };
+    (json.data ?? []).forEach((raw) => {
+      const t = toToken(raw);
+      if (t) tokensFound.set(t.id, t);
+    });
+    ids.forEach((id) => {
+      if (!tokensFound.has(id)) tokensMissing.add(id);
+    });
+    saveTokens();
+  } catch {
+    /* errore di rete: si riprova alla prossima apertura */
+  }
+}
+
+/** Chiede a Scryfall i token (per id) che non conosciamo ancora. */
+export function requestTokens(ids: string[]): void {
+  loadTokens();
+  const todo = [...new Set(ids)].filter((id) => id && !tokensFound.has(id) && !tokensMissing.has(id));
+  for (let i = 0; i < todo.length; i += BATCH) {
+    const chunk = todo.slice(i, i + BATCH);
+    chain = chain.then(async () => {
+      await fetchTokenBatch(chunk);
+      listeners.forEach((l) => l());
+      await sleep(PAUSE_MS);
+    });
+  }
+}
+
+export function getToken(id: string): ScryToken | undefined {
+  loadTokens();
+  return tokensFound.get(id);
 }
