@@ -215,7 +215,7 @@ export default function LifeCounter({ players, startLife, onCancel, onFinish }: 
                 onClick={() => setOptionsFor(i)}
                 style={TAP_HIGHLIGHT_OFF}
                 aria-label={`${p.name}: opzioni`}
-                className="absolute bottom-2 left-1/2 z-10 flex h-10 w-10 -translate-x-1/2 select-none items-center justify-center rounded-full bg-black/25 text-lg text-white/85 active:bg-black/45"
+                className="absolute bottom-2 left-1/2 z-10 flex h-[60px] w-[60px] -translate-x-1/2 select-none items-center justify-center rounded-full bg-black/25 text-[27px] leading-none text-white/85 active:bg-black/45"
               >
                 ⋯
               </button>
@@ -246,10 +246,11 @@ export default function LifeCounter({ players, startLife, onCancel, onFinish }: 
               </div>
 
               {optionsFor === i && (
-                <div className="absolute inset-0 z-20 flex flex-col justify-center gap-2 bg-black/85 px-4 py-3 text-white">
-                  <label className="flex items-center justify-between gap-3 text-[15px] font-bold tracking-wider">
+                <div className="absolute inset-0 z-20 flex flex-col bg-black/85 px-4 pb-3 pt-3 text-white">
+                  <div className="flex flex-1 flex-col justify-center gap-3.5">
+                  <label className="flex items-center justify-between gap-3 text-[24px] font-bold tracking-wider">
                     <span>KILL</span>
-                    <span className="relative">
+                    <span className="relative origin-right scale-[1.8]">
                       <input
                         type="checkbox"
                         checked={p.kill}
@@ -259,9 +260,9 @@ export default function LifeCounter({ players, startLife, onCancel, onFinish }: 
                       <span className="mtg-switch" />
                     </span>
                   </label>
-                  <label className="flex items-center justify-between gap-3 text-[15px] font-bold tracking-wider">
+                  <label className="flex items-center justify-between gap-3 text-[24px] font-bold tracking-wider">
                     <span>MILL</span>
-                    <span className="relative">
+                    <span className="relative origin-right scale-[1.8]">
                       <input
                         type="checkbox"
                         checked={p.mill}
@@ -271,9 +272,9 @@ export default function LifeCounter({ players, startLife, onCancel, onFinish }: 
                       <span className="mtg-switch" />
                     </span>
                   </label>
-                  <label className="flex items-center justify-between gap-3 text-[15px] font-bold tracking-wider">
-                    <span>VELENO</span>
-                    <span className="relative">
+                  <label className="flex items-center justify-between gap-3 text-[24px] font-bold tracking-wider">
+                    <span>POISON</span>
+                    <span className="relative origin-right scale-[1.8]">
                       <input
                         type="checkbox"
                         checked={p.poisonOn}
@@ -306,10 +307,11 @@ export default function LifeCounter({ players, startLife, onCancel, onFinish }: 
                       </button>
                     </div>
                   )}
+                  </div>
                   <button
                     type="button"
                     onClick={() => setOptionsFor(null)}
-                    className="mt-1 rounded-lg border border-white/30 py-2 text-sm font-semibold active:bg-white/20"
+                    className="mt-2 rounded-lg border-2 border-white/70 py-2.5 text-base font-semibold active:bg-white/20"
                   >
                     Chiudi
                   </button>
@@ -328,7 +330,7 @@ export default function LifeCounter({ players, startLife, onCancel, onFinish }: 
         onClick={() => setMenuOpen(true)}
         style={TAP_HIGHLIGHT_OFF}
         aria-label="Opzioni di gioco"
-        className={`absolute z-30 flex h-14 w-14 select-none items-center justify-center rounded-full border border-white/30 bg-black/75 text-2xl shadow-lg active:bg-black ${
+        className={`absolute z-30 flex h-[84px] w-[84px] select-none items-center justify-center rounded-full border border-white/30 bg-black/75 text-[40px] shadow-lg active:bg-black ${
           lives.length === 1
             ? 'bottom-3 left-1/2 -translate-x-1/2'
             : 'left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2'
