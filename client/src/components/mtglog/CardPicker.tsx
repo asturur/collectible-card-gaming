@@ -181,7 +181,7 @@ export default function CardPicker({
       aria-pressed={section === s}
       className={cx(
         'rounded-lg border px-4 py-2 text-sm font-semibold transition',
-        section === s ? 'border-zaff-text bg-zaff-text text-zaff-bg' : 'border-zaff-border text-zaff-muted'
+        section === s ? 'border-transparent bg-gradient-to-r from-zaff-primary to-zaff-accent text-zaff-bg' : 'border-zaff-border text-zaff-muted'
       )}
     >
       {label}

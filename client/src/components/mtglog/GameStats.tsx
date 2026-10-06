@@ -214,7 +214,7 @@ export default function GameStats() {
             className={cx(
               'rounded-lg border py-3.5 text-[15px] font-semibold transition',
               sort === o.value
-                ? 'border-zaff-text bg-zaff-text text-zaff-bg'
+                ? 'border-transparent bg-gradient-to-r from-zaff-primary to-zaff-accent text-zaff-bg'
                 : 'border-zaff-border bg-transparent text-zaff-muted active:border-zaff-muted active:text-zaff-text'
             )}
           >

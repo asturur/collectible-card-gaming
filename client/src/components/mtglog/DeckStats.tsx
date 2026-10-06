@@ -5,6 +5,7 @@ import { useDeckImages, useTokenImages } from './useDeckImages';
 import GlossyPie from './GlossyPie';
 import { computeDeckStats, computeTokens, MANA_COLORS, MANA_LABELS, type CurveKey, type Slice } from './deckMath';
 import { pieSlicePath } from './stats';
+import Button from '../ui/Button';
 import Modal from '../ui/Modal';
 import { cx, TEXT_MINI } from '../ui/styles';
 
@@ -245,20 +246,15 @@ function HistogramIcon() {
   );
 }
 
-/** Pulsante a istogramma + finestra "Statistiche mazzo". */
+/** Pulsante in evidenza (colori del tasto principale) + finestra "Statistiche mazzo". */
 export function DeckStatsButton({ cards, deckName }: { cards: DeckStatsItem[]; deckName?: string }) {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        title="Statistiche del mazzo"
-        aria-label="Statistiche del mazzo"
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border-2 border-zaff-primary text-zaff-text transition active:scale-95"
-      >
+      <Button size="lg" fullWidth onClick={() => setOpen(true)} aria-label="Statistiche del mazzo">
         <HistogramIcon />
-      </button>
+        Statistiche del mazzo
+      </Button>
       {open &&
         createPortal(
           <Modal level={2} title="Statistiche mazzo" subtitle={deckName} onClose={() => setOpen(false)}>

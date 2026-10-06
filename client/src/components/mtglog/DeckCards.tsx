@@ -415,7 +415,7 @@ export default function DeckCardsView({
   const toggleClass = (active: boolean) =>
     cx(
       'rounded-lg border px-4 py-2 text-sm font-semibold transition',
-      active ? 'border-zaff-text bg-zaff-text text-zaff-bg' : 'border-zaff-border text-zaff-muted'
+      active ? 'border-transparent bg-gradient-to-r from-zaff-primary to-zaff-accent text-zaff-bg' : 'border-zaff-border text-zaff-muted'
     );
   const toggleBtn = (m: ViewMode, label: string) => (
     <button type="button" onClick={() => chooseMode(m)} aria-pressed={mode === m} className={toggleClass(mode === m)}>
@@ -442,12 +442,16 @@ export default function DeckCardsView({
     <>
       {/* Nell'editor i totali stanno già nella barra fissa in cima. */}
       {!editable && (
+        <>
         <div className="sticky top-0 z-10 -mx-1 mb-3 flex items-center justify-between gap-2 rounded-lg border border-zaff-primary bg-zaff-surface px-3 py-2 text-sm font-semibold text-zaff-text shadow-lg">
           <span>Main {mainTotal}</span>
           <span>Side {sideTotal}</span>
           <span className="text-zaff-muted">Totale {mainTotal + sideTotal}</span>
+        </div>
+        <div className="mb-3">
           <DeckStatsButton cards={cards} />
         </div>
+        </>
       )}
 
       <div className="mb-2.5 grid grid-cols-2 gap-2.5">

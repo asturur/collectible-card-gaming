@@ -363,6 +363,9 @@ export default function DeckEditor({ deckId, initialDraft, onBack, onSaved }: De
         <span className="bg-gradient-to-r from-zaff-primary to-zaff-accent bg-clip-text text-lg font-bold text-transparent">
           Totale {total}
         </span>
+      </div>
+
+      <div className="mb-4">
         <DeckStatsButton cards={draft} deckName={name} />
       </div>
 

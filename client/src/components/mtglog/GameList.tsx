@@ -576,7 +576,7 @@ export default function GameList({ userId, onEdit, onRematch }: GameListProps) {
               )}
             </Button>
 
-            <Button variant="ghost" onClick={() => onRematch(selectedGame)}>
+            <Button onClick={() => onRematch(selectedGame)}>
               🔄 Rivincita
             </Button>
 
