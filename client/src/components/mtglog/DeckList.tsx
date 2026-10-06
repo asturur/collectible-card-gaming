@@ -285,16 +285,21 @@ export default function DeckList({ userId, onCreate, onEdit, onImportFile }: Dec
         )}
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        <Button variant="link" size="sm" onClick={onCreate}>
+      {/* Stessa logica dei tasti di Nuova Partita (Avvia Partita / Salva /
+          Annulla): a tutta larghezza, grandi e facili da toccare; l'azione
+          principale col colore pieno, le altre due solo col bordo. */}
+      <div className="mt-1 flex flex-col gap-2.5">
+        <Button size="lg" fullWidth className="py-3.5 text-lg" onClick={onCreate}>
           + Crea Nuovo Mazzo
         </Button>
-        <Button variant="link" size="sm" onClick={() => fileInputRef.current?.click()}>
+        <Button variant="ghost" size="lg" fullWidth className="py-3.5" onClick={() => fileInputRef.current?.click()}>
           📄 Importa Mazzo (File ManaBox)
         </Button>
         <Button
-          variant="link"
-          size="sm"
+          variant="ghost"
+          size="lg"
+          fullWidth
+          className="py-3.5"
           onClick={() => {
             setPasteOpen((v) => !v);
             setError('');
