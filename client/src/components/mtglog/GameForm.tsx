@@ -604,7 +604,7 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved }: 
                     onChange={() => toggleWinner(i)}
                     className="mtg-switch-input absolute h-0 w-0 opacity-0"
                   />
-                  <span className="mtg-switch" />
+                  <span className="mtg-switch mtg-switch-lg" />
                   Vincitore
                 </label>
 
@@ -613,7 +613,7 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved }: 
                   onChange={(next) => updatePlayer(i, { life: next })}
                   placeholder="PV"
                   aria-label="Punti vita"
-                  className="w-[104px]"
+                  className="w-[176px]"
                 />
               </div>
             </div>
@@ -621,7 +621,7 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved }: 
         ))}
       </div>
 
-      <Button variant="link" size="sm" onClick={addPlayer}>
+      <Button variant="link" size="xl" onClick={addPlayer}>
         + Aggiungi Giocatore
       </Button>
 
@@ -633,7 +633,7 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved }: 
           value={String(startLife)}
           min={1}
           onChange={(next) => setStartLife(Math.max(1, parseInt(next, 10) || 1))}
-          className="max-w-[140px]"
+          className="max-w-[190px]"
         />
       </div>
 
@@ -656,11 +656,11 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved }: 
         fieldClassName="mt-4"
       />
 
-      <div className="mt-2.5 flex flex-wrap items-center gap-2.5">
-        <Button onClick={handleSaveClick} disabled={saving}>
+      <div className="mt-2.5 grid grid-cols-2 gap-2.5">
+        <Button fullWidth onClick={handleSaveClick} disabled={saving}>
           {editingGame ? 'Salva Modifiche' : 'Salva Partita'}
         </Button>
-        <Button variant="ghost" onClick={onBack}>
+        <Button fullWidth variant="ghost" onClick={onBack}>
           Annulla
         </Button>
       </div>

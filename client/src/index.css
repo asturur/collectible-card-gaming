@@ -125,6 +125,23 @@ body::before {
   transform: translateX(16px);
 }
 
+/* Interruttore grande (1,5x), per il "Vincitore" di Nuova Partita: cambia le
+   misure vere (non uno zoom), così lo spazio attorno si adegua. */
+.mtg-switch-lg {
+  width: 54px;
+  height: 30px;
+  border-radius: 30px;
+}
+.mtg-switch-lg::before {
+  width: 24px;
+  height: 24px;
+  left: 3px;
+  top: 3px;
+}
+.mtg-switch-input:checked + .mtg-switch-lg::before {
+  transform: translateX(24px);
+}
+
 /* Stepper punti vita: niente frecce native sull'input numerico. */
 .mtg-life-input::-webkit-outer-spin-button,
 .mtg-life-input::-webkit-inner-spin-button {

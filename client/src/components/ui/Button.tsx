@@ -2,7 +2,7 @@ import type { AnchorHTMLAttributes, ButtonHTMLAttributes, ReactNode } from 'reac
 import { cx } from './styles';
 
 export type ButtonVariant = 'primary' | 'ghost' | 'link' | 'danger';
-export type ButtonSize = 'sm' | 'md' | 'lg';
+export type ButtonSize = 'sm' | 'md' | 'lg' | 'xl';
 
 const BASE =
   'inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-zaff-primary focus-visible:ring-offset-2 focus-visible:ring-offset-zaff-surface disabled:cursor-not-allowed disabled:opacity-50';
@@ -11,6 +11,8 @@ const SIZES: Record<ButtonSize, string> = {
   sm: 'px-3 py-1.5 text-sm',
   md: 'px-4 py-2.5 text-sm',
   lg: 'px-4 py-3 text-base',
+  /** 1,5 volte `sm`: per i tasti da toccare col dito, ben visibili. */
+  xl: 'px-[18px] py-[9px] text-[21px]',
 };
 
 const VARIANTS: Record<ButtonVariant, string> = {

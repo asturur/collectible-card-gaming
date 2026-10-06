@@ -13,6 +13,7 @@ interface NumberStepperProps {
 /**
  * − / campo / + per i numeri che si aggiustano a colpetti (punti vita).
  * Il valore resta una stringa perché il campo può essere vuoto.
+ * I tasti − e + sono grandi (circa il doppio) perché si toccano col dito.
  */
 export default function NumberStepper({
   value,
@@ -30,7 +31,7 @@ export default function NumberStepper({
   }
 
   const buttonClass =
-    'w-[30px] shrink-0 bg-zaff-bg text-base leading-none text-zaff-text transition hover:bg-zaff-gold hover:text-zaff-bg';
+    'w-[60px] shrink-0 bg-zaff-bg text-[32px] leading-none text-zaff-text transition hover:bg-zaff-gold hover:text-zaff-bg active:bg-zaff-gold active:text-zaff-bg';
 
   return (
     <div className={cx('flex overflow-hidden rounded-lg border border-zaff-border', className)}>
@@ -45,7 +46,7 @@ export default function NumberStepper({
         placeholder={placeholder}
         aria-label={ariaLabel}
         onChange={(e) => onChange(e.target.value)}
-        className="mtg-life-input w-11 min-w-0 flex-1 border-0 bg-zaff-bg px-0.5 py-2 text-center tabular-nums text-zaff-text placeholder:text-zaff-muted focus:outline-none"
+        className="mtg-life-input w-11 min-w-0 flex-1 border-0 bg-zaff-bg px-0.5 py-3 text-center tabular-nums text-zaff-text placeholder:text-zaff-muted focus:outline-none"
       />
       <button type="button" onClick={() => bump(step)} aria-label="Aumenta" className={buttonClass}>
         +
