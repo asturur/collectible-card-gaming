@@ -497,8 +497,10 @@ export default function GameList({ userId, onEdit, onRematch }: GameListProps) {
                               p.winner ? 'font-bold text-zaff-text' : 'text-zaff-muted'
                             }`}
                           >
-                            {p.winner && '🎉 '}
-                            {p.name}
+                            <span className="inline-block w-6 text-center" aria-hidden="true">
+                              {p.winner ? '🎉' : ''}
+                            </span>
+                            <span className="ml-1">{p.name}</span>
                             <ManaIcons colors={p.colors} className="ml-1.5 text-[13px]" />
                           </span>
                         ));
