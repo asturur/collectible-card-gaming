@@ -249,35 +249,39 @@ export default function DeckList({ userId, onCreate, onEdit, onImportFile }: Dec
         ) : (
           <ul>
             {decks.map((d) => (
-              <li key={d.id} className="flex items-center justify-between gap-2.5 border-b border-zaff-border py-2 last:border-b-0">
-                <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden">
-                  <span className="truncate text-[15px] text-zaff-text" title={d.name}>
-                    {d.name}
-                  </span>
+              <li
+                key={d.id}
+                className="mb-2 flex items-stretch rounded-lg border border-zaff-border bg-zaff-bg transition hover:border-zaff-primary has-[button:active]:border-zaff-primary"
+              >
+                {/* Tutta la riga (nome) apre la vista del mazzo, per tutti i mazzi. */}
+                <button
+                  type="button"
+                  onClick={() => setSelectedId(d.id)}
+                  className="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden py-3 pl-3.5 pr-2 text-left"
+                  title={d.name}
+                >
+                  <span className="truncate text-[15px] text-zaff-text">{d.name}</span>
                   <ManaIcons colors={d.colors} className="shrink-0 text-[17px]" />
-                </div>
-                <div className="flex shrink-0 gap-1.5 whitespace-nowrap">
-                  {canEdit(d.createdBy, userId) ? (
-                    // Cancella, modifica, visualizza (in quest'ordine): così l'occhio
-                    // "Visualizza" è sempre l'ultimo tasto a destra, incolonnato con
-                    // quello dei mazzi altrui, che hanno solo quello.
-                    <>
-                      <IconButton label="Cancella mazzo" tone="danger" onClick={() => handleDelete(d.id)}>
-                        🗑️
-                      </IconButton>
-                      <IconButton label="Modifica mazzo" onClick={() => onEdit(d.id)}>
-                        ✏️
-                      </IconButton>
-                      <IconButton label="Visualizza mazzo" onClick={() => setSelectedId(d.id)}>
-                        👁️
-                      </IconButton>
-                    </>
-                  ) : (
-                    <IconButton label="Visualizza mazzo" onClick={() => setSelectedId(d.id)}>
-                      👁️
+                </button>
+                {canEdit(d.createdBy, userId) && (
+                  // Solo per i mazzi propri: cancella e modifica.
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    <IconButton label="Cancella mazzo" tone="danger" onClick={() => handleDelete(d.id)}>
+                      🗑️
                     </IconButton>
-                  )}
-                </div>
+                    <IconButton label="Modifica mazzo" onClick={() => onEdit(d.id)}>
+                      ✏️
+                    </IconButton>
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setSelectedId(d.id)}
+                  aria-label={`Apri ${d.name}`}
+                  className="flex w-10 shrink-0 items-center justify-center text-2xl leading-none text-zaff-muted"
+                >
+                  ›
+                </button>
               </li>
             ))}
           </ul>

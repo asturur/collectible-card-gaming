@@ -25,7 +25,7 @@ export default function FilterTabs({ options, value, onChange, className }: Filt
           className={cx(
             'rounded-lg border px-3 py-1.5 text-[13px] transition',
             value === option.value
-              ? 'border-zaff-text bg-zaff-text text-zaff-bg'
+              ? 'border-transparent bg-gradient-to-r from-zaff-primary to-zaff-accent font-semibold text-zaff-bg'
               : 'border-zaff-border bg-zaff-surface text-zaff-muted hover:text-zaff-text'
           )}
         >
