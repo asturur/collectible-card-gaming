@@ -50,6 +50,8 @@ interface PlayerRow {
    *  identico (a parte maiuscole/spazi) a uno già in elenco, mostra l'avviso
    *  "scegli un nome diverso" invece della domanda "è la stessa persona?". */
   rejectingMatch?: boolean;
+  /** True quando il nome si scrive a mano (nuovo giocatore) invece di sceglierlo dall'elenco. */
+  nameTyping?: boolean;
 }
 
 /** I punti vita iniziali non fanno parte dei dati della partita su Supabase:
@@ -117,7 +119,8 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved }: 
   const [saving, setSaving] = useState(false);
   const [lifeCounterOpen, setLifeCounterOpen] = useState(false);
   /** Indice della riga giocatore il cui elenco suggerimenti nomi è aperto (solo uno alla volta). */
-  const [nameSuggestFor, setNameSuggestFor] = useState<number | null>(null);
+  const [playerPickerFor, setPlayerPickerFor] = useState<number | null>(null);
+  const [deckPickerFor, setDeckPickerFor] = useState<number | null>(null);
   const [formatPickerOpen, setFormatPickerOpen] = useState(false);
 
   async function loadOptions(): Promise<DeckOption[]> {
@@ -217,8 +220,7 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved }: 
   }
 
   function selectPlayerName(index: number, name: string) {
-    updatePlayer(index, { name, rejectingMatch: false });
-    setNameSuggestFor(null);
+    updatePlayer(index, { name, rejectingMatch: false, nameTyping: false });
   }
 
   /** Nome di un giocatore già in elenco che somiglia a quello digitato (a parte
@@ -472,41 +474,42 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved }: 
             className={`mb-3 rounded-lg border bg-zaff-bg p-3 ${p.winner ? 'border-zaff-highlight' : 'border-zaff-border'}`}
           >
             <div className="mb-2 flex flex-wrap items-center gap-2">
-              <div className="relative min-w-0 flex-1">
-                <input
-                  type="text"
-                  value={p.name}
-                  onChange={(e) => updatePlayer(i, { name: e.target.value })}
-                  onFocus={() => setNameSuggestFor(i)}
-                  onBlur={() => setNameSuggestFor((cur) => (cur === i ? null : cur))}
-                  placeholder={`Giocatore ${i + 1}`}
-                  maxLength={MAX_PLAYER_NAME_LENGTH}
-                  autoComplete="off"
-                  className={cx(FIELD_CONTROL_SM, 'w-full')}
-                />
-                {nameSuggestFor === i &&
-                  (() => {
-                    const q = p.name.trim().toLowerCase();
-                    const matches = playerNames.filter((n) => !q || n.toLowerCase().includes(q)).slice(0, 8);
-                    if (matches.length === 0) return null;
-                    return (
-                      <div className="absolute inset-x-0 top-full z-10 mt-1 max-h-[220px] overflow-y-auto rounded-lg border border-zaff-border bg-zaff-surface shadow-lg">
-                        {matches.map((n) => (
-                          <button
-                            key={n}
-                            type="button"
-                            onMouseDown={(e) => {
-                              e.preventDefault();
-                              selectPlayerName(i, n);
-                            }}
-                            className="block w-full px-2.5 py-1.5 text-left text-sm text-zaff-text transition hover:bg-zaff-bg"
-                          >
-                            {n}
-                          </button>
-                        ))}
-                      </div>
-                    );
-                  })()}
+              <div className="min-w-0 flex-1">
+                {p.nameTyping || (p.name !== '' && !playerNames.includes(p.name)) ? (
+                  <>
+                    <input
+                      type="text"
+                      value={p.name}
+                      onChange={(e) => updatePlayer(i, { name: e.target.value, nameTyping: true })}
+                      placeholder={`Nome del giocatore ${i + 1}`}
+                      maxLength={MAX_PLAYER_NAME_LENGTH}
+                      autoComplete="off"
+                      className={cx(FIELD_CONTROL_SM, 'w-full')}
+                    />
+                    {playerNames.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => updatePlayer(i, { name: '', nameTyping: false, rejectingMatch: false })}
+                        className="mt-1 text-xs text-zaff-muted underline"
+                      >
+                        Scegli dall&apos;elenco giocatori
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setPlayerPickerFor(i)}
+                    className={cx(FIELD_CONTROL_SM, 'flex w-full items-center justify-between gap-2 text-left')}
+                  >
+                    <span className={cx('min-w-0 truncate', p.name ? undefined : 'text-zaff-muted')}>
+                      {p.name || `Scegli il giocatore ${i + 1}`}
+                    </span>
+                    <span className="shrink-0 text-xl leading-none text-zaff-muted" aria-hidden="true">
+                      ›
+                    </span>
+                  </button>
+                )}
               </div>
               {players.length > 1 && (
                 <button
@@ -561,18 +564,18 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved }: 
 
             <div className="mb-2 flex flex-wrap items-center gap-2">
               {p.deckMode === 'select' ? (
-                <select
-                  value={p.deckSelect}
-                  onChange={(e) => handleDeckSelectChange(i, e.target.value)}
-                  className={cx(FIELD_CONTROL_SM, 'min-w-0 flex-1')}
+                <button
+                  type="button"
+                  onClick={() => setDeckPickerFor(i)}
+                  className={cx(FIELD_CONTROL_SM, 'flex min-w-0 flex-1 items-center justify-between gap-2 text-left')}
                 >
-                  <option value="">Nessun mazzo</option>
-                  {decks.map((d) => (
-                    <option key={d.name} value={d.name}>
-                      {d.name}
-                    </option>
-                  ))}
-                </select>
+                  <span className={cx('min-w-0 truncate', p.deckSelect ? undefined : 'text-zaff-muted')}>
+                    {p.deckSelect || 'Scegli il mazzo'}
+                  </span>
+                  <span className="shrink-0 text-xl leading-none text-zaff-muted" aria-hidden="true">
+                    ›
+                  </span>
+                </button>
               ) : (
                 <input
                   type="text"
@@ -633,6 +636,78 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved }: 
           </div>
         ))}
       </div>
+
+      {playerPickerFor !== null && (
+        <Modal level={2} title={`Giocatore ${playerPickerFor + 1}`} onClose={() => setPlayerPickerFor(null)}>
+          <div className="grid grid-cols-2 gap-2.5">
+            {playerNames.map((n) => {
+              const usedElsewhere = players.some((q, qi) => qi !== playerPickerFor && q.name.trim() === n);
+              return (
+                <Button
+                  key={n}
+                  variant={players[playerPickerFor]?.name === n ? 'primary' : 'ghost'}
+                  size="lg"
+                  fullWidth
+                  disabled={usedElsewhere}
+                  className="min-h-[64px] py-4 text-lg"
+                  onClick={() => {
+                    selectPlayerName(playerPickerFor, n);
+                    setPlayerPickerFor(null);
+                  }}
+                >
+                  <span className="min-w-0 truncate">{n}</span>
+                </Button>
+              );
+            })}
+          </div>
+          <Button
+            variant="link"
+            size="lg"
+            fullWidth
+            className="mt-3"
+            onClick={() => {
+              updatePlayer(playerPickerFor, { name: '', nameTyping: true, rejectingMatch: false });
+              setPlayerPickerFor(null);
+            }}
+          >
+            + Nuovo giocatore (scrivi il nome)
+          </Button>
+        </Modal>
+      )}
+
+      {deckPickerFor !== null && (
+        <Modal level={2} title="Mazzo" onClose={() => setDeckPickerFor(null)}>
+          <div className="flex flex-col gap-2.5">
+            <Button
+              variant={!players[deckPickerFor]?.deckSelect ? 'primary' : 'ghost'}
+              size="lg"
+              fullWidth
+              className="py-3.5 text-base"
+              onClick={() => {
+                handleDeckSelectChange(deckPickerFor, '');
+                setDeckPickerFor(null);
+              }}
+            >
+              Nessun mazzo
+            </Button>
+            {decks.map((d) => (
+              <Button
+                key={d.name}
+                variant={players[deckPickerFor]?.deckSelect === d.name ? 'primary' : 'ghost'}
+                size="lg"
+                fullWidth
+                className="py-3.5 text-base"
+                onClick={() => {
+                  handleDeckSelectChange(deckPickerFor, d.name);
+                  setDeckPickerFor(null);
+                }}
+              >
+                <span className="min-w-0 truncate">{d.name}</span>
+              </Button>
+            ))}
+          </div>
+        </Modal>
+      )}
 
       <Button variant="link" size="xl" onClick={addPlayer}>
         + Aggiungi Giocatore

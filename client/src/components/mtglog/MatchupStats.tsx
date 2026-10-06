@@ -13,7 +13,6 @@ import {
 } from './ImageExport';
 import { computeMatchups, PIE_COLORS, pieSlicePath, type MatchupRow } from './stats';
 import Modal from '../ui/Modal';
-import { CrossedSwordsIcon, GridTile, TILE_GRID } from '../ui/Tile';
 import { cx, TEXT_MINI, TEXT_MUTED } from '../ui/styles';
 
 interface MatchupStatsProps {
@@ -119,17 +118,30 @@ export default function MatchupStats({ games }: MatchupStatsProps) {
 
   return (
     <>
-      <div className={TILE_GRID}>
+      <p className={cx('mb-2', TEXT_MINI)}>Tocca una sfida per vederne le statistiche.</p>
+      <ul>
         {matchups.map((m) => (
-          <GridTile
-            key={m.key}
-            graphic={<CrossedSwordsIcon />}
-            label={m.label}
-            sublabel={`${m.games} partite`}
-            onClick={() => openMatchup(m.key)}
-          />
+          <li key={m.key}>
+            <button
+              type="button"
+              onClick={() => openMatchup(m.key)}
+              className="mb-2 flex w-full items-center gap-3 rounded-lg border border-zaff-border bg-zaff-bg px-3.5 py-3 text-left transition hover:border-zaff-primary active:border-zaff-primary"
+            >
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[15px] text-zaff-text" title={m.label}>
+                  {m.label}
+                </span>
+                <span className={cx('block', TEXT_MINI)}>
+                  {m.games} {m.games === 1 ? 'partita' : 'partite'}
+                </span>
+              </span>
+              <span className="shrink-0 text-2xl leading-none text-zaff-muted" aria-hidden="true">
+                ›
+              </span>
+            </button>
+          </li>
         ))}
-      </div>
+      </ul>
 
       {selected && (
         <Modal level={2} title={selected.label} onClose={() => openMatchup(null)}>
