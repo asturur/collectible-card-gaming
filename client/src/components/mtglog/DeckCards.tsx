@@ -1,8 +1,12 @@
-import { useEffect, useReducer, useRef, useState } from 'react';
-import { cardKey, getCard, isMissing, requestCards, subscribeCards, type ScryCard } from '../../services/scryfall';
+import { useEffect, useRef, useState } from 'react';
+import { getCard, isMissing, type ScryCard } from '../../services/scryfall';
+import { useDeckImages } from './useDeckImages';
+import { DeckStatsButton } from './DeckStats';
 import { groupCards, type GroupedColor, type GroupMode } from './cardGroups';
 import { ManaIcons } from './ManaIcon';
 import { cx } from '../ui/styles';
+
+export { useDeckImages };
 
 /** Carta di un mazzo, per questa vista (stessa forma di `DeckViewCard`). */
 export interface DeckCardsItem {
@@ -40,17 +44,6 @@ function readMode(): ViewMode {
 
 function total(cards: DeckCardsItem[]): number {
   return cards.reduce((sum, c) => sum + c.qty, 0);
-}
-
-/** Chiede a Scryfall le carte del mazzo e si riaggiorna quando arrivano. */
-export function useDeckImages(names: string[]) {
-  const [, bump] = useReducer((n: number) => n + 1, 0);
-  const signature = names.map(cardKey).join('|');
-  useEffect(() => subscribeCards(bump), []);
-  useEffect(() => {
-    requestCards(names);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [signature]);
 }
 
 /** Riquadro grigio al posto dell'immagine: carta ancora in arrivo o non trovata. */
@@ -453,6 +446,7 @@ export default function DeckCardsView({
           <span>Main {mainTotal}</span>
           <span>Side {sideTotal}</span>
           <span className="text-zaff-muted">Totale {mainTotal + sideTotal}</span>
+          <DeckStatsButton cards={cards} />
         </div>
       )}
 

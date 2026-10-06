@@ -23,9 +23,15 @@ export interface ScryCard {
   colors: string[];
   /** Riga dei tipi della faccia davanti, es. "Legendary Creature — Elf". */
   typeLine: string;
+  /** Valore di mana (costo totale convertito). */
+  cmc: number;
+  /** Costo di mana come scritto da Scryfall, es. "{2}{G}{G}". */
+  manaCost: string;
+  /** Colori di mana che la carta può produrre (W U B R G C). */
+  produced: string[];
 }
 
-const STORAGE_KEY = 'mtg-scryfall-cache-v3';
+const STORAGE_KEY = 'mtg-scryfall-cache-v4';
 const MAX_STORED = 3000;
 const BATCH = 75;
 const PAUSE_MS = 110;
@@ -51,6 +57,8 @@ function loadStorage() {
     entries.forEach(([k, v]) => {
       if (v && Array.isArray(v.faces) && v.faces.length > 0 && Array.isArray(v.colors) &&
         typeof v.typeLine === 'string' &&
+        typeof v.cmc === 'number' &&
+        Array.isArray(v.produced) &&
         typeof v.faces[0].art === 'string') {
         found.set(k, v);
       }
@@ -80,7 +88,17 @@ interface RawCard {
   image_uris?: RawFaceImages;
   colors?: string[];
   type_line?: string;
-  card_faces?: { name?: string; image_uris?: RawFaceImages; colors?: string[]; type_line?: string }[];
+  cmc?: number;
+  mana_cost?: string;
+  produced_mana?: string[];
+  card_faces?: {
+    name?: string;
+    image_uris?: RawFaceImages;
+    colors?: string[];
+    type_line?: string;
+    mana_cost?: string;
+    produced_mana?: string[];
+  }[];
 }
 
 function toFaces(raw: RawCard): ScryFace[] {
@@ -110,6 +128,10 @@ function toCard(raw: RawCard): ScryCard | null {
     faces,
     colors: raw.colors ?? front?.colors ?? [],
     typeLine: (raw.type_line ?? front?.type_line ?? '').split('//')[0].trim(),
+    cmc: typeof raw.cmc === 'number' ? raw.cmc : 0,
+    manaCost: raw.mana_cost || front?.mana_cost || '',
+    produced:
+      raw.produced_mana ?? [...new Set((raw.card_faces ?? []).flatMap((f) => f.produced_mana ?? []))],
   };
 }
 

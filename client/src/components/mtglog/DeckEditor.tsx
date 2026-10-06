@@ -3,6 +3,7 @@ import { MAX_DECK_NAME_LENGTH, supabase, TABLE_DECKS } from '../../services/supa
 import { ManaPips } from './ManaIcon';
 import CardPicker from './CardPicker';
 import DeckCardsView, { useDeckImages } from './DeckCards';
+import { DeckStatsButton } from './DeckStats';
 import Button from '../ui/Button';
 import { TextField, SelectField } from '../ui/Field';
 import { cx, FIELD_CONTROL_SM, FIELD_LABEL, TEXT_MINI, TEXT_MUTED } from '../ui/styles';
@@ -362,6 +363,7 @@ export default function DeckEditor({ deckId, initialDraft, onBack, onSaved }: De
         <span className="bg-gradient-to-r from-zaff-primary to-zaff-accent bg-clip-text text-lg font-bold text-transparent">
           Totale {total}
         </span>
+        <DeckStatsButton cards={draft} deckName={name} />
       </div>
 
       <TextField
