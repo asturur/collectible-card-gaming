@@ -14,6 +14,7 @@ import LifeCounter from './LifeCounter';
 import type { LossCause } from './GameList';
 import { ManaPips } from './ManaIcon';
 import Button from '../ui/Button';
+import Modal from '../ui/Modal';
 import NumberStepper from '../ui/NumberStepper';
 import { TextAreaField } from '../ui/Field';
 import { cx, FIELD_CONTROL_SM, FIELD_LABEL, TEXT_MINI, TEXT_MUTED } from '../ui/styles';
@@ -117,7 +118,7 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved }: 
   const [lifeCounterOpen, setLifeCounterOpen] = useState(false);
   /** Indice della riga giocatore il cui elenco suggerimenti nomi è aperto (solo uno alla volta). */
   const [nameSuggestFor, setNameSuggestFor] = useState<number | null>(null);
-  const [formatSuggestOpen, setFormatSuggestOpen] = useState(false);
+  const [formatPickerOpen, setFormatPickerOpen] = useState(false);
 
   async function loadOptions(): Promise<DeckOption[]> {
     if (!supabase) return [];
@@ -411,43 +412,55 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved }: 
           <label className={FIELD_LABEL} htmlFor="fmt">
             Formato
           </label>
-          <div className="relative">
-            <input
-              id="fmt"
-              type="text"
-              value={format}
-              onChange={(e) => setFormat(e.target.value)}
-              onFocus={() => setFormatSuggestOpen(true)}
-              onBlur={() => setFormatSuggestOpen(false)}
-              placeholder="Commander"
-              autoComplete="off"
-              className={FIELD_CONTROL_SM}
-            />
-            {formatSuggestOpen &&
-              (() => {
-                const q = format.trim().toLowerCase();
-                const matches = FORMATS.filter((f) => !q || f.toLowerCase().includes(q));
-                if (matches.length === 0) return null;
-                return (
-                  <div className="absolute inset-x-0 top-full z-10 mt-1 max-h-[220px] overflow-y-auto rounded-lg border border-zaff-border bg-zaff-surface shadow-lg">
-                    {matches.map((f) => (
-                      <button
-                        key={f}
-                        type="button"
-                        onMouseDown={(e) => {
-                          e.preventDefault();
-                          setFormat(f);
-                          setFormatSuggestOpen(false);
-                        }}
-                        className="block w-full px-2.5 py-1.5 text-left text-sm text-zaff-text transition hover:bg-zaff-bg"
-                      >
-                        {f}
-                      </button>
-                    ))}
-                  </div>
-                );
-              })()}
-          </div>
+          <button
+            id="fmt"
+            type="button"
+            onClick={() => setFormatPickerOpen(true)}
+            className={cx(FIELD_CONTROL_SM, 'flex w-full items-center justify-between gap-2 text-left')}
+          >
+            <span className={cx('min-w-0 truncate', format ? undefined : 'text-zaff-muted')}>
+              {format || 'Scegli il formato'}
+            </span>
+            <span className="shrink-0 text-xl leading-none text-zaff-muted" aria-hidden="true">
+              ›
+            </span>
+          </button>
+          {formatPickerOpen && (
+            <Modal level={2} title="Formato" onClose={() => setFormatPickerOpen(false)}>
+              <div className="grid grid-cols-2 gap-2.5">
+                {(format && !FORMATS.includes(format) ? [format, ...FORMATS] : FORMATS).map((f) => (
+                  <Button
+                    key={f}
+                    type="button"
+                    variant={format === f ? 'primary' : 'ghost'}
+                    size="lg"
+                    fullWidth
+                    className="min-h-[64px] py-4 text-lg"
+                    onClick={() => {
+                      setFormat(f);
+                      setFormatPickerOpen(false);
+                    }}
+                  >
+                    {f}
+                  </Button>
+                ))}
+              </div>
+              {format && (
+                <Button
+                  type="button"
+                  variant="link"
+                  size="sm"
+                  className="mt-3"
+                  onClick={() => {
+                    setFormat('');
+                    setFormatPickerOpen(false);
+                  }}
+                >
+                  Nessun formato
+                </Button>
+              )}
+            </Modal>
+          )}
         </div>
       </div>
 
