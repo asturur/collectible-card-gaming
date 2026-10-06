@@ -96,6 +96,54 @@ function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
+const MAX_FUZZY = 25;
+
+async function fetchFuzzy(name: string): Promise<RawCard | null> {
+  try {
+    const res = await fetch('https://api.scryfall.com/cards/named?fuzzy=' + encodeURIComponent(name), {
+      headers: { Accept: 'application/json' },
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as RawCard;
+  } catch {
+    return null;
+  }
+}
+
+/** Ricerca per nome (anche parziale) per il selettore carte con immagini.
+ *  Passa dalla stessa coda delle altre richieste, quindi rispetta il limite. */
+export function searchScryfall(query: string): Promise<ScryCard[]> {
+  loadStorage();
+  const task = async (): Promise<ScryCard[]> => {
+    try {
+      const url =
+        'https://api.scryfall.com/cards/search?unique=cards&order=name&q=' + encodeURIComponent(query + ' game:paper');
+      const res = await fetch(url, { headers: { Accept: 'application/json' } });
+      if (res.status === 404) return []; // nessun risultato
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const json = (await res.json()) as { data?: RawCard[] };
+      const out: ScryCard[] = [];
+      (json.data ?? []).slice(0, 60).forEach((raw) => {
+        const faces = toFaces(raw);
+        if (faces.length === 0) return;
+        const card: ScryCard = { name: raw.name, faces };
+        keysFor(raw).forEach((k) => found.set(k, card));
+        out.push(card);
+      });
+      saveStorage();
+      return out;
+    } finally {
+      await sleep(PAUSE_MS);
+    }
+  };
+  const result = chain.then(task);
+  chain = result.then(
+    () => undefined,
+    () => undefined
+  );
+  return result;
+}
+
 async function fetchBatch(names: string[]): Promise<void> {
   try {
     const res = await fetch('https://api.scryfall.com/cards/collection', {
@@ -111,7 +159,21 @@ async function fetchBatch(names: string[]): Promise<void> {
       const card: ScryCard = { name: raw.name, faces };
       keysFor(raw).forEach((k) => found.set(k, card));
     });
-    // Quello che non è tornato indietro: non trovato (nome sbagliato).
+    // Quello che non è tornato indietro: si riprova una per una con la
+    // ricerca "approssimata" di Scryfall (accetta piccoli errori di
+    // battitura, accenti, "Fire/Ice"…); se nemmeno lei lo trova, è un nome
+    // sbagliato.
+    const notFound = names.filter((n) => !found.has(cardKey(n)));
+    for (const n of notFound.slice(0, MAX_FUZZY)) {
+      await sleep(PAUSE_MS);
+      const raw = await fetchFuzzy(n);
+      const faces = raw ? toFaces(raw) : [];
+      if (raw && faces.length > 0) {
+        const card: ScryCard = { name: raw.name, faces };
+        keysFor(raw).forEach((k) => found.set(k, card));
+        found.set(cardKey(n), card);
+      }
+    }
     names.forEach((n) => {
       if (!found.has(cardKey(n))) missing.add(cardKey(n));
     });

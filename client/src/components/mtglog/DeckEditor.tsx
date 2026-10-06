@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import { MAX_DECK_NAME_LENGTH, supabase, TABLE_DECKS } from '../../services/supabase';
 import { ManaPips } from './ManaIcon';
+import CardPicker from './CardPicker';
+import { useDeckImages } from './DeckCards';
+import { getCard, isMissing } from '../../services/scryfall';
 import Button from '../ui/Button';
 import { TextField, SelectField } from '../ui/Field';
 import { cx, FIELD_CONTROL_SM, FIELD_LABEL, TEXT_MINI, TEXT_MUTED } from '../ui/styles';
@@ -89,6 +92,11 @@ export default function DeckEditor({ deckId, initialDraft, onBack, onSaved }: De
   const [qty, setQty] = useState(1);
   const [cardSection, setCardSection] = useState<'main' | 'side'>('main');
   const [suggestions, setSuggestions] = useState<string[]>([]);
+  /** Selettore carte con immagini: aggiungere, oppure correggere (`replace`)
+   *  una carta non riconosciuta da Scryfall. */
+  const [picker, setPicker] = useState<
+    null | { mode: 'add' } | { mode: 'replace'; name: string; section: 'main' | 'side'; qty: number }
+  >(null);
   const [loading, setLoading] = useState(Boolean(deckId));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -97,6 +105,8 @@ export default function DeckEditor({ deckId, initialDraft, onBack, onSaved }: De
   const [preconData, setPreconData] = useState<PreconDeck[] | null>(null);
   const [preconStatus, setPreconStatus] = useState('');
   const [preconSearch, setPreconSearch] = useState('');
+
+  useDeckImages(draft.map((c) => c.name));
 
   useEffect(() => {
     if (!deckId || !supabase) {
@@ -224,22 +234,49 @@ export default function DeckEditor({ deckId, initialDraft, onBack, onSaved }: De
     });
   }
 
-  function handleAddCard() {
-    const cardName = pickedCardName || cardSearch.trim();
-    if (!cardName) return;
-    const addQty = Math.max(1, qty || 1);
+  function addToDraft(cardName: string, addQty: number, section: 'main' | 'side') {
     setDraft((prev) => {
       const idx = prev.findIndex(
-        (c) => c.name.toLowerCase() === cardName.toLowerCase() && normalizeSection(c.section) === cardSection
+        (c) => c.name.toLowerCase() === cardName.toLowerCase() && normalizeSection(c.section) === section
       );
       if (idx >= 0) {
         const next = [...prev];
         next[idx] = { ...next[idx], qty: next[idx].qty + addQty };
         return next;
       }
-      return [...prev, { name: cardName, qty: addQty, section: cardSection }];
+      return [...prev, { name: cardName, qty: addQty, section }];
     });
     autoDetectColors([cardName]);
+  }
+
+  /** Sostituisce una carta non riconosciuta con quella scelta nel selettore
+   *  (tenendo sezione e copie; se la carta c'è già, le copie si sommano). */
+  function replaceInDraft(oldName: string, section: 'main' | 'side', oldQty: number, newName: string) {
+    setDraft((prev) => {
+      const without = prev.filter((c) => !(c.name === oldName && normalizeSection(c.section) === section));
+      const idx = without.findIndex(
+        (c) => c.name.toLowerCase() === newName.toLowerCase() && normalizeSection(c.section) === section
+      );
+      if (idx >= 0) {
+        const next = [...without];
+        next[idx] = { ...next[idx], qty: next[idx].qty + oldQty };
+        return next;
+      }
+      return [...without, { name: newName, qty: oldQty, section }];
+    });
+    autoDetectColors([newName]);
+  }
+
+  function countInDraft(cardName: string): number {
+    const low = cardName.toLowerCase();
+    return draft.filter((c) => c.name.toLowerCase() === low).reduce((sum, c) => sum + c.qty, 0);
+  }
+
+  function handleAddCard() {
+    const cardName = pickedCardName || cardSearch.trim();
+    if (!cardName) return;
+    const addQty = Math.max(1, qty || 1);
+    addToDraft(cardName, addQty, cardSection);
     setCardSearch('');
     setQty(1);
     setPickedCardName('');
@@ -367,6 +404,12 @@ export default function DeckEditor({ deckId, initialDraft, onBack, onSaved }: De
         </div>
       )}
 
+      <div className="mt-3.5">
+        <Button variant="ghost" size="lg" fullWidth className="py-3" onClick={() => setPicker({ mode: 'add' })}>
+          🔍 Cerca carte con le immagini
+        </Button>
+      </div>
+
       <div className="relative mt-3.5">
         <label className={FIELD_LABEL} htmlFor="cardSearch">
           Cerca carta
@@ -455,11 +498,29 @@ export default function DeckEditor({ deckId, initialDraft, onBack, onSaved }: De
         (() => {
           const mainDraft = draft.filter((c) => normalizeSection(c.section) === 'main');
           const sideDraft = draft.filter((c) => normalizeSection(c.section) === 'side');
-          const renderRow = (c: DraftCard) => (
+          const renderRow = (c: DraftCard) => {
+            const scry = getCard(c.name);
+            const sec = normalizeSection(c.section);
+            return (
             <div
-              key={normalizeSection(c.section) + '|' + c.name}
-              className="flex items-center justify-between gap-2 border-b border-zaff-border py-1.5 text-sm text-zaff-text last:border-b-0"
+              key={sec + '|' + c.name}
+              className="flex items-center justify-between gap-2.5 border-b border-zaff-border py-1.5 text-sm text-zaff-text last:border-b-0"
             >
+              {scry ? (
+                <img src={scry.faces[0].small} alt="" loading="lazy" decoding="async" className="h-14 w-10 shrink-0 rounded object-cover" />
+              ) : isMissing(c.name) ? (
+                <button
+                  type="button"
+                  onClick={() => setPicker({ mode: 'replace', name: c.name, section: sec, qty: c.qty })}
+                  title="Carta non riconosciuta: tocca per cercarla"
+                  aria-label={`Carta non riconosciuta: ${c.name}. Tocca per cercarla`}
+                  className="flex h-14 w-10 shrink-0 items-center justify-center rounded border-2 border-dashed border-zaff-gold bg-zaff-surface text-xl font-bold text-zaff-gold"
+                >
+                  ?
+                </button>
+              ) : (
+                <span className="h-14 w-10 shrink-0 animate-pulse rounded border border-zaff-border bg-zaff-surface" />
+              )}
               <span className="min-w-0 flex-1 truncate">
                 {c.qty}× {c.name}
               </span>
@@ -472,7 +533,8 @@ export default function DeckEditor({ deckId, initialDraft, onBack, onSaved }: De
                 ×
               </button>
             </div>
-          );
+            );
+          };
           return (
             <div className="mb-2.5">
               <span className={FIELD_LABEL}>Main Deck · {mainDraft.reduce((s, c) => s + c.qty, 0)} carte</span>
@@ -519,6 +581,20 @@ export default function DeckEditor({ deckId, initialDraft, onBack, onSaved }: De
         </a>
         ; i mazzi precon da un archivio pubblico della community Magic.
       </p>
+      {picker && (
+        <CardPicker
+          mode={picker.mode}
+          initialQuery={picker.mode === 'replace' ? picker.name : ''}
+          section={cardSection}
+          onSectionChange={setCardSection}
+          countOf={countInDraft}
+          onPick={(card) => {
+            if (picker.mode === 'add') addToDraft(card.name, 1, cardSection);
+            else replaceInDraft(picker.name, picker.section, picker.qty, card.name);
+          }}
+          onClose={() => setPicker(null)}
+        />
+      )}
     </>
   );
 }

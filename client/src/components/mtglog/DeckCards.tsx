@@ -25,7 +25,7 @@ function total(cards: DeckCardsItem[]): number {
 }
 
 /** Chiede a Scryfall le carte del mazzo e si riaggiorna quando arrivano. */
-function useDeckImages(names: string[]) {
+export function useDeckImages(names: string[]) {
   const [, bump] = useReducer((n: number) => n + 1, 0);
   const signature = names.map(cardKey).join('|');
   useEffect(() => subscribeCards(bump), []);
