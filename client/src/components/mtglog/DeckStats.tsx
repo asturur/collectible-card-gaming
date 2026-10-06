@@ -16,7 +16,7 @@ interface DeckStatsItem {
 
 function ChartTitle({ children, note }: { children: string; note?: string }) {
   return (
-    <div className="mb-2.5 mt-6 border-b border-zaff-border pb-1 first:mt-0">
+    <div className="mb-3 mt-9 border-b border-zaff-border pb-1">
       <h3 className="text-[15px] font-bold text-zaff-text">{children}</h3>
       {note && <p className={TEXT_MINI}>{note}</p>}
     </div>
@@ -141,7 +141,7 @@ export default function DeckStatsContents({ cards }: { cards: DeckStatsItem[] })
         return (
           <div key={chart.title}>
             <ChartTitle>{`Sottotipi · ${chart.title}`}</ChartTitle>
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-2">
               {chart.rows.map((r) => (
                 <div key={r.name} className="flex items-center gap-2 text-sm">
                   <span className="w-28 shrink-0 truncate text-zaff-text">{r.name}</span>
