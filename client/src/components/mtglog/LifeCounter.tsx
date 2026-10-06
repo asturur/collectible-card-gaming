@@ -248,9 +248,9 @@ export default function LifeCounter({ players, startLife, onCancel, onFinish }: 
               {optionsFor === i && (
                 <div className="absolute inset-0 z-20 flex flex-col bg-black/85 px-4 pb-3 pt-3 text-white">
                   <div className="flex flex-1 flex-col justify-center gap-3.5">
-                  <label className="flex items-center justify-between gap-3 text-[24px] font-bold tracking-wider">
+                  <label className="flex items-center justify-between gap-3 text-[18px] font-bold tracking-wider">
                     <span>KILL</span>
-                    <span className="relative origin-right scale-[1.8]">
+                    <span className="relative origin-right scale-[1.2]">
                       <input
                         type="checkbox"
                         checked={p.kill}
@@ -260,9 +260,9 @@ export default function LifeCounter({ players, startLife, onCancel, onFinish }: 
                       <span className="mtg-switch" />
                     </span>
                   </label>
-                  <label className="flex items-center justify-between gap-3 text-[24px] font-bold tracking-wider">
+                  <label className="flex items-center justify-between gap-3 text-[18px] font-bold tracking-wider">
                     <span>MILL</span>
-                    <span className="relative origin-right scale-[1.8]">
+                    <span className="relative origin-right scale-[1.2]">
                       <input
                         type="checkbox"
                         checked={p.mill}
@@ -272,9 +272,9 @@ export default function LifeCounter({ players, startLife, onCancel, onFinish }: 
                       <span className="mtg-switch" />
                     </span>
                   </label>
-                  <label className="flex items-center justify-between gap-3 text-[24px] font-bold tracking-wider">
+                  <label className="flex items-center justify-between gap-3 text-[18px] font-bold tracking-wider">
                     <span>POISON</span>
-                    <span className="relative origin-right scale-[1.8]">
+                    <span className="relative origin-right scale-[1.2]">
                       <input
                         type="checkbox"
                         checked={p.poisonOn}
