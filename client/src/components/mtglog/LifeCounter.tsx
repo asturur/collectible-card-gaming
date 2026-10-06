@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Button from '../ui/Button';
 import { PIE_COLORS } from './stats';
 import { HEADING_SECTION } from '../ui/styles';
@@ -19,6 +19,55 @@ interface LcPlayer {
   /** Il contatore veleno compare solo se acceso dalle opzioni del giocatore. */
   poisonOn: boolean;
   poison: number;
+}
+
+/**
+ * Tiene lo schermo acceso finché il segna-punti è aperto (Screen Wake Lock).
+ * Il blocco salta da solo quando la pagina va in secondo piano: lo richiedo
+ * di nuovo al ritorno. Se il browser non lo supporta, o lo rifiuta (es.
+ * risparmio energia), non succede nulla: lo schermo si comporta come prima.
+ */
+function useKeepScreenAwake() {
+  useEffect(() => {
+    let sentinel: WakeLockSentinel | null = null;
+    let cancelled = false;
+
+    async function acquire() {
+      if (cancelled || sentinel || document.visibilityState !== 'visible') return;
+      if (!('wakeLock' in navigator)) return;
+      try {
+        const lock = await navigator.wakeLock.request('screen');
+        if (cancelled) {
+          void lock.release();
+          return;
+        }
+        sentinel = lock;
+        lock.addEventListener('release', () => {
+          if (sentinel === lock) sentinel = null;
+        });
+      } catch {
+        /* rifiutato: pazienza */
+      }
+    }
+
+    function onVisibilityChange() {
+      if (document.visibilityState === 'visible') void acquire();
+    }
+
+    void acquire();
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    // Alcuni browser accettano la richiesta solo dopo un tocco: se la prima
+    // non è andata a buon fine, riprovo al primo tocco sullo schermo.
+    document.addEventListener('pointerdown', acquire);
+
+    return () => {
+      cancelled = true;
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      document.removeEventListener('pointerdown', acquire);
+      if (sentinel) void sentinel.release();
+      sentinel = null;
+    };
+  }, []);
 }
 
 /** Con 10 o più segnalini veleno si perde. */
@@ -81,6 +130,8 @@ const TAP_HIGHLIGHT_OFF = { WebkitTapHighlightColor: 'transparent' } as const;
  * decidere chi inizia.
  */
 export default function LifeCounter({ players, startLife, onCancel, onFinish }: LifeCounterProps) {
+  useKeepScreenAwake();
+
   const [lives, setLives] = useState<LcPlayer[]>(
     players.map((name) => ({ name, life: startLife, kill: false, mill: false, poisonOn: false, poison: 0 }))
   );
