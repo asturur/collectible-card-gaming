@@ -5,7 +5,8 @@ import { ManaIcons } from './ManaIcon';
 import { dateLabel, durationLabel, rowToGame, timeLabel } from './stats';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
-import { cx, HEADING_SECTION, TEXT_MINI, TEXT_MUTED } from '../ui/styles';
+import FilterTabs from '../ui/FilterTabs';
+import { cx, FIELD_CONTROL, HEADING_SECTION, TEXT_MINI, TEXT_MUTED } from '../ui/styles';
 
 interface IconButtonProps {
   label: string;
@@ -347,6 +348,10 @@ export default function GameList({ userId, onEdit, onRematch }: GameListProps) {
    *  il tasto "Esporta" non sembra mai non aver fatto nulla. */
   const [exportedImage, setExportedImage] = useState<string | null>(null);
   const shareCardRef = useRef<HTMLDivElement>(null);
+  // Ricerca e filtri dell'elenco (non toccano i dati, solo cosa si vede).
+  const [query, setQuery] = useState('');
+  const [formatFilter, setFormatFilter] = useState('all');
+  const [periodFilter, setPeriodFilter] = useState<'all' | '30' | 'year'>('all');
 
   async function loadGames() {
     if (!supabase) return;
@@ -394,6 +399,28 @@ export default function GameList({ userId, onEdit, onRematch }: GameListProps) {
     const players = selectedGame.players;
     return players.map((_, i) => i).sort((a, b) => Number(players[b].winner) - Number(players[a].winner));
   }, [selectedGame]);
+
+  const formats = useMemo(
+    () => [...new Set(games.map((g) => g.format.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'it')),
+    [games]
+  );
+  const visibleGames = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const now = new Date();
+    const since30 = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const yearStart = `${now.getFullYear()}-01-01`;
+    return games.filter((g) => {
+      if (formatFilter !== 'all' && g.format.trim() !== formatFilter) return false;
+      if (periodFilter === '30' && g.date < since30) return false;
+      if (periodFilter === 'year' && g.date < yearStart) return false;
+      if (!q) return true;
+      const haystack = [g.format, g.notes, ...g.players.flatMap((p) => [p.name, p.deck, p.desc])]
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [games, query, formatFilter, periodFilter]);
+  const filtersActive = query.trim() !== '' || formatFilter !== 'all' || periodFilter !== 'all';
 
   async function handleDelete(id: string) {
     if (!supabase) return;
@@ -475,9 +502,60 @@ export default function GameList({ userId, onEdit, onRematch }: GameListProps) {
         </div>
       ) : (
         <>
-          <p className={`mb-2 ${TEXT_MINI}`}>{games.length} partite</p>
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Cerca giocatore, mazzo, appunti…"
+            aria-label="Cerca nelle partite"
+            autoComplete="off"
+            enterKeyHint="search"
+            className={cx(FIELD_CONTROL, 'mb-2.5 w-full')}
+          />
+          <FilterTabs
+            className="mb-2"
+            value={periodFilter}
+            onChange={(v) => setPeriodFilter(v as 'all' | '30' | 'year')}
+            options={[
+              { value: 'all', label: 'Tutte' },
+              { value: '30', label: 'Ultimi 30 giorni' },
+              { value: 'year', label: "Quest'anno" },
+            ]}
+          />
+          {formats.length > 1 && (
+            <FilterTabs
+              className="mb-2.5"
+              value={formatFilter}
+              onChange={setFormatFilter}
+              options={[{ value: 'all', label: 'Tutti i formati' }, ...formats.map((f) => ({ value: f, label: f }))]}
+            />
+          )}
+          <p className={`mb-2 ${TEXT_MINI}`}>
+            {filtersActive ? `${visibleGames.length} di ${games.length} partite` : `${games.length} partite`}
+            {filtersActive && (
+              <>
+                {' · '}
+                <button
+                  type="button"
+                  className="underline"
+                  onClick={() => {
+                    setQuery('');
+                    setFormatFilter('all');
+                    setPeriodFilter('all');
+                  }}
+                >
+                  Azzera filtri
+                </button>
+              </>
+            )}
+          </p>
+          {visibleGames.length === 0 && (
+            <div className="rounded-lg border border-dashed border-zaff-border p-6 text-center text-sm text-zaff-muted">
+              Nessuna partita corrisponde alla ricerca.
+            </div>
+          )}
           <ul>
-            {games.map((g) => (
+            {visibleGames.map((g) => (
               <li key={g.id}>
                 <button
                   type="button"

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { canEdit, MAX_DECK_NAME_LENGTH, supabase, TABLE_DECKS } from '../../services/supabase';
 import { ManaIcons, ManaPips } from './ManaIcon';
 import DeckCardsView from './DeckCards';
@@ -6,33 +6,6 @@ import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import Badge from '../ui/Badge';
 import { cx, TEXT_MINI, TEXT_MUTED } from '../ui/styles';
-
-interface IconButtonProps {
-  label: string;
-  onClick: () => void;
-  tone?: 'default' | 'danger';
-  children: ReactNode;
-}
-
-/** Bottone quadrato con solo un'icona (emoji) e un'etichetta accessibile
- *  (title + aria-label): per riga occupa molto meno di un bottone con testo,
- *  comodo quando ce ne sono tre per mazzo su schermi piccoli. */
-function IconButton({ label, onClick, tone = 'default', children }: IconButtonProps) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      title={label}
-      aria-label={label}
-      className={cx(
-        'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-zaff-border bg-zaff-bg text-base leading-none text-zaff-muted transition',
-        tone === 'danger' ? 'hover:border-red-400 hover:text-red-400' : 'hover:border-zaff-gold hover:text-zaff-gold'
-      )}
-    >
-      {children}
-    </button>
-  );
-}
 
 interface DeckListProps {
   userId: string;
@@ -226,15 +199,17 @@ export default function DeckList({ userId, onCreate, onEdit, onImportFile }: Dec
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function handleDelete(id: string) {
-    if (!supabase) return;
-    if (!confirm('Cancellare questo mazzo? Le partite che lo usano già continueranno a mostrarne solo il nome.')) return;
+  /** True se il mazzo è stato davvero cancellato (non annullato, non in errore). */
+  async function handleDelete(id: string): Promise<boolean> {
+    if (!supabase) return false;
+    if (!confirm('Cancellare questo mazzo? Le partite che lo usano già continueranno a mostrarne solo il nome.')) return false;
     const { error: deleteError } = await supabase.from(TABLE_DECKS).delete().eq('id', id);
     if (deleteError) {
       setError('Cancellazione mazzo non riuscita: ' + deleteError.message);
-      return;
+      return false;
     }
     await loadDecks();
+    return true;
   }
 
   const selectedDeck = decks.find((d) => d.id === selectedId) ?? null;
@@ -249,38 +224,20 @@ export default function DeckList({ userId, onCreate, onEdit, onImportFile }: Dec
         ) : (
           <ul>
             {decks.map((d) => (
-              <li
-                key={d.id}
-                className="mb-2 flex items-stretch rounded-lg border border-zaff-border bg-zaff-bg transition hover:border-zaff-primary has-[button:active]:border-zaff-primary"
-              >
-                {/* Tutta la riga (nome) apre la vista del mazzo, per tutti i mazzi. */}
+              <li key={d.id}>
+                {/* Una sola azione per riga: tutta la riga apre il mazzo.
+                    Modifica e cancella (solo mazzi propri) stanno nel dettaglio. */}
                 <button
                   type="button"
                   onClick={() => setSelectedId(d.id)}
-                  className="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden py-3 pl-3.5 pr-2 text-left"
                   title={d.name}
+                  className="mb-2 flex w-full items-center gap-1.5 overflow-hidden rounded-lg border border-zaff-border bg-zaff-bg py-3 pl-3.5 pr-2 text-left transition hover:border-zaff-primary active:border-zaff-primary"
                 >
-                  <span className="truncate text-[15px] text-zaff-text">{d.name}</span>
+                  <span className="min-w-0 truncate text-[15px] text-zaff-text">{d.name}</span>
                   <ManaIcons colors={d.colors} className="shrink-0 text-[17px]" />
-                </button>
-                {canEdit(d.createdBy, userId) && (
-                  // Solo per i mazzi propri: cancella e modifica.
-                  <div className="flex shrink-0 items-center gap-1.5">
-                    <IconButton label="Cancella mazzo" tone="danger" onClick={() => handleDelete(d.id)}>
-                      🗑️
-                    </IconButton>
-                    <IconButton label="Modifica mazzo" onClick={() => onEdit(d.id)}>
-                      ✏️
-                    </IconButton>
-                  </div>
-                )}
-                <button
-                  type="button"
-                  onClick={() => setSelectedId(d.id)}
-                  aria-label={`Apri ${d.name}`}
-                  className="flex w-10 shrink-0 items-center justify-center text-2xl leading-none text-zaff-muted"
-                >
-                  ›
+                  <span className="ml-auto shrink-0 pl-2 text-2xl leading-none text-zaff-muted" aria-hidden="true">
+                    ›
+                  </span>
                 </button>
               </li>
             ))}
@@ -360,6 +317,33 @@ export default function DeckList({ userId, onCreate, onEdit, onImportFile }: Dec
           {selectedDeck.colors.length > 0 && (
             <div className="mb-2.5">
               <ManaPips colors={selectedDeck.colors} />
+            </div>
+          )}
+
+          {canEdit(selectedDeck.createdBy, userId) && (
+            // Solo per i mazzi propri.
+            <div className="mb-3 grid grid-cols-2 gap-2.5">
+              <Button
+                variant="ghost"
+                fullWidth
+                onClick={() => {
+                  const id = selectedDeck.id;
+                  setSelectedId(null);
+                  onEdit(id);
+                }}
+              >
+                ✏️ Modifica
+              </Button>
+              <Button
+                variant="ghost"
+                fullWidth
+                className="hover:border-red-400 hover:text-red-400"
+                onClick={async () => {
+                  if (await handleDelete(selectedDeck.id)) setSelectedId(null);
+                }}
+              >
+                🗑️ Cancella
+              </Button>
             </div>
           )}
 
