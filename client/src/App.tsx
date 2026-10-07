@@ -5,7 +5,8 @@ import DeckPreview from './components/DeckPreview';
 import GameView from './components/GameView';
 import MtgLog from './components/MtgLog';
 import { useRoute } from './router';
-import type { MtgJsonDeck } from './services/mtgjson';
+import { fromSavedDeck, expandPlayableDeck, type PlayableDeck } from './services/playableDeck';
+import { getSavedDeck } from './services/savedDecks';
 
 /** Schermate interne alla piattaforma di gioco ZAFF (tutte sotto /zaff). */
 type ZaffScreen = 'join' | 'pickDeck' | 'previewDeck' | 'game';
@@ -19,7 +20,7 @@ export default function App() {
   const [route, navigate] = useRoute();
   const [screen, setScreen] = useState<ZaffScreen>('join');
   const [connection, setConnection] = useState<Connection | null>(null);
-  const [selectedDeck, setSelectedDeck] = useState<MtgJsonDeck | null>(null);
+  const [selectedDeck, setSelectedDeck] = useState<PlayableDeck | null>(null);
 
   useEffect(() => {
     document.title = route === 'zaff' ? 'ZAFF — Collectible Card Gaming' : 'Registro partite di Magic';
@@ -30,7 +31,7 @@ export default function App() {
     setScreen('pickDeck');
   }
 
-  function handleDeckSelected(deck: MtgJsonDeck) {
+  function handleDeckSelected(deck: PlayableDeck) {
     setSelectedDeck(deck);
     setScreen('previewDeck');
   }
@@ -40,7 +41,17 @@ export default function App() {
     setScreen('pickDeck');
   }
 
-  function handleConfirmDeck() {
+  async function handleConfirmDeck() {
+    if (!selectedDeck) return;
+    if (selectedDeck.source.kind === 'saved') {
+      const fresh = fromSavedDeck(await getSavedDeck(selectedDeck.source.id));
+      if (fresh.source.kind === 'saved' && fresh.source.revision !== selectedDeck.source.revision) {
+        setSelectedDeck(fresh);
+        throw new Error('This deck changed while you were reviewing it. Review the updated cards and confirm again.');
+      }
+      expandPlayableDeck(fresh);
+      setSelectedDeck(fresh);
+    } else expandPlayableDeck(selectedDeck);
     setScreen('game');
   }
 

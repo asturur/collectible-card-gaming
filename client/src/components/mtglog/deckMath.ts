@@ -123,8 +123,8 @@ const SUBTYPE_TITLES: Partial<Record<TypeGroupId, string>> = {
 };
 
 export function computeDeckStats(
-  cards: { name: string; qty: number; section?: string }[],
-  lookup: (name: string) => ScryCard | undefined
+  cards: { name: string; scryfallId?: string | null; qty: number; section?: string }[],
+  lookup: (name: string, scryfallId?: string | null) => ScryCard | undefined
 ): DeckStats {
   const main = cards.filter((c) => c.section !== 'side');
   let total = 0;
@@ -139,7 +139,7 @@ export function computeDeckStats(
 
   main.forEach((item) => {
     total += item.qty;
-    const card = lookup(item.name);
+    const card = lookup(item.name, item.scryfallId);
     if (!card) {
       unknown += item.qty;
       return;
@@ -233,15 +233,15 @@ export interface TokenGroup {
   token: ScryToken;
   /** Quante carte del mazzo (con le copie) lo possono creare. */
   count: number;
-  cards: { name: string; qty: number }[];
+  cards: { name: string; scryfallId?: string | null; qty: number }[];
 }
 
 /** Token che le carte del Main Deck possono creare. Tokens uguali (stesso
  *  nome, forza/costituzione, colori e testo) si sommano anche se vengono da
  *  stampe diverse. `pending` = token ancora in arrivo da Scryfall. */
 export function computeTokens(
-  cards: { name: string; qty: number; section?: string }[],
-  lookup: (name: string) => ScryCard | undefined,
+  cards: { name: string; scryfallId?: string | null; qty: number; section?: string }[],
+  lookup: (name: string, scryfallId?: string | null) => ScryCard | undefined,
   lookupToken: (id: string) => ScryToken | undefined
 ): { groups: TokenGroup[]; pending: number } {
   const groups = new Map<string, TokenGroup & { seen: Set<string> }>();
@@ -249,7 +249,7 @@ export function computeTokens(
   cards
     .filter((c) => c.section !== 'side')
     .forEach((item) => {
-      const card = lookup(item.name);
+      const card = lookup(item.name, item.scryfallId);
       if (!card) return;
       card.tokens.forEach((tk) => {
         const tok = lookupToken(tk.id);

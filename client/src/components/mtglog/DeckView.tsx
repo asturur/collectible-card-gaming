@@ -7,6 +7,7 @@ import { TEXT_MINI } from '../ui/styles';
  *  (i mazzi salvati prima di questa distinzione non hanno il campo: main). */
 export interface DeckViewCard {
   name: string;
+  scryfallId?: string | null;
   qty: number;
   section: 'main' | 'side';
 }

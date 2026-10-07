@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { MAX_DECK_NAME_LENGTH, supabase, TABLE_DECKS } from '../../services/supabase';
+import { MAX_DECK_NAME_LENGTH } from '../../services/supabase';
+import { saveSavedDeck, getSavedDeck, DeckConflictError, UnresolvedCardsError } from '../../services/savedDecks';
+import { autocompleteCards } from '../../services/scryfall';
+import type { DeckEntry } from '../../services/deckCards';
 import { ManaPips } from './ManaIcon';
 import CardPicker from './CardPicker';
 import DeckCardsView, { useDeckImages } from './DeckCards';
@@ -13,16 +16,13 @@ interface DeckEditorProps {
   initialDraft?: { name: string; cards: DraftCard[] } | null;
   onBack: () => void;
   onSaved: () => void;
+  onPersistingChange?: (busy: boolean) => void;
 }
 
 /** `section` distingue il main deck dalla riserva (sideboard): le carte
  *  importate o salvate prima di questa distinzione non hanno il campo e
  *  vengono trattate come main deck (vedi `normalizeSection`). */
-interface DraftCard {
-  name: string;
-  qty: number;
-  section?: 'main' | 'side';
-}
+type DraftCard = DeckEntry;
 
 function normalizeSection(raw: unknown): 'main' | 'side' {
   return raw === 'side' ? 'side' : 'main';
@@ -65,17 +65,6 @@ function detectLandColors(cardNames: string[]): Set<string> {
   return found;
 }
 
-async function searchCards(query: string): Promise<string[]> {
-  try {
-    const res = await fetch('https://api.scryfall.com/cards/autocomplete?q=' + encodeURIComponent(query));
-    if (!res.ok) return [];
-    const data = await res.json();
-    return data.data ?? [];
-  } catch {
-    return [];
-  }
-}
-
 /** Creazione/modifica manuale di un mazzo, con autocomplete carte (Scryfall),
  *  rilevamento automatico dei colori dalle terre base, e import (file ManaBox
  *  passato come `initialDraft`, o mazzo precon Commander cercato qui).
@@ -84,11 +73,7 @@ async function searchCards(query: string): Promise<string[]> {
 /** Formati selezionabili per un mazzo (usati anche dal filtro nella lista mazzi). */
 export const DECK_FORMATS = ['Commander', 'Standard', 'Modern', 'Pauper', 'Altro'];
 
-function deckFingerprint(row: { name?: unknown; source?: unknown; format?: unknown; colors?: unknown; cards?: unknown }): string {
-  return JSON.stringify([row.name ?? '', row.source ?? '', row.format ?? '', row.colors ?? [], row.cards ?? []]);
-}
-
-export default function DeckEditor({ deckId, initialDraft, onBack, onSaved }: DeckEditorProps) {
+export default function DeckEditor({ deckId, initialDraft, onBack, onSaved, onPersistingChange }: DeckEditorProps) {
   const [name, setName] = useState(initialDraft?.name ?? '');
   const [source, setSource] = useState('');
   const [format, setFormat] = useState('');
@@ -109,44 +94,37 @@ export default function DeckEditor({ deckId, initialDraft, onBack, onSaved }: De
   const [loading, setLoading] = useState(Boolean(deckId));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [unresolved, setUnresolved] = useState(false);
+  const [persisting, setPersisting] = useState(false);
+  const saveAbort = useRef<AbortController | null>(null);
+  const newId = useRef('m' + Date.now() + Math.random().toString(36).slice(2, 9));
 
   const [preconOpen, setPreconOpen] = useState(false);
   const [preconData, setPreconData] = useState<PreconDeck[] | null>(null);
   const [preconStatus, setPreconStatus] = useState('');
   const [preconSearch, setPreconSearch] = useState('');
 
-  useDeckImages(draft.map((c) => c.name));
+  useDeckImages(draft);
 
-  /** Impronta del mazzo com'era quando l'ho aperto: al salvataggio la rileggo
-   *  e, se è cambiata, qualcun altro l'ha modificato nel frattempo. */
-  const openedFingerprint = useRef<string | null>(null);
+  const openedRevision = useRef<number | null>(null);
+  useEffect(() => () => { saveAbort.current?.abort(); }, []);
 
   useEffect(() => {
-    if (!deckId || !supabase) {
+    let cancelled = false;
+    if (!deckId) {
       setLoading(false);
-      if (initialDraft?.cards.length) autoDetectColors(initialDraft.cards.map((c) => c.name));
+      if (initialDraft?.cards.length) autoDetectColors(initialDraft.cards.map(c => c.name));
       return;
     }
-    supabase
-      .from(TABLE_DECKS)
-      .select('*')
-      .eq('id', deckId)
-      .single()
-      .then(({ data, error: loadError }) => {
-        if (loadError) {
-          setError('Non riesco a leggere il mazzo: ' + loadError.message);
-        } else if (data) {
-          openedFingerprint.current = deckFingerprint(data);
-          setName(data.name);
-          setSource(data.source ?? '');
-          setFormat(data.format ?? '');
-          setColors(new Set(data.colors ?? []));
-          setDraft(
-            (data.cards ?? []).map((c: DraftCard) => ({ ...c, section: normalizeSection(c.section) }))
-          );
-        }
-        setLoading(false);
-      });
+    getSavedDeck(deckId).then(deck => {
+      if (cancelled) return;
+      openedRevision.current = deck.revision;
+      setName(deck.name); setSource(deck.source); setFormat(deck.format);
+      setColors(new Set(deck.colors)); setDraft(deck.cards);
+    }).catch(err => {
+      if (!cancelled) setError('Non riesco a leggere il mazzo: ' + err.message);
+    }).finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deckId]);
 
@@ -156,11 +134,12 @@ export default function DeckEditor({ deckId, initialDraft, onBack, onSaved }: De
       setSuggestions([]);
       return;
     }
+    let cancelled = false;
     const timer = setTimeout(async () => {
-      const names = await searchCards(q);
-      setSuggestions(names);
+      try { const names = await autocompleteCards(q); if (!cancelled) setSuggestions(names); }
+      catch { if (!cancelled) setSuggestions([]); }
     }, 250);
-    return () => clearTimeout(timer);
+    return () => { cancelled = true; clearTimeout(timer); };
   }, [cardSearch]);
 
   function autoDetectColors(cardNames: string[]) {
@@ -314,66 +293,49 @@ export default function DeckEditor({ deckId, initialDraft, onBack, onSaved }: De
     setDraft((prev) => prev.filter((c) => !(c.name === cardName && normalizeSection(c.section) === section)));
   }
 
-  async function handleSave() {
-    // .slice come rete di sicurezza: il campo ha già maxLength, ma un nome
-    // importato (precon o file ManaBox) potrebbe superarlo anche se raro.
+  async function handleSave(allowUnresolved = false) {
     const trimmedName = name.trim().slice(0, MAX_DECK_NAME_LENGTH);
-    setError('');
-    if (!trimmedName) {
-      setError('Dai un nome al mazzo prima di salvarlo.');
-      return;
-    }
-    if (!draft.length) {
-      setError('Aggiungi almeno una carta al mazzo.');
-      return;
-    }
-    if (!supabase) {
-      setError('Supabase non configurato.');
-      return;
-    }
-    if (deckId && openedFingerprint.current !== null) {
-      const { data: current } = await supabase.from(TABLE_DECKS).select('*').eq('id', deckId).maybeSingle();
-      if (!current) {
-        setError('Questo mazzo non esiste più: è stato cancellato da qualcun altro.');
-        return;
-      }
-      if (
-        deckFingerprint(current) !== openedFingerprint.current &&
-        !window.confirm(
-          'Qualcun altro ha modificato questo mazzo mentre lo stavi modificando.\n\nOK = sovrascrivi con le tue modifiche\nAnnulla = torna indietro (poi chiudi e riapri il mazzo per vedere la versione aggiornata)'
-        )
-      ) {
-        return;
-      }
-    }
+    setError(''); setUnresolved(false);
+    if (!trimmedName) { setError('Dai un nome al mazzo prima di salvarlo.'); return; }
+    if (!draft.length) { setError('Aggiungi almeno una carta al mazzo.'); return; }
+    if (deckId && openedRevision.current === null) { setError('Riapri il mazzo prima di salvarlo.'); return; }
+    const controller = new AbortController();
+    saveAbort.current = controller;
     setSaving(true);
-    if (deckId) {
-      const { error: updateError } = await supabase
-        .from(TABLE_DECKS)
-        .update({ name: trimmedName, cards: draft, source, format, colors: [...colors] })
-        .eq('id', deckId);
-      setSaving(false);
-      if (updateError) {
-        setError('Salvataggio mazzo non riuscito: ' + updateError.message);
-        return;
+    let didPersist = false;
+    const persist = () => {
+      didPersist = true;
+      setPersisting(true); onPersistingChange?.(true);
+    };
+    try {
+      const input = { id: deckId ?? newId.current, name: trimmedName, source, format,
+        colors: [...colors], cards: draft, expectedRevision: openedRevision.current };
+      try {
+        await saveSavedDeck(input, { allowUnresolved, signal: controller.signal, onPersisting: persist });
+      } catch (err) {
+        if (!(err instanceof DeckConflictError)) throw err;
+        didPersist = false;
+        setPersisting(false); onPersistingChange?.(false);
+        const current = await getSavedDeck(input.id);
+        controller.signal.throwIfAborted();
+        if (!window.confirm('Qualcun altro ha modificato questo mazzo.\n\nOK = sovrascrivi con le tue modifiche\nAnnulla = conserva la bozza e torna alla modifica')) {
+          setError(err.message); return;
+        }
+        await saveSavedDeck({ ...input, expectedRevision: current.revision }, {
+          allowUnresolved, signal: controller.signal, onPersisting: persist,
+        });
       }
-    } else {
-      const row = {
-        id: 'm' + Date.now() + Math.random().toString(36).slice(2, 7),
-        name: trimmedName,
-        cards: draft,
-        source,
-        format,
-        colors: [...colors],
-      };
-      const { error: insertError } = await supabase.from(TABLE_DECKS).insert(row);
-      setSaving(false);
-      if (insertError) {
-        setError('Salvataggio mazzo non riuscito: ' + insertError.message);
-        return;
+      onSaved();
+    } catch (err) {
+      if (!controller.signal.aborted) {
+        setError('Salvataggio mazzo non riuscito: ' + (err instanceof Error ? err.message : String((err as { message?: string }).message ?? err)));
+        setUnresolved(err instanceof UnresolvedCardsError);
       }
+    } finally {
+      setSaving(false); setPersisting(false);
+      if (didPersist) onPersistingChange?.(false);
+      saveAbort.current = null;
     }
-    onSaved();
   }
 
   const total = draft.reduce((sum, c) => sum + c.qty, 0);
@@ -387,6 +349,7 @@ export default function DeckEditor({ deckId, initialDraft, onBack, onSaved }: De
 
   return (
     <>
+      <fieldset disabled={saving}>
       {/* Totali sempre in vista mentre si scorre. */}
       <div className="sticky top-0 z-10 -mx-1 mb-3.5 flex items-center justify-between gap-2 rounded-lg border border-zaff-primary bg-zaff-surface px-3 py-2 text-sm font-semibold text-zaff-text shadow-lg">
         <span>Main {mainTotal}</span>
@@ -588,16 +551,22 @@ export default function DeckEditor({ deckId, initialDraft, onBack, onSaved }: De
         ; i mazzi precon da un archivio pubblico della community Magic.
       </p>
 
+      </fieldset>
+      {unresolved && !saving && (
+        <Button variant="ghost" fullWidth onClick={() => handleSave(true)}>
+          Salva solo per il registro (non ancora giocabile)
+        </Button>
+      )}
       {/* Barra sempre in vista in fondo allo schermo: salvare senza scorrere. */}
       <div className="sticky bottom-0 z-10 -mx-4 mt-4 grid grid-cols-2 gap-2.5 border-t border-zaff-border bg-zaff-surface px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 sm:-mx-6 sm:px-6">
-        <Button size="lg" fullWidth onClick={handleSave} disabled={saving}>
-          {deckId ? 'Salva Modifiche' : 'Salva Mazzo'}
+        <Button size="lg" fullWidth onClick={() => handleSave()} disabled={saving}>
+          {saving ? (persisting ? 'Salvataggio…' : 'Verifico le carte…') : deckId ? 'Salva Modifiche' : 'Salva Mazzo'}
         </Button>
-        <Button size="lg" fullWidth variant="ghost" onClick={onBack}>
+        <Button size="lg" fullWidth variant="ghost" disabled={persisting} onClick={onBack}>
           Annulla
         </Button>
       </div>
-      {picker && (
+      {picker && !saving && (
         <CardPicker
           mode={picker.mode}
           initialQuery={picker.mode === 'replace' ? picker.name : ''}

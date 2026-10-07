@@ -1,387 +1,168 @@
-/**
- * Client minimale di Scryfall (https://scryfall.com/docs/api) per mostrare le
- * immagini delle carte dei mazzi. Solo carte in inglese (il default di
- * Scryfall). Regole rispettate: intestazioni User-Agent/Accept, una richiesta
- * alla volta con pausa di 100 ms (limite ~10 al secondo), immagini non
- * modificate. I risultati si ricordano in memoria e nel browser (localStorage),
- * così riaprire un mazzo non rifà alcuna chiamata.
- */
+/** Scryfall display cache backed by the shared exact lookup/scheduler. */
+import { cacheVerifiedCard, requestScryfall, resolveScryfallNames, rawNames, type RawCard, type RawFaceImages } from './scryfallLookup';
 
-export interface ScryFace {
-  small: string;
-  normal: string;
-  /** Solo l'illustrazione centrale della carta (formato quasi quadrato). */
-  art: string;
-}
-
+export interface ScryFace { small: string; normal: string; art: string }
 export interface ScryCard {
   name: string;
-  /** Una faccia per le carte normali, due per quelle a doppia faccia. */
+  scryfallId: string;
+  oracleId: string | null;
+  exactMatch: true;
   faces: ScryFace[];
-  /** Colori della carta (W U B R G): vuoto per incolori e terre. Per le
-   *  doppie facce conta la faccia davanti. */
   colors: string[];
-  /** Riga dei tipi della faccia davanti, es. "Legendary Creature — Elf". */
   typeLine: string;
-  /** Valore di mana (costo totale convertito). */
   cmc: number;
-  /** Costo di mana come scritto da Scryfall, es. "{2}{G}{G}". */
   manaCost: string;
-  /** Colori di mana che la carta può produrre (W U B R G C). */
   produced: string[];
-  /** Token che la carta può creare (id Scryfall e nome). */
   tokens: { id: string; name: string }[];
 }
-
-/** Un token (es. "Human 2/2"), con l'immagine; arriva da una richiesta a parte. */
 export interface ScryToken {
-  id: string;
-  name: string;
-  typeLine: string;
-  power: string;
-  toughness: string;
-  colors: string[];
-  oracle: string;
-  art: string;
-  normal: string;
+  id: string; name: string; typeLine: string; power: string; toughness: string;
+  colors: string[]; oracle: string; art: string; normal: string;
 }
 
-const STORAGE_KEY = 'mtg-scryfall-cache-v5';
-const MAX_STORED = 3000;
-const BATCH = 75;
-const PAUSE_MS = 110;
-
-const found = new Map<string, ScryCard>();
-/** Nomi non trovati in questa sessione (non salvati: se il nome viene
- *  corretto o Scryfall cambia, al prossimo avvio si riprova). */
-const missing = new Set<string>();
-const listeners = new Set<() => void>();
-let loadedStorage = false;
-
-export function cardKey(name: string): string {
-  return name.trim().toLowerCase();
-}
-
-function loadStorage() {
-  if (loadedStorage) return;
-  loadedStorage = true;
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return;
-    const entries = JSON.parse(raw) as [string, ScryCard][];
-    entries.forEach(([k, v]) => {
-      if (v && Array.isArray(v.faces) && v.faces.length > 0 && Array.isArray(v.colors) &&
-        typeof v.typeLine === 'string' &&
-        typeof v.cmc === 'number' &&
-        Array.isArray(v.produced) &&
-        Array.isArray(v.tokens) &&
-        typeof v.faces[0].art === 'string') {
-        found.set(k, v);
-      }
-    });
-  } catch {
-    /* cache assente o rovinata: si riparte da vuoto */
-  }
-}
-
-function saveStorage() {
-  try {
-    const entries = [...found.entries()].slice(-MAX_STORED);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
-  } catch {
-    /* spazio finito o storage bloccato (navigazione privata): pazienza */
-  }
-}
-
-interface RawFaceImages {
-  small?: string;
-  normal?: string;
-  art_crop?: string;
-}
-
-interface RawCard {
-  name: string;
-  image_uris?: RawFaceImages;
-  colors?: string[];
-  type_line?: string;
-  cmc?: number;
-  mana_cost?: string;
-  produced_mana?: string[];
-  id?: string;
-  power?: string;
-  toughness?: string;
-  oracle_text?: string;
-  all_parts?: { id: string; component: string; name: string }[];
-  card_faces?: {
-    power?: string;
-    toughness?: string;
-    oracle_text?: string;
-    name?: string;
-    image_uris?: RawFaceImages;
-    colors?: string[];
-    type_line?: string;
-    mana_cost?: string;
-    produced_mana?: string[];
-  }[];
-}
-
-function toFaces(raw: RawCard): ScryFace[] {
-  // Carte normali (e split/aftermath/adventure): immagine unica in cima.
-  if (raw.image_uris?.small && raw.image_uris?.normal) {
-    return [
-      {
-        small: raw.image_uris.small,
-        normal: raw.image_uris.normal,
-        art: raw.image_uris.art_crop ?? raw.image_uris.small,
-      },
-    ];
-  }
-  // Doppia faccia (transform, modal DFC…): un'immagine per faccia.
-  return (raw.card_faces ?? [])
-    .map((f) => f.image_uris)
-    .filter((u): u is RawFaceImages => !!u?.small && !!u?.normal)
-    .map((u) => ({ small: u.small as string, normal: u.normal as string, art: u.art_crop ?? (u.small as string) }));
-}
-
-function toCard(raw: RawCard): ScryCard | null {
-  const faces = toFaces(raw);
-  if (faces.length === 0) return null;
-  const front = raw.card_faces?.[0];
-  return {
-    name: raw.name,
-    faces,
-    colors: raw.colors ?? front?.colors ?? [],
-    typeLine: (raw.type_line ?? front?.type_line ?? '').split('//')[0].trim(),
-    cmc: typeof raw.cmc === 'number' ? raw.cmc : 0,
-    manaCost: raw.mana_cost || front?.mana_cost || '',
-    produced:
-      raw.produced_mana ?? [...new Set((raw.card_faces ?? []).flatMap((f) => f.produced_mana ?? []))],
-    tokens: (raw.all_parts ?? [])
-      .filter((p) => p.component === 'token')
-      .map((p) => ({ id: p.id, name: p.name })),
-  };
-}
-
-/** Le chiavi sotto cui una carta risolta può essere cercata: nome completo
- *  ("Fire // Ice") e nome di ogni faccia ("Fire", "Ice"). */
-function keysFor(raw: RawCard): string[] {
-  const keys = [cardKey(raw.name)];
-  raw.name.split('//').forEach((part) => keys.push(cardKey(part)));
-  (raw.card_faces ?? []).forEach((f) => f.name && keys.push(cardKey(f.name)));
-  return [...new Set(keys)];
-}
-
-let chain: Promise<void> = Promise.resolve();
-
-function sleep(ms: number) {
-  return new Promise((r) => setTimeout(r, ms));
-}
-
-const MAX_FUZZY = 25;
-
-async function fetchFuzzy(name: string): Promise<RawCard | null> {
-  try {
-    const res = await fetch('https://api.scryfall.com/cards/named?fuzzy=' + encodeURIComponent(name), {
-      headers: { Accept: 'application/json' },
-    });
-    if (!res.ok) return null;
-    return (await res.json()) as RawCard;
-  } catch {
-    return null;
-  }
-}
-
-/** Ricerca per nome (anche parziale) per il selettore carte con immagini.
- *  Passa dalla stessa coda delle altre richieste, quindi rispetta il limite. */
-export function searchScryfall(query: string): Promise<ScryCard[]> {
-  loadStorage();
-  const task = async (): Promise<ScryCard[]> => {
-    try {
-      const url =
-        'https://api.scryfall.com/cards/search?unique=cards&order=name&q=' + encodeURIComponent(query + ' game:paper');
-      const res = await fetch(url, { headers: { Accept: 'application/json' } });
-      if (res.status === 404) return []; // nessun risultato
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      const json = (await res.json()) as { data?: RawCard[] };
-      const out: ScryCard[] = [];
-      (json.data ?? []).slice(0, 60).forEach((raw) => {
-        const card = toCard(raw);
-        if (!card) return;
-        keysFor(raw).forEach((k) => found.set(k, card));
-        out.push(card);
-      });
-      saveStorage();
-      return out;
-    } finally {
-      await sleep(PAUSE_MS);
-    }
-  };
-  const result = chain.then(task);
-  chain = result.then(
-    () => undefined,
-    () => undefined
-  );
-  return result;
-}
-
-async function fetchBatch(names: string[]): Promise<void> {
-  try {
-    const res = await fetch('https://api.scryfall.com/cards/collection', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ identifiers: names.map((name) => ({ name })) }),
-    });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const json = (await res.json()) as { data?: RawCard[] };
-    (json.data ?? []).forEach((raw) => {
-      const card = toCard(raw);
-      if (!card) return;
-      keysFor(raw).forEach((k) => found.set(k, card));
-    });
-    // Quello che non è tornato indietro: si riprova una per una con la
-    // ricerca "approssimata" di Scryfall (accetta piccoli errori di
-    // battitura, accenti, "Fire/Ice"…); se nemmeno lei lo trova, è un nome
-    // sbagliato.
-    const notFound = names.filter((n) => !found.has(cardKey(n)));
-    for (const n of notFound.slice(0, MAX_FUZZY)) {
-      await sleep(PAUSE_MS);
-      const raw = await fetchFuzzy(n);
-      const card = raw ? toCard(raw) : null;
-      if (raw && card) {
-        keysFor(raw).forEach((k) => found.set(k, card));
-        found.set(cardKey(n), card);
-      }
-    }
-    names.forEach((n) => {
-      if (!found.has(cardKey(n))) missing.add(cardKey(n));
-    });
-    saveStorage();
-  } catch {
-    // Errore di rete o limite: niente "non trovato", si riproverà alla
-    // prossima apertura (le carte restano grigie nel frattempo).
-  }
-}
-
-/** Chiede a Scryfall le carte che non conosciamo ancora (a gruppi di 75, in
- *  coda, con pausa tra una richiesta e l'altra) e avvisa chi ascolta. */
-export function requestCards(names: string[]): void {
-  loadStorage();
-  const todo = [...new Set(names.map(cardKey))].filter((k) => k && !found.has(k) && !missing.has(k));
-  if (todo.length === 0) return;
-
-  // Per la richiesta serve il nome com'è scritto, non la chiave minuscola.
-  const original = new Map<string, string>();
-  names.forEach((n) => original.set(cardKey(n), n.trim()));
-
-  for (let i = 0; i < todo.length; i += BATCH) {
-    const chunk = todo.slice(i, i + BATCH).map((k) => original.get(k) ?? k);
-    chain = chain.then(async () => {
-      await fetchBatch(chunk);
-      listeners.forEach((l) => l());
-      await sleep(PAUSE_MS);
-    });
-  }
-}
-
-export function getCard(name: string): ScryCard | undefined {
-  loadStorage();
-  return found.get(cardKey(name));
-}
-
-export function isMissing(name: string): boolean {
-  return missing.has(cardKey(name));
-}
-
-export function subscribeCards(listener: () => void): () => void {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
-}
-
-// --- Token ---------------------------------------------------------------
-
+// v5 did not retain IDs or exact-vs-fuzzy provenance; it cannot establish identity.
+const STORAGE_KEY = 'mtg-scryfall-cache-v6';
 const TOKEN_KEY = 'mtg-scryfall-tokens-v1';
+const found = new Map<string, ScryCard>();
+const byId = new Map<string, ScryCard>();
+const missing = new Set<string>();
+const pendingNames = new Set<string>();
+const pendingIds = new Set<string>();
 const tokensFound = new Map<string, ScryToken>();
 const tokensMissing = new Set<string>();
+const tokensPending = new Set<string>();
+const listeners = new Set<() => void>();
+let loaded = false;
 let loadedTokens = false;
+export const cardKey = (name: string): string => name.trim().toLowerCase();
+const notify = () => listeners.forEach(l => l());
+
+function loadStorage() {
+  if (loaded) return;
+  loaded = true;
+  try {
+    const entries = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]') as [string, ScryCard][];
+    for (const [key, card] of entries) {
+      if (card.exactMatch === true && typeof card.scryfallId === 'string' &&
+        Array.isArray(card.faces) && card.faces[0]?.normal && Array.isArray(card.tokens) &&
+        Array.isArray(card.colors) && Array.isArray(card.produced) && typeof card.typeLine === 'string') {
+        found.set(key, card); byId.set(card.scryfallId, card);
+      }
+    }
+  } catch { /* A corrupt/blocked cache is replaceable. */ }
+}
+function saveStorage() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify([...found.entries()].slice(-3000))); }
+  catch { /* Private/full storage does not prevent lookup. */ }
+}
+function toFaces(raw: RawCard): ScryFace[] {
+  const images = raw.image_uris ? [raw.image_uris] : (raw.card_faces ?? []).map(f => f.image_uris);
+  return images.filter((u): u is RawFaceImages => !!u?.normal)
+    .map(u => ({ small: u.small ?? u.normal!, normal: u.normal!, art: u.art_crop ?? u.small ?? u.normal! }));
+}
+function remember(raw: RawCard, requestedName?: string): ScryCard | undefined {
+  const faces = toFaces(raw);
+  if (!raw.id || !faces.length) return;
+  const front = raw.card_faces?.[0];
+  const card: ScryCard = {
+    name: raw.name, scryfallId: raw.id, oracleId: raw.oracle_id ?? front?.oracle_id ?? null,
+    exactMatch: true, faces, colors: raw.colors ?? front?.colors ?? [],
+    typeLine: (raw.type_line ?? front?.type_line ?? '').split('//')[0].trim(),
+    cmc: raw.cmc ?? 0, manaCost: raw.mana_cost || front?.mana_cost || '',
+    produced: raw.produced_mana ?? [...new Set((raw.card_faces ?? []).flatMap(f => f.produced_mana ?? []))],
+    tokens: (raw.all_parts ?? []).filter(p => p.component === 'token').map(p => ({ id: p.id, name: p.name })),
+  };
+  byId.set(raw.id, card);
+  for (const name of [...rawNames(raw), ...(requestedName ? [requestedName] : [])]) {
+    if (!found.has(cardKey(name))) found.set(cardKey(name), card);
+    missing.delete(cardKey(name));
+  }
+  cacheVerifiedCard(raw, requestedName);
+  return card;
+}
+
+export async function searchScryfall(query: string): Promise<ScryCard[]> {
+  loadStorage();
+  const result = await requestScryfall<{ data?: RawCard[] }>(
+    `/cards/search?unique=cards&order=name&q=${encodeURIComponent(query + ' game:paper')}`);
+  const cards = (result.data.data ?? []).slice(0, 60).map(raw => remember(raw)).filter((c): c is ScryCard => !!c);
+  saveStorage(); notify();
+  return cards;
+}
+export async function autocompleteCards(query: string): Promise<string[]> {
+  const result = await requestScryfall<{ data?: string[] }>(`/cards/autocomplete?q=${encodeURIComponent(query)}`);
+  return result.data.data ?? [];
+}
+
+/** Saved rows are hydrated by ID; new/unsaved entries are resolved exactly by name. */
+export function requestCards(names: string[], identities: { name: string; scryfallId?: string | null }[] = []): void {
+  loadStorage();
+  const pinned = new Set(identities.filter(c => c.scryfallId).map(c => cardKey(c.name)));
+  const ids = [...new Set(identities.map(c => c.scryfallId).filter((id): id is string => !!id))]
+    .filter(id => !byId.has(id) && !pendingIds.has(id));
+  for (let i = 0; i < ids.length; i += 75) {
+    const chunk = ids.slice(i, i + 75);
+    chunk.forEach(id => pendingIds.add(id));
+    void requestScryfall<{ data?: RawCard[] }>('/cards/collection', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ identifiers: chunk.map(id => ({ id })) }),
+    }).then(result => { (result.data.data ?? []).forEach(raw => remember(raw)); saveStorage(); })
+      .catch(() => { /* Transient errors are not missing identities. */ })
+      .finally(() => { chunk.forEach(id => pendingIds.delete(id)); notify(); });
+  }
+  const todo = [...new Set(names.map(cardKey))].filter(n => n && !pinned.has(n) && !found.has(n) && !missing.has(n) && !pendingNames.has(n));
+  if (!todo.length) return;
+  todo.forEach(n => pendingNames.add(n));
+  void resolveScryfallNames(todo).then(result => {
+    for (const name of todo) {
+      const raw = result.get(name);
+      if (raw) remember(raw, name); else missing.add(name);
+    }
+    saveStorage();
+  }).catch(() => { /* Keep network errors retryable; never label them unknown cards. */ })
+    .finally(() => { todo.forEach(n => pendingNames.delete(n)); notify(); });
+}
+export function getCard(name: string, scryfallId?: string | null): ScryCard | undefined {
+  loadStorage();
+  return scryfallId ? byId.get(scryfallId) : found.get(cardKey(name));
+}
+export const isMissing = (name: string): boolean => missing.has(cardKey(name));
+export function subscribeCards(listener: () => void): () => void {
+  listeners.add(listener); return () => { listeners.delete(listener); };
+}
 
 function loadTokens() {
   if (loadedTokens) return;
   loadedTokens = true;
   try {
-    const raw = localStorage.getItem(TOKEN_KEY);
-    if (!raw) return;
-    (JSON.parse(raw) as [string, ScryToken][]).forEach(([k, v]) => {
-      if (v && typeof v.art === 'string' && typeof v.name === 'string') tokensFound.set(k, v);
-    });
-  } catch {
-    /* cache assente o rovinata */
-  }
+    const entries = JSON.parse(localStorage.getItem(TOKEN_KEY) ?? '[]') as [string, ScryToken][];
+    for (const [id, token] of entries) if (token?.normal && token.name) tokensFound.set(id, token);
+  } catch { /* Replaceable cache. */ }
 }
-
-function saveTokens() {
-  try {
-    localStorage.setItem(TOKEN_KEY, JSON.stringify([...tokensFound.entries()].slice(-1500)));
-  } catch {
-    /* spazio finito o storage bloccato */
-  }
-}
-
-function toToken(raw: RawCard): ScryToken | null {
+function toToken(raw: RawCard): ScryToken | undefined {
   const front = raw.card_faces?.[0];
-  const img = raw.image_uris ?? (raw.card_faces ?? []).map((f) => f.image_uris).find((u) => !!u?.normal);
-  if (!raw.id || !img?.normal) return null;
-  return {
-    id: raw.id,
-    name: raw.name.split('//')[0].trim(),
+  const img = raw.image_uris ?? front?.image_uris;
+  if (!raw.id || !img?.normal) return;
+  return { id: raw.id, name: raw.name.split('//')[0].trim(),
     typeLine: (raw.type_line ?? front?.type_line ?? '').split('//')[0].trim(),
-    power: raw.power ?? front?.power ?? '',
-    toughness: raw.toughness ?? front?.toughness ?? '',
-    colors: raw.colors ?? front?.colors ?? [],
-    oracle: (raw.oracle_text ?? front?.oracle_text ?? '').trim(),
-    art: img.art_crop ?? img.small ?? img.normal,
-    normal: img.normal,
-  };
+    power: raw.power ?? front?.power ?? '', toughness: raw.toughness ?? front?.toughness ?? '',
+    colors: raw.colors ?? front?.colors ?? [], oracle: (raw.oracle_text ?? front?.oracle_text ?? '').trim(),
+    art: img.art_crop ?? img.small ?? img.normal, normal: img.normal };
 }
-
-async function fetchTokenBatch(ids: string[]): Promise<void> {
-  try {
-    const res = await fetch('https://api.scryfall.com/cards/collection', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ identifiers: ids.map((id) => ({ id })) }),
-    });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const json = (await res.json()) as { data?: RawCard[] };
-    (json.data ?? []).forEach((raw) => {
-      const t = toToken(raw);
-      if (t) tokensFound.set(t.id, t);
-    });
-    ids.forEach((id) => {
-      if (!tokensFound.has(id)) tokensMissing.add(id);
-    });
-    saveTokens();
-  } catch {
-    /* errore di rete: si riprova alla prossima apertura */
-  }
-}
-
-/** Chiede a Scryfall i token (per id) che non conosciamo ancora. */
 export function requestTokens(ids: string[]): void {
   loadTokens();
-  const todo = [...new Set(ids)].filter((id) => id && !tokensFound.has(id) && !tokensMissing.has(id));
-  for (let i = 0; i < todo.length; i += BATCH) {
-    const chunk = todo.slice(i, i + BATCH);
-    chain = chain.then(async () => {
-      await fetchTokenBatch(chunk);
-      listeners.forEach((l) => l());
-      await sleep(PAUSE_MS);
-    });
+  const todo = [...new Set(ids)].filter(id => id && !tokensFound.has(id) && !tokensMissing.has(id) && !tokensPending.has(id));
+  for (let i = 0; i < todo.length; i += 75) {
+    const chunk = todo.slice(i, i + 75); chunk.forEach(id => tokensPending.add(id));
+    void requestScryfall<{ data?: RawCard[] }>('/cards/collection', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ identifiers: chunk.map(id => ({ id })) }),
+    }).then(result => {
+      for (const raw of result.data.data ?? []) { const token = toToken(raw); if (token) tokensFound.set(token.id, token); }
+      chunk.forEach(id => { if (!tokensFound.has(id)) tokensMissing.add(id); });
+      try { localStorage.setItem(TOKEN_KEY, JSON.stringify([...tokensFound.entries()].slice(-1500))); } catch { /* Optional cache. */ }
+    }).catch(() => { /* Network errors remain retryable. */ })
+      .finally(() => { chunk.forEach(id => tokensPending.delete(id)); notify(); });
   }
 }
-
-export function getToken(id: string): ScryToken | undefined {
-  loadTokens();
-  return tokensFound.get(id);
-}
+export function getToken(id: string): ScryToken | undefined { loadTokens(); return tokensFound.get(id); }

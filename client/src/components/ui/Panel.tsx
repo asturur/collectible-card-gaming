@@ -7,7 +7,7 @@ interface CenteredPanelProps {
   /** Illustrazione a tutta pagina dietro al riquadro (vedi LOGIN_BACKGROUND). */
   background?: string;
   /** Larghezza del riquadro: `md` è la maschera standard dell'app. */
-  width?: 'sm' | 'md';
+  width?: 'sm' | 'md' | 'lg';
   /** Il riquadro è un modulo: il contenuto viene avvolto in un `<form>`. */
   onSubmit?: () => void;
   className?: string;
@@ -51,7 +51,7 @@ export default function CenteredPanel({
   const boxClass = cx(
     PANEL,
     'relative z-10',
-    width === 'sm' ? 'max-w-sm' : 'max-w-md',
+    width === 'sm' ? 'max-w-sm' : width === 'lg' ? 'max-w-3xl' : 'max-w-md',
     // sopra l'illustrazione il riquadro si fa più denso, così il testo resta leggibile
     background && 'bg-zaff-surface/85 backdrop-blur-md',
     // sul desktop scende un po': l'illustrazione ha il volto in alto

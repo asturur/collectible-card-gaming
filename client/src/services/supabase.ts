@@ -18,6 +18,7 @@ export const supabase =
 export const TABLE_GAMES = 'partite';
 export const TABLE_PLAYERS = 'giocatori';
 export const TABLE_DECKS = 'mazzi';
+export const TABLE_DECK_CARDS = 'mazzi-cards';
 
 /** Lunghezza massima di un nome giocatore: generosa per qualunque nome vero
  *  (nome e cognome, o un suffisso tipo "_B" per distinguere un omonimo). */

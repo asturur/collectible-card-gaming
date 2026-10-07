@@ -1,132 +1,102 @@
 import { useState, useEffect } from 'react';
-import {
-  fetchDeckList,
-  fetchDeck,
-  extractDeckTypes,
-  filterDecksByType,
-  type DeckListEntry,
-  type MtgJsonDeck,
-} from '../services/mtgjson';
+import { fetchDeckList, fetchDeck, extractDeckTypes, filterDecksByType, type DeckListEntry } from '../services/mtgjson';
+import { listSavedDecks, getSavedDeck, subscribeSavedDecks, type SavedDeck } from '../services/savedDecks';
+import { fromMtgJson, fromSavedDeck, type PlayableDeck } from '../services/playableDeck';
+import { isPlayableEntry } from '../services/deckCards';
 import Button from './ui/Button';
 import CenteredPanel from './ui/Panel';
 import { SelectField } from './ui/Field';
-import { TEXT_ERROR } from './ui/styles';
+import { TEXT_ERROR, TEXT_MINI } from './ui/styles';
 
-interface DeckPickerProps {
-  onDeckSelected: (deck: MtgJsonDeck) => void;
-}
+interface DeckPickerProps { onDeckSelected: (deck: PlayableDeck) => void }
 
 export default function DeckPicker({ onDeckSelected }: DeckPickerProps) {
-  const [deckList, setDeckList] = useState<DeckListEntry[] | null>(null);
-  const [deckTypes, setDeckTypes] = useState<string[]>([]);
+  const [deckList, setDeckList] = useState<DeckListEntry[]>([]);
+  const [savedDecks, setSavedDecks] = useState<SavedDeck[]>([]);
   const [selectedType, setSelectedType] = useState('');
-  const [filteredDecks, setFilteredDecks] = useState<DeckListEntry[]>([]);
-  const [selectedFileName, setSelectedFileName] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [selection, setSelection] = useState<{ kind: 'saved' | 'mtgjson'; id: string } | null>(null);
+  const [loadingPremade, setLoadingPremade] = useState(true);
+  const [loadingSaved, setLoadingSaved] = useState(true);
+  const [premadeError, setPremadeError] = useState('');
+  const [savedError, setSavedError] = useState('');
+  const [error, setError] = useState('');
   const [fetching, setFetching] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [retry, setRetry] = useState(0);
 
-  // Fetch deck list index on mount
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    setError(null);
+    setLoadingPremade(true); setPremadeError('');
+    fetchDeckList().then(entries => { if (!cancelled) setDeckList(entries); })
+      .catch(err => { if (!cancelled) setPremadeError(err.message); })
+      .finally(() => { if (!cancelled) setLoadingPremade(false); });
+    return () => { cancelled = true; };
+  }, [retry]);
 
-    fetchDeckList()
-      .then((entries) => {
-        if (cancelled) return;
-        setDeckList(entries);
-        setDeckTypes(extractDeckTypes(entries));
-        setLoading(false);
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        setError(err instanceof Error ? err.message : 'Failed to load deck list');
-        setLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  // Update filtered decks when type changes
   useEffect(() => {
-    if (!deckList || !selectedType) {
-      setFilteredDecks([]);
-      setSelectedFileName('');
-      return;
+    let cancelled = false;
+    setLoadingSaved(true);
+    async function load() {
+      try {
+        const decks = await listSavedDecks();
+        if (!cancelled) { setSavedDecks(decks); setSavedError(''); }
+      } catch (err) { if (!cancelled) setSavedError((err as Error).message); }
+      finally { if (!cancelled) setLoadingSaved(false); }
     }
-    setFilteredDecks(filterDecksByType(deckList, selectedType));
-    setSelectedFileName('');
-  }, [deckList, selectedType]);
+    void load();
+    const stop = subscribeSavedDecks(load);
+    return () => { cancelled = true; stop(); };
+  }, [retry]);
 
+  const chosenSaved = selection?.kind === 'saved' ? savedDecks.find(d => d.id === selection.id) : undefined;
+  const missing = chosenSaved?.cardRows.filter(c => !isPlayableEntry(c)) ?? [];
   async function handleConfirm() {
-    if (!selectedFileName) return;
-    setFetching(true);
-    setError(null);
-
+    if (!selection) return;
+    setFetching(true); setError('');
     try {
-      const deck = await fetchDeck(selectedFileName);
+      const deck = selection.kind === 'saved'
+        ? fromSavedDeck(await getSavedDeck(selection.id))
+        : fromMtgJson(await fetchDeck(selection.id), selection.id);
       onDeckSelected(deck);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load deck');
-    } finally {
-      setFetching(false);
-    }
-  }
-
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-zaff-bg px-4">
-        <div className="text-center">
-          <div className="mb-4 text-lg text-zaff-muted">Loading deck library...</div>
-          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-zaff-border border-t-zaff-primary" />
-        </div>
-      </div>
-    );
+    } catch (err) { setError((err as Error).message); }
+    finally { setFetching(false); }
   }
 
   return (
-    <CenteredPanel title="Choose a Deck" subtitle="Browse premade decks from MTGJSON">
-      {error && (
-        <div className={`mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 ${TEXT_ERROR}`} role="alert">
-          {error}
+    <CenteredPanel width="lg" title="Choose a Deck" subtitle="Premade decks or any deck saved in Registro">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <SelectField id="deck-type" label="MTGJSON deck type" value={selectedType} disabled={loadingPremade || fetching}
+            onChange={e => { setSelectedType(e.target.value); if (selection?.kind === 'mtgjson') setSelection(null); }}>
+            <option value="">{loadingPremade ? 'Loading library…' : 'Select a deck type…'}</option>
+            {extractDeckTypes(deckList).map(type => <option key={type} value={type}>{type}</option>)}
+          </SelectField>
+          <SelectField id="deck-name" label="Premade deck" value={selection?.kind === 'mtgjson' ? selection.id : ''}
+            disabled={!selectedType || fetching} onChange={e => { setSelection(e.target.value ? { kind: 'mtgjson', id: e.target.value } : null); setError(''); }}>
+            <option value="">Select a deck…</option>
+            {filterDecksByType(deckList, selectedType).map(deck => <option key={deck.fileName} value={deck.fileName}>{deck.name}</option>)}
+          </SelectField>
+          {premadeError && <p className={TEXT_ERROR} role="alert">MTGJSON: {premadeError}</p>}
         </div>
-      )}
-
-      <SelectField
-        id="deck-type"
-        label="Deck Type"
-        value={selectedType}
-        onChange={(e) => setSelectedType(e.target.value)}
-      >
-        <option value="">Select a deck type...</option>
-        {deckTypes.map((type) => (
-          <option key={type} value={type}>
-            {type}
-          </option>
-        ))}
-      </SelectField>
-
-      {selectedType && (
-        <SelectField
-          id="deck-name"
-          label="Deck Name"
-          value={selectedFileName}
-          onChange={(e) => setSelectedFileName(e.target.value)}
-        >
-          <option value="">Select a deck...</option>
-          {filteredDecks.map((deck) => (
-            <option key={deck.fileName} value={deck.fileName}>
-              {deck.name}
-            </option>
-          ))}
-        </SelectField>
-      )}
-
-      <Button onClick={handleConfirm} disabled={!selectedFileName || fetching} size="lg" fullWidth>
-        {fetching ? 'Loading deck...' : 'OK'}
+        <div>
+          <SelectField id="saved-deck" label="Saved deck (Registro)" value={selection?.kind === 'saved' ? selection.id : ''}
+            disabled={loadingSaved || fetching} onChange={e => { setSelection(e.target.value ? { kind: 'saved', id: e.target.value } : null); setError(''); }}>
+            <option value="">{loadingSaved ? 'Loading saved decks…' : 'Select a saved deck…'}</option>
+            {savedDecks.map(deck => <option key={deck.id} value={deck.id}>
+              {deck.name}{deck.format ? ` · ${deck.format}` : ''}{savedDecks.filter(d => d.name === deck.name).length > 1 ? ` · ${deck.id.slice(-6)}` : ''}
+            </option>)}
+          </SelectField>
+          {!loadingSaved && !savedError && !savedDecks.length && <p className={TEXT_MINI}>No saved decks yet.</p>}
+          {chosenSaved && <p className={TEXT_MINI}>
+            {chosenSaved.cardRows.reduce((n, c) => n + c.qty, 0)} cards
+            {missing.length > 0 ? ` · ${missing.length} unresolved groups; fix them in Registro before playing.` : ''}
+          </p>}
+          {savedError && <p className={TEXT_ERROR} role="alert">Registro: {savedError}</p>}
+        </div>
+      </div>
+      {(savedError || premadeError) && <Button variant="ghost" onClick={() => setRetry(n => n + 1)}>Retry libraries</Button>}
+      {error && <p className={TEXT_ERROR} role="alert">{error}</p>}
+      <Button onClick={handleConfirm} disabled={!selection || fetching} size="lg" fullWidth>
+        {fetching ? 'Loading deck…' : 'Preview Deck'}
       </Button>
     </CenteredPanel>
   );
