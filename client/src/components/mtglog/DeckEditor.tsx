@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { MAX_DECK_NAME_LENGTH, supabase, TABLE_DECKS } from '../../services/supabase';
 import { ManaPips } from './ManaIcon';
 import CardPicker from './CardPicker';
@@ -80,6 +80,11 @@ async function searchCards(query: string): Promise<string[]> {
  *  rilevamento automatico dei colori dalle terre base, e import (file ManaBox
  *  passato come `initialDraft`, o mazzo precon Commander cercato qui).
  *  Va mostrato dentro un `Modal` (titolo e chiusura li mette il riquadro). */
+/** Parti del mazzo che contano per accorgersi di una modifica altrui. */
+function deckFingerprint(row: { name?: unknown; source?: unknown; colors?: unknown; cards?: unknown }): string {
+  return JSON.stringify([row.name ?? '', row.source ?? '', row.colors ?? [], row.cards ?? []]);
+}
+
 export default function DeckEditor({ deckId, initialDraft, onBack, onSaved }: DeckEditorProps) {
   const [name, setName] = useState(initialDraft?.name ?? '');
   const [source, setSource] = useState('');
@@ -108,6 +113,10 @@ export default function DeckEditor({ deckId, initialDraft, onBack, onSaved }: De
 
   useDeckImages(draft.map((c) => c.name));
 
+  /** Impronta del mazzo com'era quando l'ho aperto: al salvataggio la rileggo
+   *  e, se è cambiata, qualcun altro l'ha modificato nel frattempo. */
+  const openedFingerprint = useRef<string | null>(null);
+
   useEffect(() => {
     if (!deckId || !supabase) {
       setLoading(false);
@@ -123,6 +132,7 @@ export default function DeckEditor({ deckId, initialDraft, onBack, onSaved }: De
         if (loadError) {
           setError('Non riesco a leggere il mazzo: ' + loadError.message);
         } else if (data) {
+          openedFingerprint.current = deckFingerprint(data);
           setName(data.name);
           setSource(data.source ?? '');
           setColors(new Set(data.colors ?? []));
@@ -315,6 +325,21 @@ export default function DeckEditor({ deckId, initialDraft, onBack, onSaved }: De
     if (!supabase) {
       setError('Supabase non configurato.');
       return;
+    }
+    if (deckId && openedFingerprint.current !== null) {
+      const { data: current } = await supabase.from(TABLE_DECKS).select('*').eq('id', deckId).maybeSingle();
+      if (!current) {
+        setError('Questo mazzo non esiste più: è stato cancellato da qualcun altro.');
+        return;
+      }
+      if (
+        deckFingerprint(current) !== openedFingerprint.current &&
+        !window.confirm(
+          'Qualcun altro ha modificato questo mazzo mentre lo stavi modificando.\n\nOK = sovrascrivi con le tue modifiche\nAnnulla = torna indietro (poi chiudi e riapri il mazzo per vedere la versione aggiornata)'
+        )
+      ) {
+        return;
+      }
     }
     setSaving(true);
     if (deckId) {

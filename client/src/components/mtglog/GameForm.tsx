@@ -11,6 +11,7 @@ import {
   TABLE_PLAYERS,
 } from '../../services/supabase';
 import type { Game } from './GameList';
+import { rowToGame } from './stats';
 import LifeCounter, { type LifeCounterResume } from './LifeCounter';
 import type { LossCause } from './GameList';
 import { ManaPips } from './ManaIcon';
@@ -78,6 +79,11 @@ function rememberStartLife(gameId: string, value: number) {
   } catch {
     /* storage non disponibile: pazienza */
   }
+}
+
+/** Parti della partita che contano per accorgersi di una modifica altrui. */
+function gameFingerprint(g: Game): string {
+  return JSON.stringify([g.date, g.format, g.notes, g.startedAt, g.players]);
 }
 
 /** Ultima partita nuova salvata su questo dispositivo: formato, punti vita
@@ -416,6 +422,25 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved }: 
     };
 
     const gameId = editingGame ? editingGame.id : 'g' + Date.now() + Math.random().toString(36).slice(2, 7);
+
+    // Modifica di una partita salvata: se nel frattempo qualcun altro l'ha
+    // cambiata (o cancellata) lo dico prima di sovrascrivere.
+    if (editingGame) {
+      const { data: currentRow } = await supabase.from(TABLE_GAMES).select('*').eq('id', gameId).maybeSingle();
+      if (!currentRow) {
+        setError('Questa partita non esiste più: è stata cancellata da qualcun altro.');
+        return;
+      }
+      if (
+        gameFingerprint(rowToGame(currentRow)) !== gameFingerprint(editingGame) &&
+        !window.confirm(
+          'Qualcun altro ha modificato questa partita mentre la stavi modificando.\n\nOK = sovrascrivi con le tue modifiche\nAnnulla = torna indietro (poi chiudi e riapri la partita per vedere la versione aggiornata)'
+        )
+      ) {
+        return;
+      }
+    }
+
     setSaving(true);
     const { error: saveError } = editingGame
       ? await supabase.from(TABLE_GAMES).update(row).eq('id', gameId)
