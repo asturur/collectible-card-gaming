@@ -108,10 +108,27 @@ and static image export presentations. Player-specific deck results retain their
 original scope. Shared breadcrumbs lead back to each statistics list, while
 loading, failed reads, missing players/formations, and invalid URLs are handled.
 
-Checks started before the user's request to leave build/testing to them. The new
-route cases passed; two test typing issues and an existing timing-sensitive deck
-breadcrumb assertion were corrected. Build/tests were not rerun after those fixes,
-and browser verification remains for the user.
+Verification: the production build and all 120 tests in 14 files passed after
+the follow-up fixes. Phone/desktop checks with local sample data covered player
+and exact multiplayer matchup pages, long names, refresh, Back, shared breadcrumb
+navigation, and absence of statistics dialogs or horizontal page overflow.
+
+## Follow-up implemented: compact, whole-word breadcrumbs
+
+The shared page shell reduces top spacing, and the shared breadcrumb component
+reduces its vertical padding and gap above the page panel. Trails fit a single
+row using actual text measurements: Home remains intact, the earliest ancestor
+loses whole words first, then later ancestors, and the current page last. A label
+with no remaining words becomes `…`. Links retain their destinations, full
+accessible names, and title hints; labels restore as the available width grows.
+Resize and font-loading changes repeat the measurement through the shared kit.
+
+Verification: production build and all 126 tests in 15 files pass. The focused
+coverage checks priority, word boundaries, single-word labels, accessible names,
+link destinations, and restoration on resize. Browser checks at 320px, 390px,
+540px, and 1280px confirmed one-row fitting, compact spacing, full Home labels,
+progressive restoration, and navigation through collapsed links using local
+sample data. No shared database writes were performed.
 
 ## Recommendation and expected result
 

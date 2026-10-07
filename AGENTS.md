@@ -362,7 +362,11 @@ implementation sequence are in [plans/PLAN_DAISYUI_MIGRATION.md](plans/PLAN_DAIS
 - Breadcrumbs describe hierarchy, not the previous visited page. Supply linked
   ancestors through `SectionPage`; it adds Home and the nonlinked current page
   with `aria-current="page"`. Use saved record names when available, and keep
-  long labels readable on narrow phones. Do not recreate trails in each screen.
+  Home visible on narrow phones. The shared trail fits one row by shortening
+  whole words from the earliest ancestor onward, then the next, and the current
+  page last. Never cut a word in half. Preserve full accessible names, link
+  destinations, and title hints when a crumb becomes `…`; restore full labels
+  as space grows. Do not recreate trails in each screen.
 - Put persisted IDs in the URL and load through existing services/shared data.
   Do not require a clicked record in component state to reopen a page. Preserve
   the requested URL through authentication and handle missing/forbidden records.
