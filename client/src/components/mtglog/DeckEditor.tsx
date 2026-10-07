@@ -528,15 +528,6 @@ export default function DeckEditor({ deckId, initialDraft, onBack, onSaved }: De
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-2.5">
-        <Button onClick={handleSave} disabled={saving}>
-          {deckId ? 'Salva Modifiche' : 'Salva Mazzo'}
-        </Button>
-        <Button variant="ghost" onClick={onBack}>
-          Annulla
-        </Button>
-      </div>
-
       {error && (
         <p className="mt-3 text-sm text-red-400" role="alert">
           {error}
@@ -550,6 +541,16 @@ export default function DeckEditor({ deckId, initialDraft, onBack, onSaved }: De
         </a>
         ; i mazzi precon da un archivio pubblico della community Magic.
       </p>
+
+      {/* Barra sempre in vista in fondo allo schermo: salvare senza scorrere. */}
+      <div className="sticky bottom-0 z-10 -mx-4 mt-4 grid grid-cols-2 gap-2.5 border-t border-zaff-border bg-zaff-surface px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 sm:-mx-6 sm:px-6">
+        <Button size="lg" fullWidth onClick={handleSave} disabled={saving}>
+          {deckId ? 'Salva Modifiche' : 'Salva Mazzo'}
+        </Button>
+        <Button size="lg" fullWidth variant="ghost" onClick={onBack}>
+          Annulla
+        </Button>
+      </div>
       {picker && (
         <CardPicker
           mode={picker.mode}

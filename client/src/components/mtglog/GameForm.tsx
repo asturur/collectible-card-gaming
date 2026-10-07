@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   findCanonicalName,
   MAX_PLAYER_NAME_LENGTH,
+  sameName,
   subscribeToTable,
   suggestAlternativeNames,
   supabase,
@@ -79,6 +80,41 @@ function rememberStartLife(gameId: string, value: number) {
   }
 }
 
+/** Ultima partita nuova salvata su questo dispositivo: formato, punti vita
+ *  iniziali e giocatori (non i mazzi, che cambiano quasi sempre) vengono
+ *  riproposti nella prossima "Nuova partita". Mai bloccante. */
+const LAST_GAME_KEY = 'mtglog:lastNewGame';
+
+interface LastGame {
+  format: string;
+  startLife: number;
+  names: string[];
+}
+
+function readLastGame(): LastGame | null {
+  try {
+    const raw = localStorage.getItem(LAST_GAME_KEY);
+    if (!raw) return null;
+    const v = JSON.parse(raw) as Partial<LastGame>;
+    if (!Array.isArray(v.names)) return null;
+    return {
+      format: typeof v.format === 'string' ? v.format : '',
+      startLife: typeof v.startLife === 'number' && v.startLife >= 1 ? v.startLife : 20,
+      names: v.names.filter((n): n is string => typeof n === 'string' && n.trim() !== ''),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function rememberLastGame(value: LastGame) {
+  try {
+    localStorage.setItem(LAST_GAME_KEY, JSON.stringify(value));
+  } catch {
+    /* storage non disponibile: pazienza */
+  }
+}
+
 /** Valore per un `<input type="datetime-local">`, in ora locale (non UTC:
  *  `toISOString()` darebbe l'ora sbagliata a chi non è su fuso UTC). */
 function toLocalDateTimeValue(d: Date): string {
@@ -106,6 +142,8 @@ function emptyPlayerRow(): PlayerRow {
  *  Va mostrato dentro un `Modal` (titolo e chiusura li mette il riquadro). */
 export default function GameForm({ editingGame, rematchFrom, onBack, onSaved }: GameFormProps) {
   const [playerNames, setPlayerNames] = useState<string[]>([]);
+  /** Nomi in elenco appena letti (lo stato si aggiorna solo al render dopo). */
+  const loadedNames = useRef<string[]>([]);
   const [decks, setDecks] = useState<DeckOption[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -134,7 +172,8 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved }: 
       supabase.from(TABLE_PLAYERS).select('name').order('name'),
       supabase.from(TABLE_DECKS).select('name, colors').order('name'),
     ]);
-    setPlayerNames((playersRes.data ?? []).map((r) => r.name));
+    loadedNames.current = (playersRes.data ?? []).map((r) => r.name);
+    setPlayerNames(loadedNames.current);
     const deckList = (decksRes.data ?? []).map((r) => ({ name: r.name, colors: r.colors ?? [] }));
     setDecks(deckList);
     return deckList;
@@ -199,6 +238,18 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved }: 
         // Un solo tap: il segna-punti parte subito. Se lo si chiude resta il
         // modulo già compilato.
         setLifeCounterOpen(true);
+      } else {
+        // Partita nuova: riparto da formato, punti vita e giocatori dell'ultima
+        // partita salvata (solo i giocatori ancora presenti in elenco).
+        const last = readLastGame();
+        if (last) {
+          setFormat(last.format);
+          setStartLife(last.startLife);
+          const known = last.names.filter((n) => loadedNames.current.some((x) => sameName(x, n)));
+          if (known.length >= 2) {
+            setPlayers(known.map((n) => ({ ...emptyPlayerRow(), name: loadedNames.current.find((x) => sameName(x, n)) ?? n })));
+          }
+        }
       }
       setLoading(false);
     });
@@ -375,6 +426,13 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved }: 
       return;
     }
     rememberStartLife(gameId, startLife);
+    if (!editingGame) {
+      rememberLastGame({
+        format: format.trim(),
+        startLife,
+        names: readPlayers.map((p) => p.name).filter((n) => !/^Giocatore \d+$/.test(n)),
+      });
+    }
 
     if (onSaved) {
       onSaved();
@@ -506,7 +564,7 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved }: 
             key={i}
             className={`mb-3 rounded-lg border bg-zaff-bg p-3 ${p.winner ? 'border-zaff-highlight' : 'border-zaff-border'}`}
           >
-            <div className="mb-2 flex flex-wrap items-center gap-2">
+            <div className="mb-2 flex items-start gap-2">
               <div className="min-w-0 flex-1">
                 {p.nameTyping || (p.name !== '' && !playerNames.includes(p.name)) ? (
                   <>
@@ -549,7 +607,7 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved }: 
                   type="button"
                   onClick={() => removePlayer(i)}
                   title="Togli giocatore"
-                  className="h-7 w-7 shrink-0 rounded-lg border border-zaff-border text-base leading-none text-zaff-muted transition hover:border-red-400 hover:text-red-400"
+                  className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-lg border border-zaff-border text-xl leading-none text-zaff-muted transition hover:border-red-400 hover:text-red-400 active:scale-95"
                 >
                   ×
                 </button>
@@ -780,15 +838,6 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved }: 
         fieldClassName="mt-4"
       />
 
-      <div className="mt-2.5 grid grid-cols-2 gap-2.5">
-        <Button fullWidth onClick={handleSaveClick} disabled={saving}>
-          {editingGame ? 'Salva Modifiche' : 'Salva Partita'}
-        </Button>
-        <Button fullWidth variant="ghost" onClick={onBack}>
-          Annulla
-        </Button>
-      </div>
-
       {message && <p className="mt-3 text-sm text-green-400">{message}</p>}
       {error && (
         <p className="mt-3 text-sm text-red-400" role="alert">
@@ -799,6 +848,17 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved }: 
       <p className={cx('mt-2.5', TEXT_MINI)}>
         I pallini sotto ogni nome sono i colori del mazzo: bianco, blu, nero, rosso, verde.
       </p>
+
+      {/* Barra sempre in vista in fondo allo schermo (sopra la barra di
+          navigazione): il salvataggio è raggiungibile senza scorrere. */}
+      <div className="sticky bottom-[calc(4rem+env(safe-area-inset-bottom))] z-10 -mx-4 mt-4 grid grid-cols-2 gap-2.5 border-t border-zaff-border bg-zaff-surface px-4 py-3 sm:-mx-6 sm:px-6">
+        <Button fullWidth size="lg" onClick={handleSaveClick} disabled={saving}>
+          {editingGame ? 'Salva Modifiche' : 'Salva Partita'}
+        </Button>
+        <Button fullWidth size="lg" variant="ghost" onClick={onBack}>
+          Annulla
+        </Button>
+      </div>
     </>
   );
 }

@@ -11,6 +11,7 @@ import GameStats from './mtglog/GameStats';
 import Standings from './mtglog/Standings';
 import MatchupStats from './mtglog/MatchupStats';
 import { computeTally, rowToGame } from './mtglog/stats';
+import BottomNav, { type NavTab } from './mtglog/BottomNav';
 import Modal from './ui/Modal';
 import Button, { ButtonLink } from './ui/Button';
 import {
@@ -43,7 +44,39 @@ const OPENED_FROM_RECOVERY_LINK =
 const LINK_ERROR_IN_URL =
   typeof window !== 'undefined' && /error_code=|error=access_denied/.test(window.location.hash + window.location.search);
 
-type MtgLogModal = null | 'players' | 'decks' | 'newGame' | 'games' | 'stats' | 'playerStats' | 'matchups';
+type MtgLogModal =
+  | null
+  | 'players'
+  | 'decks'
+  | 'newGame'
+  | 'games'
+  | 'stats'
+  | 'playerStats'
+  | 'matchups'
+  | 'statsMenu'
+  | 'more';
+
+/** Quale voce della barra in basso è accesa per il riquadro aperto. */
+function tabFor(modal: MtgLogModal): NavTab | null {
+  switch (modal) {
+    case 'games':
+      return 'games';
+    case 'decks':
+      return 'decks';
+    case 'newGame':
+      return 'new';
+    case 'stats':
+    case 'playerStats':
+    case 'matchups':
+    case 'statsMenu':
+      return 'stats';
+    case 'players':
+    case 'more':
+      return 'more';
+    default:
+      return null;
+  }
+}
 
 /**
  * Registro Partite MTG (vedi plans/PLAN_5_MTG_LOG_PORTING.md): autenticazione,
@@ -165,9 +198,28 @@ export default function MtgLog({ onOpenZaff }: MtgLogProps) {
     setRematchFrom(null);
   }
 
+  function selectTab(tab: NavTab) {
+    const current = tabFor(openModal);
+    const root: MtgLogModal =
+      tab === 'new' ? 'newGame' : tab === 'stats' ? 'statsMenu' : tab === 'more' ? 'more' : tab;
+    // Toccare la voce già aperta: dentro un dettaglio (es. una statistica) torna
+    // al menu della sezione, già al menu riporta alla pagina iniziale.
+    const target: MtgLogModal = tab === current && openModal === root ? null : root;
+    if (
+      openModal === 'newGame' &&
+      target !== 'newGame' &&
+      !window.confirm('Uscire dalla partita? Quello che non hai salvato andrà perso.')
+    ) {
+      return;
+    }
+    setEditingGame(null);
+    setRematchFrom(null);
+    setOpenModal(target);
+  }
+
   return (
     <div className="min-h-screen bg-zaff-bg text-zaff-text">
-      <div className="mx-auto w-full max-w-[1180px] px-4 pb-20 pt-6 sm:px-5 sm:pt-7">
+      <div className="mx-auto w-full max-w-[1180px] px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-6 sm:px-5 sm:pt-7">
         <header className="border-b-2 border-zaff-text pb-4 sm:pb-[18px]">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="min-w-0">
@@ -284,6 +336,33 @@ export default function MtgLog({ onOpenZaff }: MtgLogProps) {
         </Modal>
       )}
 
+      {openModal === 'statsMenu' && (
+        <Modal title="Statistiche" onClose={closeModal}>
+          <div className={TILE_GRID}>
+            <GridTile graphic={<StatsRingIcon />} label="Mazzi" onClick={() => setOpenModal('stats')} />
+            <GridTile graphic={<PodiumIcon />} label="Giocatori" onClick={() => setOpenModal('playerStats')} />
+            <GridTile graphic={<CrossedSwordsIcon />} label="Per Sfida" onClick={() => setOpenModal('matchups')} />
+          </div>
+        </Modal>
+      )}
+
+      {openModal === 'more' && (
+        <Modal title="Altro" onClose={closeModal}>
+          <p className="mb-3 truncate text-sm text-zaff-muted">{session.user.email}</p>
+          <div className="flex flex-col gap-2.5">
+            <Button variant="ghost" size="lg" fullWidth className="py-3.5" onClick={() => setOpenModal('players')}>
+              Gestisci Giocatori
+            </Button>
+            <ButtonLink {...navLinkProps('zaff', onOpenZaff)} variant="ghost" size="lg" fullWidth className="py-3.5">
+              Vai a ZAFF →
+            </ButtonLink>
+            <Button variant="ghost" size="lg" fullWidth className="py-3.5" onClick={() => supabase?.auth.signOut()}>
+              Esci
+            </Button>
+          </div>
+        </Modal>
+      )}
+
       {openModal === 'players' && (
         <Modal
           title="Giocatori"
@@ -319,6 +398,8 @@ export default function MtgLog({ onOpenZaff }: MtgLogProps) {
           />
         </Modal>
       )}
+
+      <BottomNav active={tabFor(openModal)} onSelect={selectTab} />
     </div>
   );
 }

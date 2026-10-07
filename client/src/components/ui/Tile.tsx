@@ -31,7 +31,7 @@ export function GridTile({ icon, graphic, label, sublabel, onClick }: GridTilePr
     <button
       type="button"
       onClick={onClick}
-      className="flex h-28 flex-col overflow-hidden rounded-lg border border-zaff-border bg-zaff-surface text-center text-zaff-text transition hover:border-zaff-primary active:scale-[0.97]"
+      className="flex h-32 flex-col overflow-hidden rounded-lg border border-zaff-border bg-zaff-surface text-center text-zaff-text transition hover:border-zaff-primary active:scale-[0.97]"
     >
       <span className="relative flex flex-1 items-center justify-center overflow-hidden">
         {graphic ?? <span className="text-2xl leading-none">{icon}</span>}
@@ -42,8 +42,8 @@ export function GridTile({ icon, graphic, label, sublabel, onClick }: GridTilePr
           graphic ? '-mt-3' : undefined
         )}
       >
-        <span className="text-[13px] font-medium leading-tight">{label}</span>
-        {sublabel && <span className="text-[11px] text-zaff-muted">{sublabel}</span>}
+        <span className="text-[15px] font-bold leading-tight">{label}</span>
+        {sublabel && <span className="text-xs text-zaff-muted">{sublabel}</span>}
       </span>
     </button>
   );
