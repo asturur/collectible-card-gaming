@@ -129,7 +129,9 @@ export default function DeckList({ userId, onCreate, onEdit, onImportFile }: Dec
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
   const [pasteOpen, setPasteOpen] = useState(false);
+  const [pasteError, setPasteError] = useState('');
   const [pasteText, setPasteText] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -154,10 +156,10 @@ export default function DeckList({ userId, onCreate, onEdit, onImportFile }: Dec
   function handlePasteImport() {
     const parsed = parsePastedDeckList(pasteText);
     if (!parsed.length) {
-      setError("Non sono riuscito a leggere nessuna carta da questo testo: controlla che ci sia una riga \"<numero> <nome carta>\" per ogni carta.");
+      setPasteError("Non sono riuscito a leggere nessuna carta da questo testo: controlla che ci sia una riga \"<numero> <nome carta>\" per ogni carta.");
       return;
     }
-    setError('');
+    setPasteError('');
     setPasteOpen(false);
     setPasteText('');
     // Il testo incollato non porta un nome mazzo: lo si scrive nella
@@ -245,33 +247,82 @@ export default function DeckList({ userId, onCreate, onEdit, onImportFile }: Dec
         )}
       </div>
 
-      {/* Stessa logica dei tasti di Nuova Partita (Avvia Partita / Salva /
-          Annulla): a tutta larghezza, grandi e facili da toccare; l'azione
-          principale col colore pieno, le altre due solo col bordo. */}
-      <div className="mt-1 flex flex-col gap-2.5">
-        <Button size="lg" fullWidth className="py-3.5 text-lg" onClick={onCreate}>
-          + Crea Nuovo Mazzo
-        </Button>
-        <Button variant="ghost" size="lg" fullWidth className="py-3.5" onClick={() => fileInputRef.current?.click()}>
-          📄 Importa Mazzo (File ManaBox)
-        </Button>
-        <Button
-          variant="ghost"
-          size="lg"
-          fullWidth
-          className="py-3.5"
-          onClick={() => {
-            setPasteOpen((v) => !v);
-            setError('');
-          }}
-        >
-          📋 Incolla Mazzo
-        </Button>
-      </div>
       <input ref={fileInputRef} type="file" accept=".txt" hidden onChange={handleFileChange} />
 
+      {error && (
+        <p className="mt-3 text-sm text-red-400" role="alert">
+          {error}
+        </p>
+      )}
+
+      {/* Un solo tasto, sempre in vista in fondo (sopra la barra di
+          navigazione): le tre strade per creare un mazzo si scelgono dopo. */}
+      <div className="sticky bottom-[calc(4rem+env(safe-area-inset-bottom))] z-10 -mx-4 mt-3 border-t border-zaff-border bg-zaff-surface px-4 py-3 sm:-mx-6 sm:px-6">
+        <Button
+          size="lg"
+          fullWidth
+          className="py-3.5 text-lg"
+          onClick={() => {
+            setError('');
+            setCreateOpen(true);
+          }}
+        >
+          + Crea Nuovo Mazzo
+        </Button>
+      </div>
+
+      {createOpen && (
+        <Modal level={2} title="Crea Nuovo Mazzo" subtitle="Come vuoi iniziare?" onClose={() => setCreateOpen(false)}>
+          <div className="flex flex-col gap-2.5">
+            <Button
+              size="lg"
+              fullWidth
+              className="py-3.5 text-lg"
+              onClick={() => {
+                setCreateOpen(false);
+                onCreate();
+              }}
+            >
+              ✍️ Inserimento manuale
+            </Button>
+            <Button
+              variant="ghost"
+              size="lg"
+              fullWidth
+              className="py-3.5"
+              onClick={() => {
+                setCreateOpen(false);
+                fileInputRef.current?.click();
+              }}
+            >
+              📄 Importa file (ManaBox)
+            </Button>
+            <Button
+              variant="ghost"
+              size="lg"
+              fullWidth
+              className="py-3.5"
+              onClick={() => {
+                setCreateOpen(false);
+                setPasteError('');
+                setPasteOpen(true);
+              }}
+            >
+              📋 Incolla elenco
+            </Button>
+          </div>
+        </Modal>
+      )}
+
       {pasteOpen && (
-        <div className="mb-3.5 mt-2.5 rounded-lg border border-zaff-border bg-zaff-bg p-3">
+        <Modal
+          level={2}
+          title="Incolla elenco"
+          onClose={() => {
+            setPasteOpen(false);
+            setPasteText('');
+          }}
+        >
           <p className={cx('mb-2', TEXT_MINI)}>
             Incolla qui l&apos;elenco copiato da ManaBox, MTG Scanner o app simili: righe come &quot;Deck&quot; o
             &quot;Sideboard&quot; (anche con un numero dopo) vengono riconosciute e saltate da sole.
@@ -281,15 +332,20 @@ export default function DeckList({ userId, onCreate, onEdit, onImportFile }: Dec
             onChange={(e) => setPasteText(e.target.value)}
             placeholder={'Deck\n2 Annul\n4 Brainstorm\n16 Island\n\nSideboard\n2 Island'}
             rows={8}
-            className="w-full rounded-lg border border-zaff-border bg-zaff-surface p-2.5 text-sm text-zaff-text placeholder:text-zaff-muted"
+            className="w-full rounded-lg border border-zaff-border bg-zaff-bg p-2.5 text-sm text-zaff-text placeholder:text-zaff-muted"
           />
-          <div className="mt-2 flex gap-2">
-            <Button size="sm" onClick={handlePasteImport} disabled={!pasteText.trim()}>
+          {pasteError && (
+            <p className="mt-2 text-sm text-red-400" role="alert">
+              {pasteError}
+            </p>
+          )}
+          <div className="mt-3 grid grid-cols-2 gap-2.5">
+            <Button size="lg" onClick={handlePasteImport} disabled={!pasteText.trim()}>
               Importa
             </Button>
             <Button
+              size="lg"
               variant="ghost"
-              size="sm"
               onClick={() => {
                 setPasteOpen(false);
                 setPasteText('');
@@ -298,13 +354,7 @@ export default function DeckList({ userId, onCreate, onEdit, onImportFile }: Dec
               Annulla
             </Button>
           </div>
-        </div>
-      )}
-
-      {error && (
-        <p className="mt-3 text-sm text-red-400" role="alert">
-          {error}
-        </p>
+        </Modal>
       )}
 
       {selectedDeck && (
