@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
-import { isSupabaseConfigured, subscribeToTable, supabase, TABLE_GAMES } from '../services/supabase';
+import { isSupabaseConfigured, subscribeToTable, supabase, TABLE_DECKS, TABLE_GAMES } from '../services/supabase';
 import AuthScreen from './mtglog/AuthScreen';
 import PlayersRoster from './mtglog/PlayersRoster';
 import DeckList from './mtglog/DeckList';
@@ -10,8 +10,8 @@ import GameList, { type Game } from './mtglog/GameList';
 import GameStats from './mtglog/GameStats';
 import Standings from './mtglog/Standings';
 import MatchupStats from './mtglog/MatchupStats';
-import { computeTally, dateLabel, rowToGame } from './mtglog/stats';
-import { ManaIcons } from './mtglog/ManaIcon';
+import { computeTally, rowToGame } from './mtglog/stats';
+import HomeOverview from './mtglog/HomeOverview';
 import BottomNav, { type NavTab } from './mtglog/BottomNav';
 import Modal from './ui/Modal';
 import Button, { ButtonLink } from './ui/Button';
@@ -98,6 +98,7 @@ export default function MtgLog({ onOpenZaff }: MtgLogProps) {
   const [rematchFrom, setRematchFrom] = useState<Game | null>(null);
   const [games, setGames] = useState<Game[]>([]);
   /** True finché non è stata scelta la nuova password (link di recupero). */
+  const [deckCount, setDeckCount] = useState(0);
   const [sharedGameId, setSharedGameId] = useState<string | null>(SHARED_GAME_ID);
   const [recovering, setRecovering] = useState(OPENED_FROM_RECOVERY_LINK);
   const [linkExpired, setLinkExpired] = useState(LINK_ERROR_IN_URL);
@@ -152,6 +153,18 @@ export default function MtgLog({ onOpenZaff }: MtgLogProps) {
     return subscribeToTable(TABLE_GAMES, loadGames);
   }, [loggedIn]);
 
+  // Numero di mazzi salvati, per la pagina iniziale.
+  useEffect(() => {
+    if (!loggedIn || !supabase) return;
+    async function loadDeckCount() {
+      if (!supabase) return;
+      const { count } = await supabase.from(TABLE_DECKS).select('id', { count: 'exact', head: true });
+      setDeckCount(count ?? 0);
+    }
+    loadDeckCount();
+    return subscribeToTable(TABLE_DECKS, loadDeckCount);
+  }, [loggedIn]);
+
   if (!isSupabaseConfigured) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-zaff-bg px-4">
@@ -194,14 +207,6 @@ export default function MtgLog({ onOpenZaff }: MtgLogProps) {
   }
 
   const userId = session.user.id;
-  // Ultima partita giocata (per data, poi orario di inizio, poi id).
-  const lastGame =
-    [...games].sort(
-      (x, y) =>
-        y.date.localeCompare(x.date) ||
-        (y.startedAt ?? '').localeCompare(x.startedAt ?? '') ||
-        y.id.localeCompare(x.id)
-    )[0] ?? null;
   const standings = computeTally(games);
 
   function closeModal() {
@@ -244,67 +249,21 @@ export default function MtgLog({ onOpenZaff }: MtgLogProps) {
 
           <div className="mtg-sep" />
 
-          {/* Pagina iniziale essenziale: un solo grande tasto per iniziare e
-              l'ultima partita giocata. Tutto il resto (partite, mazzi,
-              statistiche, giocatori, ZAFF, esci) è nella barra in basso. */}
-          <button
-            type="button"
-            onClick={() => {
+          {/* Pagina iniziale: tasto Nuova Partita, tre numeri e anteprime di
+              partite, mazzi e classifica (ognuna è un solo tasto verso la
+              sezione completa). Il resto è nella barra in basso. */}
+          <HomeOverview
+            games={games}
+            deckCount={deckCount}
+            onNewGame={() => {
               setEditingGame(null);
               setRematchFrom(null);
               setOpenModal('newGame');
             }}
-            className="flex w-full items-center gap-4 rounded-xl bg-gradient-to-r from-zaff-primary to-zaff-accent px-5 py-5 text-left text-zaff-bg shadow-lg transition active:scale-[0.98]"
-          >
-            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-black/20 text-4xl font-light leading-none">
-              +
-            </span>
-            <span className="min-w-0">
-              <span className="block text-2xl font-bold leading-tight">Nuova Partita</span>
-              <span className="block text-sm font-medium opacity-80">Segna-punti e risultato</span>
-            </span>
-          </button>
-
-          <h2 className="mb-2 mt-6 text-sm font-semibold uppercase tracking-wide text-zaff-muted">Ultima partita</h2>
-          {lastGame ? (
-            <button
-              type="button"
-              onClick={() => {
-                setEditingGame(null);
-                setRematchFrom(null);
-                setSharedGameId(lastGame.id);
-                setOpenModal('games');
-              }}
-              className="flex w-full items-center gap-3.5 rounded-lg border border-zaff-border bg-zaff-bg px-3.5 py-3 text-left transition hover:border-zaff-primary active:border-zaff-primary"
-            >
-              <span className="shrink-0 whitespace-nowrap border-r border-zaff-border pr-3 text-sm text-zaff-muted">
-                {dateLabel(lastGame.date)}
-              </span>
-              <span className="flex min-w-0 flex-1 flex-col gap-1.5">
-                {[...lastGame.players]
-                  .sort((x, y) => Number(y.winner) - Number(x.winner))
-                  .map((p, i) => (
-                    <span
-                      key={i}
-                      className={`whitespace-nowrap text-sm ${p.winner ? 'font-bold text-zaff-text' : 'text-zaff-muted'}`}
-                    >
-                      <span className="inline-block w-6 text-center" aria-hidden="true">
-                        {p.winner ? '🎉' : ''}
-                      </span>
-                      <span className="ml-1">{p.name}</span>
-                      <ManaIcons colors={p.colors} className="ml-1.5 text-[13px]" />
-                    </span>
-                  ))}
-              </span>
-              <span className="shrink-0 text-2xl leading-none text-zaff-muted" aria-hidden="true">
-                ›
-              </span>
-            </button>
-          ) : (
-            <p className="rounded-lg border border-dashed border-zaff-border p-4 text-sm text-zaff-muted">
-              Ancora nessuna partita registrata: tocca &quot;Nuova Partita&quot; per iniziare.
-            </p>
-          )}
+            onOpenGames={() => setOpenModal('games')}
+            onOpenDecks={() => setOpenModal('decks')}
+            onOpenPlayerStats={() => setOpenModal('playerStats')}
+          />
         </header>
       </div>
 
