@@ -41,7 +41,7 @@ existing `pnpm-lock.yaml` only describes root tooling, not the client workspace.
 ## Tech Stack
 
 - **Client**: React 19, Vite, Tailwind CSS v4, FabricJS, TypeScript
-- **UI**: daisyUI 5 + shared React kit in `client/src/components/ui/`. Base UI has been removed. Buttons, basic fields, badges, and modal close controls are migrated; custom widgets and overlay behavior retain their existing implementations.
+- **UI**: daisyUI 5 + shared React kit in `client/src/components/ui/`.Buttons, basic fields, badges, and modal close controls are migrated; custom widgets and overlay behavior retain their existing implementations.
 - **Server**: Go, `coder/websocket`, built-in Cloudflare tunnel support
 - **Shared types**: TypeScript package `@zaff/shared`, consumed by client
 - **Card data**: MTGJSON API (deck lists), Scryfall (card images)
