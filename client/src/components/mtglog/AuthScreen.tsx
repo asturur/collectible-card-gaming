@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '../../services/supabase';
 import { navLinkProps } from '../../router';
 import Button from '../ui/Button';
@@ -16,20 +16,31 @@ interface AuthScreenProps {
   /** True quando si arriva dal link "recupera password" ricevuto per email:
    *  invece del login si chiede di scegliere la nuova password. */
   recovery?: boolean;
+  /** Il link dell'email era scaduto o già usato: si parte dalla richiesta di un nuovo link. */
+  linkExpired?: boolean;
   /** Chiamata dopo aver salvato la nuova password. */
   onRecovered?: () => void;
 }
 
 /** Login/registrazione con Supabase Auth (email + password): il riquadro
  *  centrato che nell'app originale copriva la pagina finché non entravi. */
-export default function AuthScreen({ onOpenZaff, recovery = false, onRecovered }: AuthScreenProps) {
-  const [mode, setMode] = useState<AuthMode>('signin');
+export default function AuthScreen({ onOpenZaff, recovery = false, linkExpired = false, onRecovered }: AuthScreenProps) {
+  const [mode, setMode] = useState<AuthMode>(linkExpired ? 'forgot' : 'signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [password2, setPassword2] = useState('');
-  const [error, setError] = useState('');
+  const [error, setError] = useState(
+    linkExpired ? 'Il link è scaduto o è già stato usato. Inserisci l’email per riceverne uno nuovo.' : ''
+  );
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Se il link risulta scaduto dopo che la schermata è già comparsa.
+  useEffect(() => {
+    if (!linkExpired) return;
+    setMode('forgot');
+    setError('Il link è scaduto o è già stato usato. Inserisci l’email per riceverne uno nuovo.');
+  }, [linkExpired]);
 
   function toggleMode() {
     setMode((m) => (m === 'signin' ? 'signup' : 'signin'));

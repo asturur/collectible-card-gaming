@@ -38,6 +38,11 @@ interface MtgLogProps {
 const OPENED_FROM_RECOVERY_LINK =
   typeof window !== 'undefined' && /type=recovery/.test(window.location.hash + window.location.search);
 
+/** Il link dell'email è già stato usato o è scaduto: Supabase lo scrive nell'indirizzo
+ *  come `error_code=otp_expired` / `error=access_denied`. */
+const LINK_ERROR_IN_URL =
+  typeof window !== 'undefined' && /error_code=|error=access_denied/.test(window.location.hash + window.location.search);
+
 type MtgLogModal = null | 'players' | 'decks' | 'newGame' | 'games' | 'stats' | 'playerStats' | 'matchups';
 
 /**
@@ -65,6 +70,14 @@ export default function MtgLog({ onOpenZaff }: MtgLogProps) {
   const [games, setGames] = useState<Game[]>([]);
   /** True finché non è stata scelta la nuova password (link di recupero). */
   const [recovering, setRecovering] = useState(OPENED_FROM_RECOVERY_LINK);
+  const [linkExpired, setLinkExpired] = useState(LINK_ERROR_IN_URL);
+
+  // Arrivato dal link ma, dopo qualche secondo, nessuna sessione: link non valido.
+  useEffect(() => {
+    if (!OPENED_FROM_RECOVERY_LINK || LINK_ERROR_IN_URL) return;
+    const t = setTimeout(() => setLinkExpired(true), 4000);
+    return () => clearTimeout(t);
+  }, []);
 
   useEffect(() => {
     if (!isSupabaseConfigured || !supabase) {
@@ -77,7 +90,10 @@ export default function MtgLog({ onOpenZaff }: MtgLogProps) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, newSession) => {
-      if (event === 'PASSWORD_RECOVERY') setRecovering(true);
+      if (event === 'PASSWORD_RECOVERY') {
+        setRecovering(true);
+        setLinkExpired(false);
+      }
       setSession(newSession);
     });
 
@@ -134,6 +150,7 @@ export default function MtgLog({ onOpenZaff }: MtgLogProps) {
         onOpenZaff={onOpenZaff}
         // Senza sessione non c'è niente da recuperare (link scaduto o già usato).
         recovery={recovering && Boolean(session)}
+        linkExpired={linkExpired && !session}
         onRecovered={() => setRecovering(false)}
       />
     );
