@@ -6,19 +6,27 @@ import CenteredPanel from '../ui/Panel';
 import { TextField } from '../ui/Field';
 import { LOGIN_BACKGROUND } from '../ui/styles';
 
-type AuthMode = 'signin' | 'signup';
+type AuthMode = 'signin' | 'signup' | 'forgot';
+
+const MIN_PASSWORD_LENGTH = 6;
 
 interface AuthScreenProps {
   /** Porta alla piattaforma di gioco ZAFF (/zaff). */
   onOpenZaff: () => void;
+  /** True quando si arriva dal link "recupera password" ricevuto per email:
+   *  invece del login si chiede di scegliere la nuova password. */
+  recovery?: boolean;
+  /** Chiamata dopo aver salvato la nuova password. */
+  onRecovered?: () => void;
 }
 
 /** Login/registrazione con Supabase Auth (email + password): il riquadro
  *  centrato che nell'app originale copriva la pagina finché non entravi. */
-export default function AuthScreen({ onOpenZaff }: AuthScreenProps) {
+export default function AuthScreen({ onOpenZaff, recovery = false, onRecovered }: AuthScreenProps) {
   const [mode, setMode] = useState<AuthMode>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [password2, setPassword2] = useState('');
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
@@ -29,7 +37,72 @@ export default function AuthScreen({ onOpenZaff }: AuthScreenProps) {
     setMessage('');
   }
 
+  function goTo(next: AuthMode) {
+    setMode(next);
+    setError('');
+    setMessage('');
+  }
+
+  /** Scelta della nuova password dopo il link ricevuto per email. */
+  async function handleNewPassword() {
+    setError('');
+    setMessage('');
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      setError(`La password deve avere almeno ${MIN_PASSWORD_LENGTH} caratteri.`);
+      return;
+    }
+    if (password !== password2) {
+      setError('Le due password non coincidono.');
+      return;
+    }
+    if (!supabase) {
+      setError('Supabase non configurato.');
+      return;
+    }
+    setLoading(true);
+    const { error: updateError } = await supabase.auth.updateUser({ password });
+    setLoading(false);
+    if (updateError) {
+      setError('Non sono riuscito a cambiare la password: ' + updateError.message);
+      return;
+    }
+    setPassword('');
+    setPassword2('');
+    onRecovered?.();
+  }
+
+  /** Invio dell'email con il link per scegliere una nuova password. Il
+   *  messaggio è sempre lo stesso, esista o no l'indirizzo, così nessuno può
+   *  scoprire quali email sono registrate. */
+  async function handleForgot() {
+    setError('');
+    setMessage('');
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
+      setError('Inserisci la tua email.');
+      return;
+    }
+    if (!supabase) {
+      setError('Supabase non configurato.');
+      return;
+    }
+    setLoading(true);
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(trimmedEmail, {
+      // Stesso indirizzo di partenza della registrazione (va autorizzato nei
+      // "Redirect URLs" di Supabase).
+      redirectTo: window.location.origin + import.meta.env.BASE_URL,
+    });
+    setLoading(false);
+    if (resetError && /rate|too many|seconds/i.test(resetError.message)) {
+      setError('Troppe richieste ravvicinate: aspetta un minuto e riprova.');
+      return;
+    }
+    setMessage('Se l\u2019indirizzo è registrato, riceverai a breve un\u2019email con il link per scegliere una nuova password. Controlla anche la cartella spam.');
+  }
+
   async function handleSubmit() {
+    if (recovery) return handleNewPassword();
+    if (mode === 'forgot') return handleForgot();
     setError('');
     setMessage('');
 
@@ -79,38 +152,87 @@ export default function AuthScreen({ onOpenZaff }: AuthScreenProps) {
     <CenteredPanel
       onSubmit={handleSubmit}
       background={LOGIN_BACKGROUND}
-      title="Registro partite"
-      subtitle={mode === 'signin' ? 'Accedi con il tuo account per continuare' : 'Crea un account per iniziare'}
+      title={recovery ? 'Nuova password' : 'Registro partite'}
+      subtitle={
+        recovery
+          ? 'Scegli la nuova password per il tuo account'
+          : mode === 'signin'
+            ? 'Accedi con il tuo account per continuare'
+            : mode === 'signup'
+              ? 'Crea un account per iniziare'
+              : 'Ti mando un link per scegliere una nuova password'
+      }
     >
-      <TextField
-        id="auth-email"
-        type="email"
-        label="Email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        placeholder="nome@esempio.it"
-        autoComplete="username"
-        required
-      />
+      {!recovery && (
+        <TextField
+          id="auth-email"
+          type="email"
+          label="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="nome@esempio.it"
+          autoComplete="username"
+          required
+        />
+      )}
 
-      <TextField
-        id="auth-password"
-        type="password"
-        label="Password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        placeholder="La tua password"
-        autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
-        required
-      />
+      {(recovery || mode !== 'forgot') && (
+        <TextField
+          id="auth-password"
+          type="password"
+          label={recovery ? 'Nuova password' : 'Password'}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder={recovery ? `Almeno ${MIN_PASSWORD_LENGTH} caratteri` : 'La tua password'}
+          autoComplete={mode === 'signin' && !recovery ? 'current-password' : 'new-password'}
+          required
+        />
+      )}
+
+      {recovery && (
+        <TextField
+          id="auth-password2"
+          type="password"
+          label="Ripeti la nuova password"
+          value={password2}
+          onChange={(e) => setPassword2(e.target.value)}
+          placeholder="Scrivila ancora una volta"
+          autoComplete="new-password"
+          required
+        />
+      )}
 
       <Button type="submit" size="lg" fullWidth disabled={loading}>
-        {mode === 'signin' ? 'Accedi' : 'Crea account'}
+        {recovery
+          ? 'Salva la nuova password'
+          : mode === 'signin'
+            ? 'Accedi'
+            : mode === 'signup'
+              ? 'Crea account'
+              : 'Invia il link di recupero'}
       </Button>
 
-      <Button variant="ghost" size="lg" fullWidth className="mt-3" onClick={toggleMode}>
-        {mode === 'signin' ? 'Non hai un account? Registrati' : 'Hai già un account? Accedi'}
-      </Button>
+      {!recovery && mode === 'signin' && (
+        <button
+          type="button"
+          onClick={() => goTo('forgot')}
+          className="mt-3 block w-full py-1 text-center text-sm text-zaff-muted underline transition-colors hover:text-zaff-primary"
+        >
+          Password dimenticata?
+        </button>
+      )}
+
+      {!recovery && mode !== 'forgot' && (
+        <Button variant="ghost" size="lg" fullWidth className="mt-3" onClick={toggleMode}>
+          {mode === 'signin' ? 'Non hai un account? Registrati' : 'Hai già un account? Accedi'}
+        </Button>
+      )}
+
+      {!recovery && mode === 'forgot' && (
+        <Button variant="ghost" size="lg" fullWidth className="mt-3" onClick={() => goTo('signin')}>
+          Torna all&apos;accesso
+        </Button>
+      )}
 
       {error && (
         <p className="mt-3 text-center text-sm text-red-400" role="alert">

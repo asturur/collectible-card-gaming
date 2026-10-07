@@ -32,6 +32,12 @@ interface MtgLogProps {
   onOpenZaff: () => void;
 }
 
+/** Si arriva dal link "recupera password" dell'email: Supabase mette nell'indirizzo
+ *  `type=recovery`. Lo leggo subito (prima che il client lo ripulisca), perché
+ *  l'evento PASSWORD_RECOVERY può partire prima che questa pagina lo ascolti. */
+const OPENED_FROM_RECOVERY_LINK =
+  typeof window !== 'undefined' && /type=recovery/.test(window.location.hash + window.location.search);
+
 type MtgLogModal = null | 'players' | 'decks' | 'newGame' | 'games' | 'stats' | 'playerStats' | 'matchups';
 
 /**
@@ -57,6 +63,8 @@ export default function MtgLog({ onOpenZaff }: MtgLogProps) {
   /** Partita da cui ripartire con "Rivincita" (stessi giocatori e mazzi). */
   const [rematchFrom, setRematchFrom] = useState<Game | null>(null);
   const [games, setGames] = useState<Game[]>([]);
+  /** True finché non è stata scelta la nuova password (link di recupero). */
+  const [recovering, setRecovering] = useState(OPENED_FROM_RECOVERY_LINK);
 
   useEffect(() => {
     if (!isSupabaseConfigured || !supabase) {
@@ -68,7 +76,10 @@ export default function MtgLog({ onOpenZaff }: MtgLogProps) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, newSession) => setSession(newSession));
+    } = supabase.auth.onAuthStateChange((event, newSession) => {
+      if (event === 'PASSWORD_RECOVERY') setRecovering(true);
+      setSession(newSession);
+    });
 
     return () => subscription.unsubscribe();
   }, []);
@@ -117,8 +128,15 @@ export default function MtgLog({ onOpenZaff }: MtgLogProps) {
     );
   }
 
-  if (!session) {
-    return <AuthScreen onOpenZaff={onOpenZaff} />;
+  if (!session || recovering) {
+    return (
+      <AuthScreen
+        onOpenZaff={onOpenZaff}
+        // Senza sessione non c'è niente da recuperare (link scaduto o già usato).
+        recovery={recovering && Boolean(session)}
+        onRecovered={() => setRecovering(false)}
+      />
+    );
   }
 
   const userId = session.user.id;
