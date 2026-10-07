@@ -292,6 +292,16 @@ interface GameListProps {
   onEdit: (game: Game) => void;
   /** Avvia una nuova partita con gli stessi giocatori e gli stessi mazzi. */
   onRematch: (game: Game) => void;
+  /** Partita da aprire subito nel dettaglio (arrivando da un link condiviso). */
+  initialGameId?: string | null;
+  /** Chiamata quando la partita del link è stata aperta (non va riaperta più). */
+  onInitialOpened?: () => void;
+}
+
+/** Indirizzo che riapre l'app direttamente su questa partita (serve il login,
+ *  come per tutto il registro). */
+export function gameLink(gameId: string): string {
+  return `${window.location.origin}${import.meta.env.BASE_URL}?partita=${encodeURIComponent(gameId)}`;
 }
 
 const WINNER_TAGS = [
@@ -336,7 +346,7 @@ function idTimeSuffix(id: string): string {
 /** Storico partite: lista + dettaglio, appellativi scherzosi random per
  *  vincitore/perdenti nel dettaglio.
  *  Va mostrata dentro un `Modal`; il dettaglio partita si apre come riquadro sopra. */
-export default function GameList({ userId, onEdit, onRematch }: GameListProps) {
+export default function GameList({ userId, onEdit, onRematch, initialGameId, onInitialOpened }: GameListProps) {
   const [games, setGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -348,6 +358,9 @@ export default function GameList({ userId, onEdit, onRematch }: GameListProps) {
    *  il tasto "Esporta" non sembra mai non aver fatto nulla. */
   const [exportedImage, setExportedImage] = useState<string | null>(null);
   const shareCardRef = useRef<HTMLDivElement>(null);
+  /** Esito di "Condividi link" (es. "Link copiato"). */
+  const [linkNotice, setLinkNotice] = useState('');
+  const openedInitial = useRef(false);
   // Ricerca e filtri dell'elenco (non toccano i dati, solo cosa si vede).
   const [query, setQuery] = useState('');
   const [formatFilter, setFormatFilter] = useState('all');
@@ -399,6 +412,34 @@ export default function GameList({ userId, onEdit, onRematch }: GameListProps) {
     const players = selectedGame.players;
     return players.map((_, i) => i).sort((a, b) => Number(players[b].winner) - Number(players[a].winner));
   }, [selectedGame]);
+
+  // Arrivando da un link condiviso, appena le partite sono caricate si apre quella.
+  useEffect(() => {
+    if (openedInitial.current || !initialGameId || games.length === 0) return;
+    if (games.some((g) => g.id === initialGameId)) setSelectedId(initialGameId);
+    openedInitial.current = true;
+    onInitialOpened?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [games, initialGameId]);
+
+  async function handleShareLink(g: Game) {
+    const url = gameLink(g.id);
+    setLinkNotice('');
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'Partita di Magic', text: 'Partita del ' + dateLabel(g.date), url });
+        return;
+      } catch {
+        // Annullato dall'utente o non disponibile: si prova a copiarlo.
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setLinkNotice('Link copiato negli appunti.');
+    } catch {
+      setLinkNotice(url);
+    }
+  }
 
   const formats = useMemo(
     () => [...new Set(games.map((g) => g.format.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'it')),
@@ -608,6 +649,7 @@ export default function GameList({ userId, onEdit, onRematch }: GameListProps) {
           xl
           onClose={() => {
             setSelectedId(null);
+            setLinkNotice('');
             setExportedImage((prev) => {
               if (prev) URL.revokeObjectURL(prev);
               return null;
@@ -660,6 +702,10 @@ export default function GameList({ userId, onEdit, onRematch }: GameListProps) {
               🔄 Rivincita
             </Button>
 
+            <Button variant="ghost" onClick={() => handleShareLink(selectedGame)}>
+              🔗 Link
+            </Button>
+
             {canEdit(selectedGame.createdBy, userId) && (
               <>
                 <IconButton label="Modifica partita" onClick={() => onEdit(selectedGame)}>
@@ -671,6 +717,8 @@ export default function GameList({ userId, onEdit, onRematch }: GameListProps) {
               </>
             )}
           </div>
+
+          {linkNotice && <p className={cx('mt-2 break-all', TEXT_MINI)}>{linkNotice}</p>}
 
           {exportedImage && (
             <div className="mt-3.5 rounded-lg border border-zaff-border bg-zaff-bg p-3">

@@ -44,6 +44,11 @@ const OPENED_FROM_RECOVERY_LINK =
 const LINK_ERROR_IN_URL =
   typeof window !== 'undefined' && /error_code=|error=access_denied/.test(window.location.hash + window.location.search);
 
+/** Link condiviso "…/?partita=ID": dopo il login apre quella partita. Letto subito,
+ *  all'avvio, e tolto dall'indirizzo una volta usato. */
+const SHARED_GAME_ID =
+  typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('partita') : null;
+
 type MtgLogModal =
   | null
   | 'players'
@@ -102,6 +107,7 @@ export default function MtgLog({ onOpenZaff }: MtgLogProps) {
   const [rematchFrom, setRematchFrom] = useState<Game | null>(null);
   const [games, setGames] = useState<Game[]>([]);
   /** True finché non è stata scelta la nuova password (link di recupero). */
+  const [sharedGameId, setSharedGameId] = useState<string | null>(SHARED_GAME_ID);
   const [recovering, setRecovering] = useState(OPENED_FROM_RECOVERY_LINK);
   const [linkExpired, setLinkExpired] = useState(LINK_ERROR_IN_URL);
 
@@ -134,6 +140,13 @@ export default function MtgLog({ onOpenZaff }: MtgLogProps) {
   }, []);
 
   const loggedIn = session !== null && session !== 'loading';
+
+  // Appena dentro, un link a una partita apre l'elenco con quella partita.
+  useEffect(() => {
+    if (!loggedIn || !sharedGameId) return;
+    setOpenModal('games');
+    window.history.replaceState(null, '', window.location.pathname + window.location.hash);
+  }, [loggedIn, sharedGameId]);
 
   useEffect(() => {
     if (!loggedIn || !supabase) return;
@@ -294,6 +307,8 @@ export default function MtgLog({ onOpenZaff }: MtgLogProps) {
         <Modal wide title="Partite Salvate" onClose={closeModal}>
           <GameList
             userId={userId}
+            initialGameId={sharedGameId}
+            onInitialOpened={() => setSharedGameId(null)}
             onEdit={(game) => {
               setEditingGame(game);
               setRematchFrom(null);
