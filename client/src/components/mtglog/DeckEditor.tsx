@@ -81,13 +81,17 @@ async function searchCards(query: string): Promise<string[]> {
  *  passato come `initialDraft`, o mazzo precon Commander cercato qui).
  *  Va mostrato dentro un `Modal` (titolo e chiusura li mette il riquadro). */
 /** Parti del mazzo che contano per accorgersi di una modifica altrui. */
-function deckFingerprint(row: { name?: unknown; source?: unknown; colors?: unknown; cards?: unknown }): string {
-  return JSON.stringify([row.name ?? '', row.source ?? '', row.colors ?? [], row.cards ?? []]);
+/** Formati selezionabili per un mazzo (usati anche dal filtro nella lista mazzi). */
+export const DECK_FORMATS = ['Commander', 'Standard', 'Modern', 'Pauper', 'Altro'];
+
+function deckFingerprint(row: { name?: unknown; source?: unknown; format?: unknown; colors?: unknown; cards?: unknown }): string {
+  return JSON.stringify([row.name ?? '', row.source ?? '', row.format ?? '', row.colors ?? [], row.cards ?? []]);
 }
 
 export default function DeckEditor({ deckId, initialDraft, onBack, onSaved }: DeckEditorProps) {
   const [name, setName] = useState(initialDraft?.name ?? '');
   const [source, setSource] = useState('');
+  const [format, setFormat] = useState('');
   const [colors, setColors] = useState<Set<string>>(new Set());
   const [draft, setDraft] = useState<DraftCard[]>(
     (initialDraft?.cards ?? []).map((c) => ({ ...c, section: normalizeSection(c.section) }))
@@ -135,6 +139,7 @@ export default function DeckEditor({ deckId, initialDraft, onBack, onSaved }: De
           openedFingerprint.current = deckFingerprint(data);
           setName(data.name);
           setSource(data.source ?? '');
+          setFormat(data.format ?? '');
           setColors(new Set(data.colors ?? []));
           setDraft(
             (data.cards ?? []).map((c: DraftCard) => ({ ...c, section: normalizeSection(c.section) }))
@@ -345,7 +350,7 @@ export default function DeckEditor({ deckId, initialDraft, onBack, onSaved }: De
     if (deckId) {
       const { error: updateError } = await supabase
         .from(TABLE_DECKS)
-        .update({ name: trimmedName, cards: draft, source, colors: [...colors] })
+        .update({ name: trimmedName, cards: draft, source, format, colors: [...colors] })
         .eq('id', deckId);
       setSaving(false);
       if (updateError) {
@@ -358,6 +363,7 @@ export default function DeckEditor({ deckId, initialDraft, onBack, onSaved }: De
         name: trimmedName,
         cards: draft,
         source,
+        format,
         colors: [...colors],
       };
       const { error: insertError } = await supabase.from(TABLE_DECKS).insert(row);
@@ -403,6 +409,21 @@ export default function DeckEditor({ deckId, initialDraft, onBack, onSaved }: De
         placeholder="es. Mono nero aggro by Ale"
         maxLength={MAX_DECK_NAME_LENGTH}
       />
+
+      <SelectField
+        id="deckFormat"
+        label="Formato"
+        density="compact"
+        value={format}
+        onChange={(e) => setFormat(e.target.value)}
+      >
+        <option value="">Non specificato</option>
+        {DECK_FORMATS.map((f) => (
+          <option key={f} value={f}>
+            {f}
+          </option>
+        ))}
+      </SelectField>
 
       <SelectField
         id="deckSource"

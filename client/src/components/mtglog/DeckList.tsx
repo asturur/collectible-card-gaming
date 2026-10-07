@@ -2,6 +2,8 @@ import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { canEdit, MAX_DECK_NAME_LENGTH, supabase, TABLE_DECKS } from '../../services/supabase';
 import { ManaIcons, ManaPips } from './ManaIcon';
 import DeckCardsView from './DeckCards';
+import { DECK_FORMATS } from './DeckEditor';
+import FilterTabs from '../ui/FilterTabs';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import Badge from '../ui/Badge';
@@ -101,6 +103,7 @@ interface Deck {
   name: string;
   cards: DeckCard[];
   source: string;
+  format: string;
   colors: string[];
   createdBy: string | null;
 }
@@ -133,6 +136,8 @@ export default function DeckList({ userId, onCreate, onEdit, onImportFile }: Dec
   const [pasteOpen, setPasteOpen] = useState(false);
   const [pasteError, setPasteError] = useState('');
   const [pasteText, setPasteText] = useState('');
+  const [colorFilter, setColorFilter] = useState<Set<string>>(new Set());
+  const [formatFilter, setFormatFilter] = useState('all');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   function handleFileChange(e: ChangeEvent<HTMLInputElement>) {
@@ -186,6 +191,7 @@ export default function DeckList({ userId, onCreate, onEdit, onImportFile }: Dec
           section: normalizeSection(c.section),
         })),
         source: r.source ?? '',
+        format: r.format ?? '',
         colors: r.colors ?? [],
         createdBy: r.created_by ?? null,
       }))
@@ -214,6 +220,22 @@ export default function DeckList({ userId, onCreate, onEdit, onImportFile }: Dec
     return true;
   }
 
+  function toggleColorFilter(c: string) {
+    setColorFilter((prev) => {
+      const next = new Set(prev);
+      if (next.has(c)) next.delete(c);
+      else next.add(c);
+      return next;
+    });
+  }
+
+  // Colori: il mazzo deve contenerli tutti quelli selezionati (può averne altri).
+  const visibleDecks = decks.filter(
+    (d) =>
+      [...colorFilter].every((c) => d.colors.includes(c)) && (formatFilter === 'all' || d.format === formatFilter)
+  );
+  const filtersActive = colorFilter.size > 0 || formatFilter !== 'all';
+
   const selectedDeck = decks.find((d) => d.id === selectedId) ?? null;
 
   return (
@@ -224,8 +246,40 @@ export default function DeckList({ userId, onCreate, onEdit, onImportFile }: Dec
         ) : decks.length === 0 ? (
           <p className="text-sm text-zaff-muted">Ancora nessun mazzo salvato.</p>
         ) : (
+          <>
+            <div className="mb-3 rounded-lg border border-zaff-border bg-zaff-bg p-2.5">
+              <span className={cx('mb-1.5 block', TEXT_MINI)}>Colore</span>
+              <div className="mb-3 flex flex-wrap items-center gap-2">
+                <ManaPips colors={colorFilter} onToggle={toggleColorFilter} />
+                <button
+                  type="button"
+                  onClick={() => setColorFilter(new Set())}
+                  aria-pressed={colorFilter.size === 0}
+                  className={cx(
+                    'rounded-lg border px-3 py-1.5 text-[13px] transition',
+                    colorFilter.size === 0
+                      ? 'border-transparent bg-gradient-to-r from-zaff-primary to-zaff-accent font-semibold text-zaff-bg'
+                      : 'border-zaff-border bg-zaff-surface text-zaff-muted hover:text-zaff-text'
+                  )}
+                >
+                  Nessun filtro
+                </button>
+              </div>
+              <span className={cx('mb-1.5 block', TEXT_MINI)}>Tipo</span>
+              <FilterTabs
+                value={formatFilter}
+                onChange={setFormatFilter}
+                options={[{ value: 'all', label: 'Nessun filtro' }, ...DECK_FORMATS.map((f) => ({ value: f, label: f }))]}
+              />
+            </div>
+            {filtersActive && (
+              <p className={cx('mb-2', TEXT_MINI)}>
+                {visibleDecks.length} di {decks.length} mazzi
+              </p>
+            )}
+            {visibleDecks.length === 0 && <p className="text-sm text-zaff-muted">Nessun mazzo con questi filtri.</p>}
           <ul>
-            {decks.map((d) => (
+            {visibleDecks.map((d) => (
               <li key={d.id}>
                 {/* Una sola azione per riga: tutta la riga apre il mazzo.
                     Modifica e cancella (solo mazzi propri) stanno nel dettaglio. */}
@@ -244,6 +298,7 @@ export default function DeckList({ userId, onCreate, onEdit, onImportFile }: Dec
               </li>
             ))}
           </ul>
+          </>
         )}
       </div>
 
