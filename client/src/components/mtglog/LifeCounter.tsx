@@ -333,13 +333,15 @@ export default function LifeCounter({ players, startLife, resume, onCancel, onFi
                     </div>
                   )}
                   </div>
-                  <button
-                    type="button"
+                  <Button
+                    variant="ghost"
+                    size="lg"
+                    fullWidth
                     onClick={() => setOptionsFor(null)}
-                    className="mt-2 rounded-lg border-2 border-white/70 py-2.5 text-base font-semibold active:bg-white/20"
+                    className="mt-2"
                   >
                     Chiudi
-                  </button>
+                  </Button>
                 </div>
               )}
             </div>

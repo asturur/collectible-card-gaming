@@ -1,24 +1,30 @@
-import type { ReactNode } from 'react';
+import type { HTMLAttributes, ReactNode } from 'react';
 import { cx } from './styles';
 
-export type BadgeTone = 'neutral' | 'brew' | 'precon';
+export type BadgeTone = 'neutral' | 'brew' | 'precon' | 'count' | 'primary' | 'warning';
+export type BadgeSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 
 const TONES: Record<BadgeTone, string> = {
-  neutral: 'border-zaff-border text-zaff-muted',
-  brew: 'border-green-400 text-green-400',
-  precon: 'border-cyan-400 text-cyan-400',
+  neutral: 'badge-outline',
+  brew: 'badge-outline badge-success',
+  precon: 'badge-outline badge-info',
+  count: 'badge-neutral',
+  primary: 'badge-primary',
+  warning: 'badge-warning',
 };
 
-interface BadgeProps {
+const SIZES: Record<BadgeSize, string> = { xs: 'badge-xs', sm: 'badge-sm', md: 'badge-md', lg: 'badge-lg', xl: 'badge-xl' };
+
+interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
   tone?: BadgeTone;
-  className?: string;
+  size?: BadgeSize;
   children: ReactNode;
 }
 
 /** Pillola sottile: origine del mazzo, conteggi, etichette brevi. */
-export default function Badge({ tone = 'neutral', className, children }: BadgeProps) {
+export default function Badge({ tone = 'neutral', size = 'sm', className, children, ...props }: BadgeProps) {
   return (
-    <span className={cx('shrink-0 rounded-full border px-2 py-px text-[11px] whitespace-nowrap', TONES[tone], className)}>
+    <span {...props} className={cx('badge shrink-0 whitespace-nowrap', SIZES[size], TONES[tone], className)}>
       {children}
     </span>
   );

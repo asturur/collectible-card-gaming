@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { searchScryfall, type ScryCard } from '../../services/scryfall';
 import Button from '../ui/Button';
+import Badge from '../ui/Badge';
+import CloseButton from '../ui/CloseButton';
 import { cx, TEXT_MINI } from '../ui/styles';
 
 interface CardPickerProps {
@@ -18,15 +20,6 @@ interface CardPickerProps {
   totals?: { main: number; side: number };
   onPick: (card: ScryCard) => void;
   onClose: () => void;
-}
-
-function CloseIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-      <line x1="5" y1="5" x2="19" y2="19" />
-      <line x1="19" y1="5" x2="5" y2="19" />
-    </svg>
-  );
 }
 
 /** Anteprima grande di una carta trovata. Tocco sull'immagine = scelta
@@ -67,14 +60,8 @@ function Preview({
       role="dialog"
       aria-label={card.name}
     >
-      <button
-        type="button"
-        onClick={onClose}
-        aria-label="Chiudi senza scegliere"
-        className="absolute right-3 top-[calc(0.75rem+env(safe-area-inset-top))] flex h-11 w-11 items-center justify-center rounded-full border-2 border-white/60 bg-black/60 text-white"
-      >
-        <CloseIcon />
-      </button>
+      <CloseButton onClick={onClose} label="Chiudi senza scegliere" surface="image"
+        className="absolute right-3 top-[calc(0.75rem+env(safe-area-inset-top))]" />
 
       <div className="relative flex min-h-0 w-full flex-1 items-center justify-center" onClick={(e) => e.stopPropagation()}>
         <button type="button" onClick={choose} className="relative max-h-full max-w-full" aria-label={`Aggiungi ${card.name}`}>
@@ -199,14 +186,7 @@ export default function CardPicker({
             </p>
           )}
         </div>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Chiudi"
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 border-zaff-border text-zaff-text"
-        >
-          <CloseIcon />
-        </button>
+        <CloseButton onClick={onClose} />
       </div>
 
       <div className="px-4 pt-3">
@@ -259,9 +239,9 @@ export default function CardPicker({
                   className="h-full w-full rounded-md object-cover"
                 />
                 {n > 0 && (
-                  <span className="absolute right-1 top-1 rounded-full bg-black/80 px-1.5 py-0.5 text-[12px] font-bold leading-none text-white ring-1 ring-white/50">
+                  <Badge tone="count" className="absolute right-1 top-1">
                     ×{n}
-                  </span>
+                  </Badge>
                 )}
               </button>
             );

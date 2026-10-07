@@ -5,6 +5,8 @@ import { DeckStatsLink } from './DeckStats';
 import { groupCards, type GroupedColor, type GroupMode } from './cardGroups';
 import { ManaIcons } from './ManaIcon';
 import { cx } from '../ui/styles';
+import Badge from '../ui/Badge';
+import CloseButton from '../ui/CloseButton';
 
 export { useDeckImages };
 
@@ -115,17 +117,8 @@ function CardViewer({
       role="dialog"
       aria-label={item.name}
     >
-      <button
-        type="button"
-        onClick={onClose}
-        aria-label="Chiudi"
-        className="absolute right-3 top-[calc(0.75rem+env(safe-area-inset-top))] flex h-11 w-11 items-center justify-center rounded-full border-2 border-white/60 bg-black/60 text-white"
-      >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-          <line x1="5" y1="5" x2="19" y2="19" />
-          <line x1="19" y1="5" x2="5" y2="19" />
-        </svg>
-      </button>
+      <CloseButton onClick={onClose} surface="image"
+        className="absolute right-3 top-[calc(0.75rem+env(safe-area-inset-top))]" />
 
       <div className="flex min-h-0 w-full flex-1 items-center justify-center" onClick={(e) => e.stopPropagation()}>
         {image ? (
@@ -257,9 +250,9 @@ function CardGrid({ cards, onOpen, editable }: ViewProps) {
                 </button>
               )}
               {!editable && c.qty > 1 && (
-                <span className="pointer-events-none absolute right-1 top-1 rounded-full bg-black/80 px-1.5 py-0.5 text-[12px] font-bold leading-none text-white ring-1 ring-white/50">
+                <Badge tone="count" className="pointer-events-none absolute right-1 top-1">
                   ×{c.qty}
-                </span>
+                </Badge>
               )}
             </div>
             {editable && (

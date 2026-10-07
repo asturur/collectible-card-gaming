@@ -7,6 +7,7 @@ import { Link, useNavigate, useParams } from 'react-router';
 import { appHref, paths } from '../../router';
 import Button from '../ui/Button';
 import FilterTabs from '../ui/FilterTabs';
+import { JpgBadge } from './ImageExport';
 import { cx, FIELD_CONTROL, HEADING_SECTION, TEXT_MINI, TEXT_MUTED } from '../ui/styles';
 
 interface IconButtonProps {
@@ -33,28 +34,6 @@ function IconButton({ label, onClick, tone = 'default', children }: IconButtonPr
     >
       {children}
     </button>
-  );
-}
-
-/** Piccolo badge "JPG", per far capire a colpo d'occhio nel tasto "Esporta
- *  Risultati" in che formato viene generata l'immagine. */
-function JpgBadge() {
-  return (
-    <svg width="28" height="18" viewBox="0 0 28 18" className="mr-1 inline-block align-[-4px]" aria-hidden="true">
-      <rect x="0.5" y="0.5" width="27" height="17" rx="3.5" fill="#E8CA7E" stroke="#9E7A31" strokeWidth="1" />
-      <text
-        x="14"
-        y="12.5"
-        textAnchor="middle"
-        fontSize="9"
-        fontWeight="700"
-        fontFamily="system-ui, sans-serif"
-        letterSpacing="0.5"
-        fill="#241B3E"
-      >
-        JPG
-      </text>
-    </svg>
   );
 }
 

@@ -130,6 +130,26 @@ link destinations, and restoration on resize. Browser checks at 320px, 390px,
 progressive restoration, and navigation through collapsed links using local
 sample data. No shared database writes were performed.
 
+## Follow-up implemented: close controls and badges
+
+`ui/CloseButton.tsx` composes the shared Button with daisyUI's square modifier:
+ghost styling on panels and a solid neutral background over card/token artwork.
+The common modal, card picker, card viewer, and token viewer all reuse its icon,
+accessible label, and title. The life-counter options' text close action also
+uses Button. Existing overlay state, close callbacks, Escape, and scroll handling
+remain in their existing components.
+
+`ui/Badge.tsx` now uses daisyUI badge styles and sizes, enabled in the CSS plugin
+allowlist. Deck-source labels map to success/info outlines; card quantities use
+neutral or primary badges. JPG export labels share one badge helper instead of
+duplicated custom SVGs. Registro and ZAFF both reuse these implementations.
+
+Verification: production build and all 126 existing tests in 15 files pass.
+Phone and desktop checks with local sample data covered shared and nested task
+dialogs, token/card-picker close controls, source/JPG/quantity badge contrast,
+ZAFF deck quantities, backdrop and Escape closing, and restored scrolling.
+No database reads or writes were needed for these browser fixtures.
+
 ## Recommendation and expected result
 
 Adopt daisyUI 5 through the existing shared React kit. For a two-person team with
@@ -202,7 +222,8 @@ Effort labels are relative; they include preserving behavior, not just classes.
 |---------------|---------------------|------------------------|
 | `ui/Button.tsx` | `btn`, semantic colors, sizes, outline/soft styles | Low. Preserve button/link semantics and default `type="button"`. Current `ghost` is outlined; current `link` is a bordered secondary action. Map intent, not prop spelling. |
 | `ui/Field.tsx` | `fieldset`, `input`, `select`, `textarea`, labels and feedback | Low–medium. Keep comfortable/compact usage, controlled values, labels, and browser autocomplete; connect hints/errors accessibly. |
-| `ui/Badge.tsx` | `badge` with shared tone mapping | Low. Keep domain labels such as brew/precon; centralize their visual meaning. |
+| `ui/Badge.tsx` | `badge` with shared tone mapping (implemented) | Deck sources, JPG labels, and quantities in both routes now use the shared daisyUI styles. |
+| `ui/CloseButton.tsx` | Shared square daisyUI button (implemented) | Panel and image contrast variants share one close icon/label; overlay lifecycle is unchanged. |
 | `ui/FilterTabs.tsx` | Shared daisyUI buttons, optionally `join` | Low. They are filters with `aria-pressed`, not tab panels; do not add tab roles for appearance. |
 | `ui/NumberStepper.tsx` | `join` + `btn` + numeric `input` | Low–medium. Keep string/empty values, step/min behavior, and large touch targets. There is no reason to change its value contract. |
 | `ui/Panel.tsx`, `ui/Tile.tsx` | Shared `card` surfaces and action compositions | Medium. Retain login artwork and responsive geometry; isolate decorative SVGs from ordinary control styling. |

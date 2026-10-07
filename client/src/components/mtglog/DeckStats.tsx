@@ -7,6 +7,7 @@ import { computeDeckStats, computeTokens, MANA_COLORS, MANA_LABELS, type CurveKe
 import { pieSlicePath } from './stats';
 import Button, { ButtonRouteLink } from '../ui/Button';
 import Modal from '../ui/Modal';
+import CloseButton from '../ui/CloseButton';
 import { cx, TEXT_MINI } from '../ui/styles';
 
 interface DeckStatsItem {
@@ -254,17 +255,8 @@ export default function DeckStatsContents({ cards }: { cards: DeckStatsItem[] })
           role="dialog"
           aria-label={openToken.name}
         >
-          <button
-            type="button"
-            onClick={() => setOpenToken(null)}
-            aria-label="Chiudi"
-            className="absolute right-3 top-[calc(0.75rem+env(safe-area-inset-top))] flex h-11 w-11 items-center justify-center rounded-full border-2 border-white/60 bg-black/60 text-white"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-              <line x1="5" y1="5" x2="19" y2="19" />
-              <line x1="19" y1="5" x2="5" y2="19" />
-            </svg>
-          </button>
+          <CloseButton onClick={() => setOpenToken(null)} surface="image"
+            className="absolute right-3 top-[calc(0.75rem+env(safe-area-inset-top))]" />
           <img
             src={openToken.normal}
             alt={openToken.name}

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { dedupePlayableCards, expandPlayableDeck, type PlayableDeck, type PlayableCard } from '../services/playableDeck';
 import Button from './ui/Button';
+import Badge from './ui/Badge';
 import { cx, HEADING_PANEL, HEADING_SECTION } from './ui/styles';
 
 interface DeckPreviewProps {
@@ -28,9 +29,9 @@ function CardTile({ card }: { card: PlayableCard }) {
         </div>
       )}
       {card.count > 1 && (
-        <span className="absolute bottom-2 left-2 flex h-7 w-7 items-center justify-center rounded-full bg-zaff-primary text-xs font-bold text-white shadow-lg">
+        <Badge tone="primary" size="lg" className="absolute bottom-2 left-2">
           {card.count}
-        </span>
+        </Badge>
       )}
     </div>
   );

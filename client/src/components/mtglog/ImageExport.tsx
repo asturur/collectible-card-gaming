@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { toCanvas } from 'html-to-image';
 import Button from '../ui/Button';
+import Badge from '../ui/Badge';
 import { cx, HEADING_SECTION, TEXT_MINI } from '../ui/styles';
 
 /**
@@ -12,22 +13,7 @@ import { cx, HEADING_SECTION, TEXT_MINI } from '../ui/styles';
 
 /** Piccolo badge "JPG", per far capire a colpo d'occhio il formato. */
 export function JpgBadge() {
-  return (
-    <svg width="28" height="18" viewBox="0 0 28 18" className="mr-1 inline-block align-[-4px]" aria-hidden="true">
-      <rect x="0.5" y="0.5" width="27" height="17" rx="3.5" fill="#E8CA7E" stroke="#9E7A31" strokeWidth="1" />
-      <text
-        x="14"
-        y="12.5"
-        textAnchor="middle"
-        fontSize="9"
-        fontWeight="700"
-        fontFamily="Inter, system-ui, sans-serif"
-        fill="#5B4310"
-      >
-        JPG
-      </text>
-    </svg>
-  );
+  return <Badge tone="warning" aria-hidden="true">JPG</Badge>;
 }
 
 export function todayLabel(): string {

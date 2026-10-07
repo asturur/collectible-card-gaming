@@ -4,7 +4,7 @@
    deck views, charts, and game controls keep their existing rendering. */
 @plugin "daisyui" {
   themes: false;
-  include: button, input, select, textarea, fieldset, label, breadcrumbs;
+  include: button, input, select, textarea, fieldset, label, breadcrumbs, badge;
 }
 
 @plugin "daisyui/theme" {

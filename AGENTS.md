@@ -41,7 +41,7 @@ existing `pnpm-lock.yaml` only describes root tooling, not the client workspace.
 ## Tech Stack
 
 - **Client**: React 19, Vite, Tailwind CSS v4, FabricJS, TypeScript
-- **UI**: daisyUI 5 + shared React kit in `client/src/components/ui/`. Base UI has been removed. Buttons and basic fields are migrated; custom widgets and overlays retain their existing implementations.
+- **UI**: daisyUI 5 + shared React kit in `client/src/components/ui/`. Base UI has been removed. Buttons, basic fields, badges, and modal close controls are migrated; custom widgets and overlay behavior retain their existing implementations.
 - **Server**: Go, `coder/websocket`, built-in Cloudflare tunnel support
 - **Shared types**: TypeScript package `@zaff/shared`, consumed by client
 - **Card data**: MTGJSON API (deck lists), Scryfall (card images)
@@ -268,12 +268,14 @@ Registro and ZAFF implementations. Some legacy controls still bypass it.
 
 | Component | Purpose |
 |-----------|---------|
-| `Button` / `ButtonLink` / `ButtonRouteLink` | daisyUI `primary`, outlined `ghost`, soft secondary `link`, `danger`, and text-style `text` × `sm`/`md`/`lg`/`xl`. `link` is a historical variant name; use `ButtonRouteLink` for internal navigation and `ButtonLink` for external links. |
+| `Button` / `ButtonLink` / `ButtonRouteLink` | daisyUI `primary`, outlined `ghost`, soft secondary `link`, `danger`, text-style `text`, `subtle` (daisyUI ghost), and solid `neutral` × `sm`/`md`/`lg`/`xl`. Square/circle shapes use daisyUI modifiers. `link` is a historical variant name; use `ButtonRouteLink` for internal navigation and `ButtonLink` for external links. |
 | `Field` | daisyUI `TextField`, `SelectField`, `TextAreaField` (label + control + associated hint/error), `density="compact"` for dense forms |
 | `Panel` | `CenteredPanel` — the full-screen mask (ZAFF join, registro login, deck picker) |
 | `SectionPage` / `Breadcrumbs` | Shared routed page shell: mobile widths, heading, daisyUI breadcrumb hierarchy, safe-area padding |
 | `Modal` | Task overlay with ✕/Esc/backdrop close; `level={2}` stacks over another task |
-| `FilterTabs`, `Badge`, `NumberStepper` | Group/source filters, pills, −/+ numeric input |
+| `CloseButton` | Shared square daisyUI button; default panel style or solid `surface="image"` contrast for card/token previews. Full label, title, and a decorative close icon. |
+| `Badge` | daisyUI badges for deck sources, format tags, and quantities; semantic tones and `xs`/`sm`/`md`/`lg`/`xl` sizes. |
+| `FilterTabs`, `NumberStepper` | Group/source filters, −/+ numeric input |
 | `Tile` | `GridTile` and the existing navigation illustrations |
 | `styles.ts` | `PANEL`, `FIELD_*`, `HEADING_*`, `TEXT_*`, `cx()` |
 
@@ -291,8 +293,8 @@ implementation sequence are in [plans/PLAN_DAISYUI_MIGRATION.md](plans/PLAN_DAIS
 - Use **daisyUI 5 + Tailwind CSS 4 + our shared React kit**. daisyUI
   supplies component styles; React and native HTML supply interaction behavior.
   Do not introduce another general-purpose UI library or start using Base UI.
-- The first migration pass covers shared buttons, button filters, and basic
-  input/select/textarea fields, plus shared page breadcrumbs. `index.css` enables
+- Migrated primitives include shared buttons, button filters, basic
+  input/select/textarea fields, page breadcrumbs, badges, and close buttons. `index.css` enables
   those daisyUI components and their field/label styles. Extend that allowlist
   when implementing another shared primitive; do not use classes whose component
   CSS is not enabled.
@@ -316,6 +318,9 @@ implementation sequence are in [plans/PLAN_DAISYUI_MIGRATION.md](plans/PLAN_DAIS
 - Extend a shared component with a small typed prop or variant when needed.
   A new shared primitive is appropriate when it establishes a common control
   or behavior; do not create a second button, field, or modal for one route.
+- Use `CloseButton` for icon close actions in task dialogs and full-screen
+  card/token previews. Use `Badge` for source labels, JPG tags, and card counts
+  in both Registro and ZAFF; do not draw these badges with one-off spans or SVGs.
 - Put daisyUI component classes in the shared kit. Screen `className` props may
   handle placement, width, and surrounding layout; do not override a control's
   colors, font, radius, padding, focus, or disabled appearance at each call site.
