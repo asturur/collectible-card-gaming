@@ -268,6 +268,8 @@ export interface GamePlayer {
   seat?: number;
   /** Segnato dal segna-punti: KILL e/o MILL (il veleno conta come KILL). */
   loss?: LossCause[];
+  /** Contatori veleno a fine partita (solo se > 0), per riprendere la partita. */
+  poison?: number;
 }
 
 export interface Game {

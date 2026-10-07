@@ -4,11 +4,24 @@ import { PIE_COLORS } from './stats';
 import { HEADING_SECTION } from '../ui/styles';
 import type { LossCause } from './GameList';
 
+/** Stato salvato di un giocatore, per riprendere una partita già registrata. */
+export interface LifeCounterResume {
+  life: number;
+  loss: LossCause[];
+  poison: number;
+}
+
 interface LifeCounterProps {
   players: string[];
   startLife: number;
+  /** Se presente, il conteggio riparte da questi valori (per nome giocatore). */
+  resume?: Record<string, LifeCounterResume>;
   onCancel: () => void;
-  onFinish: (lives: Record<string, number>, causes: Record<string, LossCause[]>) => void;
+  onFinish: (
+    lives: Record<string, number>,
+    causes: Record<string, LossCause[]>,
+    poisons: Record<string, number>
+  ) => void;
 }
 
 interface LcPlayer {
@@ -129,11 +142,23 @@ const TAP_HIGHLIGHT_OFF = { WebkitTapHighlightColor: 'transparent' } as const;
  * di 180°, così legge dritto senza girare il telefono. High Roll (d20) per
  * decidere chi inizia.
  */
-export default function LifeCounter({ players, startLife, onCancel, onFinish }: LifeCounterProps) {
+export default function LifeCounter({ players, startLife, resume, onCancel, onFinish }: LifeCounterProps) {
   useKeepScreenAwake();
 
   const [lives, setLives] = useState<LcPlayer[]>(
-    players.map((name) => ({ name, life: startLife, kill: false, mill: false, poisonOn: false, poison: 0 }))
+    players.map((name) => {
+      const saved = resume?.[name];
+      if (!saved) return { name, life: startLife, kill: false, mill: false, poisonOn: false, poison: 0 };
+      // Il veleno letale è già contato come KILL nelle cause: non lo accendo due volte.
+      return {
+        name,
+        life: saved.life,
+        kill: saved.loss.includes('kill') && saved.poison < POISON_LIMIT,
+        mill: saved.loss.includes('mill'),
+        poisonOn: saved.poison > 0,
+        poison: saved.poison,
+      };
+    })
   );
   /** Scheda di cui è aperto il pannello opzioni (una alla volta). */
   const [optionsFor, setOptionsFor] = useState<number | null>(null);
@@ -362,7 +387,8 @@ export default function LifeCounter({ players, startLife, onCancel, onFinish }: 
               onClick={() =>
                 onFinish(
                   Object.fromEntries(lives.map((p) => [p.name, p.life])),
-                  Object.fromEntries(lives.map((p) => [p.name, lossCauses(p)]))
+                  Object.fromEntries(lives.map((p) => [p.name, lossCauses(p)])),
+                  Object.fromEntries(lives.map((p) => [p.name, p.poisonOn ? p.poison : 0]))
                 )
               }
             >

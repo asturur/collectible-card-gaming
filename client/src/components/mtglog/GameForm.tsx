@@ -10,7 +10,7 @@ import {
   TABLE_PLAYERS,
 } from '../../services/supabase';
 import type { Game } from './GameList';
-import LifeCounter from './LifeCounter';
+import LifeCounter, { type LifeCounterResume } from './LifeCounter';
 import type { LossCause } from './GameList';
 import { ManaPips } from './ManaIcon';
 import Button from '../ui/Button';
@@ -46,6 +46,8 @@ interface PlayerRow {
   colors: Set<string>;
   /** KILL/MILL segnati dal segna-punti (vuoto se non indicato). */
   loss: LossCause[];
+  /** Contatori veleno a fine partita (0 se non usato). */
+  poison: number;
   /** True dopo aver cliccato "No, è un'altra persona": finché il nome resta
    *  identico (a parte maiuscole/spazi) a uno già in elenco, mostra l'avviso
    *  "scegli un nome diverso" invece della domanda "è la stessa persona?". */
@@ -95,6 +97,7 @@ function emptyPlayerRow(): PlayerRow {
     winner: false,
     colors: new Set(),
     loss: [],
+    poison: 0,
   };
 }
 
@@ -118,6 +121,8 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved }: 
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [lifeCounterOpen, setLifeCounterOpen] = useState(false);
+  /** True quando il segna-punti si apre da "Riprendi Partita" (parte dai punteggi salvati). */
+  const [resumeCounter, setResumeCounter] = useState(false);
   /** Indice della riga giocatore il cui elenco suggerimenti nomi è aperto (solo uno alla volta). */
   const [playerPickerFor, setPlayerPickerFor] = useState<number | null>(null);
   const [deckPickerFor, setDeckPickerFor] = useState<number | null>(null);
@@ -166,6 +171,7 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved }: 
               winner: Boolean(p.winner),
               colors: new Set(p.colors || []),
               loss: p.loss ?? [],
+              poison: p.poison ?? 0,
             };
           })
         );
@@ -186,6 +192,7 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved }: 
               winner: false,
               colors: new Set(p.colors || []),
               loss: [],
+              poison: 0,
             };
           })
         );
@@ -263,7 +270,8 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved }: 
     updatePlayer(index, { deckSelect: value, colors: chosen ? new Set(chosen.colors) : players[index].colors });
   }
 
-  function handleOpenLifeCounter() {
+  function handleOpenLifeCounter(resume = false) {
+    setResumeCounter(resume);
     setError('');
     if (hasUnresolvedNameConflict()) {
       setError('Rispondi alla domanda sul nome del giocatore prima di procedere.');
@@ -277,11 +285,25 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved }: 
     setLifeCounterOpen(true);
   }
 
-  function handleLifeCounterFinish(lives: Record<string, number>, causes: Record<string, LossCause[]>) {
+  function handleLifeCounterFinish(
+    lives: Record<string, number>,
+    causes: Record<string, LossCause[]>,
+    poisons: Record<string, number>
+  ) {
+    // Se un solo giocatore non ha KILL, MILL né veleno letale, è lui il
+    // vincitore: lo preseleziono. Con più candidati non scelgo nessuno.
+    const survivors = Object.keys(lives).filter((k) => (causes[k] ?? []).length === 0);
     setPlayers((prev) =>
       prev.map((p) => {
         const key = p.name.trim();
-        return key in lives ? { ...p, life: String(lives[key]), loss: causes[key] ?? [] } : p;
+        if (!(key in lives)) return p;
+        return {
+          ...p,
+          life: String(lives[key]),
+          loss: causes[key] ?? [],
+          poison: poisons[key] ?? 0,
+          winner: survivors.length === 1 ? survivors[0] === key : p.winner,
+        };
       })
     );
     setLifeCounterOpen(false);
@@ -319,6 +341,7 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved }: 
           colors: [...p.colors],
           seat: i + 1,
           ...(p.loss.length ? { loss: p.loss } : {}),
+          ...(p.poison > 0 ? { poison: p.poison } : {}),
         };
       })
       .filter((p) => p.name || p.deck || p.desc || p.life !== null || p.colors.length)
@@ -369,11 +392,21 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved }: 
     return <p className={TEXT_MUTED}>Caricamento…</p>;
   }
 
+  /** Punteggi già salvati di ogni giocatore (solo quelli con una vita registrata). */
+  const resumeData: Record<string, LifeCounterResume> = {};
+  players.forEach((p) => {
+    const key = p.name.trim();
+    if (key && p.life !== '' && !Number.isNaN(Number(p.life))) {
+      resumeData[key] = { life: Number(p.life), loss: p.loss, poison: p.poison };
+    }
+  });
+
   if (lifeCounterOpen) {
     return (
       <LifeCounter
         players={players.map((p) => p.name.trim()).filter(Boolean)}
         startLife={startLife}
+        resume={resumeCounter ? resumeData : undefined}
         onCancel={() => setLifeCounterOpen(false)}
         onFinish={handleLifeCounterFinish}
       />
@@ -725,14 +758,17 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved }: 
         />
       </div>
 
-      <Button
-        onClick={handleOpenLifeCounter}
-        size="lg"
-        fullWidth
-        className="mt-4 py-3.5 text-lg"
-      >
-        <span className="text-xl leading-none">▶</span> Avvia Partita
-      </Button>
+      <div className={editingGame ? 'mt-4 grid grid-cols-2 gap-3' : 'mt-4'}>
+        <Button onClick={() => handleOpenLifeCounter(false)} size="lg" fullWidth className="py-3.5 text-lg">
+          <span className="text-xl leading-none">▶</span> Avvia Partita
+        </Button>
+        {/* Solo per una partita già salvata: riparte dai punteggi registrati. */}
+        {editingGame && (
+          <Button onClick={() => handleOpenLifeCounter(true)} size="lg" fullWidth className="py-3.5 text-lg">
+            <span className="text-xl leading-none">⏯</span> Riprendi Partita
+          </Button>
+        )}
+      </div>
 
       <TextAreaField
         id="notes"
