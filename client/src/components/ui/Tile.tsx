@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { Link } from 'react-router';
 import { cx } from './styles';
 
 /** Griglia a colonne di uguale larghezza (niente tessere che si "allargano"
@@ -7,7 +8,7 @@ import { cx } from './styles';
  *  principali (home, statistiche per sfida…). */
 export const TILE_GRID = 'grid grid-cols-2 gap-2.5 min-[420px]:grid-cols-3 sm:grid-cols-5';
 
-interface GridTileProps {
+interface GridTilePresentationProps {
   /** Emoji o piccola icona, centrata nella zona superiore. Ignorata se è
    *  passato anche `graphic`. */
   icon?: ReactNode;
@@ -17,8 +18,9 @@ interface GridTileProps {
   graphic?: ReactNode;
   label: string;
   sublabel?: string;
-  onClick: () => void;
 }
+
+type GridTileProps = GridTilePresentationProps & ({ onClick: () => void; to?: never } | { to: string; onClick?: never });
 
 /** Tessera standard dell'app: stessa misura e forma per tutte (altezza fissa,
  *  larghezza data dalla griglia) a prescindere dal testo dentro. Due zone
@@ -26,13 +28,10 @@ interface GridTileProps {
  *  pieno (sempre leggibile, anche quando sopra c'è una grafica elaborata) —
  *  come le icone di un'app sul telefono. Usata sia per i tasti principali
  *  della home sia per le tessere di "Statistiche per sfida". */
-export function GridTile({ icon, graphic, label, sublabel, onClick }: GridTileProps) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex h-32 flex-col overflow-hidden rounded-lg border border-zaff-border bg-zaff-surface text-center text-zaff-text transition hover:border-zaff-primary active:scale-[0.97]"
-    >
+export function GridTile({ icon, graphic, label, sublabel, onClick, to }: GridTileProps) {
+  const className = "flex h-32 flex-col overflow-hidden rounded-lg border border-zaff-border bg-zaff-surface text-center text-zaff-text transition hover:border-zaff-primary active:scale-[0.97]";
+  const content = (
+    <>
       <span className="relative flex flex-1 items-center justify-center overflow-hidden">
         {graphic ?? <span className="text-2xl leading-none">{icon}</span>}
       </span>
@@ -45,8 +44,10 @@ export function GridTile({ icon, graphic, label, sublabel, onClick }: GridTilePr
         <span className="text-[15px] font-bold leading-tight">{label}</span>
         {sublabel && <span className="text-xs text-zaff-muted">{sublabel}</span>}
       </span>
-    </button>
+    </>
   );
+  return to !== undefined ? <Link to={to} className={className}>{content}</Link>
+    : <button type="button" onClick={onClick} className={className}>{content}</button>;
 }
 
 /**

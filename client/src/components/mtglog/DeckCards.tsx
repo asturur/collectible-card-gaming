@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { getCard, isMissing, type ScryCard } from '../../services/scryfall';
 import { useDeckImages } from './useDeckImages';
-import { DeckStatsButton } from './DeckStats';
+import { DeckStatsLink } from './DeckStats';
 import { groupCards, type GroupedColor, type GroupMode } from './cardGroups';
 import { ManaIcons } from './ManaIcon';
 import { cx } from '../ui/styles';
@@ -374,9 +374,11 @@ function Section({
 export default function DeckCardsView({
   cards,
   editable,
+  statsTo,
 }: {
   cards: DeckCardsItem[];
   editable?: DeckCardsEditable;
+  statsTo?: string;
 }) {
   const [mode, setMode] = useState<ViewMode>(readMode);
   const [openIndex, setOpenIndex] = useState<number | null>(null);
@@ -449,9 +451,7 @@ export default function DeckCardsView({
           <span>Side {sideTotal}</span>
           <span className="text-zaff-muted">Totale {mainTotal + sideTotal}</span>
         </div>
-        <div className="mb-3">
-          <DeckStatsButton cards={cards} />
-        </div>
+        {statsTo && <div className="mb-3"><DeckStatsLink to={statsTo} /></div>}
         </>
       )}
 

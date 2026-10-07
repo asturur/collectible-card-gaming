@@ -1,13 +1,9 @@
 import type { ReactNode } from 'react';
+import { Link, useLocation } from 'react-router';
+import { paths } from '../../router';
 import { cx } from '../ui/styles';
 
 export type NavTab = 'games' | 'decks' | 'new' | 'stats' | 'more';
-
-interface BottomNavProps {
-  /** Sezione aperta in questo momento (evidenziata); `null` = pagina iniziale. */
-  active: NavTab | null;
-  onSelect: (tab: NavTab) => void;
-}
 
 const ICON_PROPS = {
   width: 24,
@@ -67,18 +63,22 @@ const TABS: { id: Exclude<NavTab, 'new'>; label: string; icon: ReactNode }[] = [
 /**
  * Barra di navigazione fissa in fondo allo schermo (come le app sul telefono):
  * Partite, Mazzi, il "+" al centro per una nuova partita, Statistiche e Altro.
- * Resta sopra i riquadri principali, quindi si cambia sezione senza dover
- * prima chiudere quella aperta; i riquadri annidati (livello 2) e il
- * segna-punti a tutto schermo la coprono.
+ * Le sezioni sono pagine; solo i dialoghi di lavoro e il segna-punti la coprono.
  */
-export default function BottomNav({ active, onSelect }: BottomNavProps) {
+export default function BottomNav() {
+  const location = useLocation();
+  const pathname = location.pathname.replace(/\/+$/, '') || paths.home;
+  const active: NavTab | null = pathname === paths.newGame || /^\/games\/[^/]+\/(edit|rematch)$/.test(pathname) ? 'new'
+    : pathname === paths.games || pathname.startsWith(`${paths.games}/`) ? 'games'
+    : pathname === paths.decks || pathname.startsWith(`${paths.decks}/`) ? 'decks'
+    : pathname === paths.stats || pathname.startsWith(`${paths.stats}/`) ? 'stats'
+    : pathname === paths.players || pathname === paths.more ? 'more' : null;
   function tabButton(tab: (typeof TABS)[number]) {
     const on = active === tab.id;
     return (
-      <button
+      <Link
         key={tab.id}
-        type="button"
-        onClick={() => onSelect(tab.id)}
+        to={paths[tab.id]}
         aria-current={on ? 'page' : undefined}
         className={cx(
           'flex h-16 flex-col items-center justify-center gap-0.5 text-xs font-semibold transition active:scale-95',
@@ -87,7 +87,7 @@ export default function BottomNav({ active, onSelect }: BottomNavProps) {
       >
         {tab.icon}
         {tab.label}
-      </button>
+      </Link>
     );
   }
 
@@ -99,9 +99,8 @@ export default function BottomNav({ active, onSelect }: BottomNavProps) {
       <div className="mx-auto grid max-w-[680px] grid-cols-5 items-center">
         {tabButton(TABS[0])}
         {tabButton(TABS[1])}
-        <button
-          type="button"
-          onClick={() => onSelect('new')}
+        <Link
+          to={paths.newGame}
           aria-label="Nuova partita"
           aria-current={active === 'new' ? 'page' : undefined}
           className="flex h-16 items-center justify-center"
@@ -114,7 +113,7 @@ export default function BottomNav({ active, onSelect }: BottomNavProps) {
           >
             +
           </span>
-        </button>
+        </Link>
         {tabButton(TABS[2])}
         {tabButton(TABS[3])}
       </div>

@@ -29,15 +29,17 @@ function total(cards: DeckViewCard[]): number {
 /** Contenuto, in sola visualizzazione, del dettaglio di un mazzo: origine,
  *  colori, e l'elenco carte con le copie (main deck, poi sideboard). Stessa
  *  resa del dettaglio mazzo di "Gestisci Mazzi", senza modifica né cancellazione.
- *  Va dentro un `Modal` col nome del mazzo come titolo. */
+ *  La pagina del mazzo gestisce titolo, navigazione e azioni. */
 export default function DeckViewContents({
   source,
   colors,
   cards,
+  statsTo,
 }: {
   source: string;
   colors: string[];
   cards: DeckViewCard[];
+  statsTo: string;
 }) {
   const label = source === 'precon' ? 'Precon' : source === 'brew' ? 'Homebrew' : null;
 
@@ -54,7 +56,7 @@ export default function DeckViewContents({
         </div>
       )}
 
-      <DeckCardsView cards={cards} />
+      <DeckCardsView cards={cards} statsTo={statsTo} />
     </>
   );
 }

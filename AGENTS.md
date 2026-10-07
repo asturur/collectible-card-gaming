@@ -17,7 +17,9 @@ zaff/
 │       ├── state.ts     # GameState, Player, Card types
 │       ├── actions.ts   # ActionTypes enum, Action, SequencedAction
 │       └── protocol.ts  # ClientMessage, ServerMessage envelopes
-└── plans/           # Implementation plans
+│── plans/           # Implementation plans
+└── supabase/        # supabase connection
+    └── migrations/  # supabase sql files
 ```
 
 ## Build & Run
@@ -29,14 +31,17 @@ npm run dev          # Client only
 npm run dev:server   # Server only
 npm run build        # Build shared + client
 npm run test         # Run client tests (vitest)
-npm run lint         # Lint client
+npm run lint         # Not wired yet: client/package.json has no lint script
 ```
 
 The Go server binary is at `server/`. Run directly: `cd server && go run . --port 8080`.
+Use npm workspaces and `package-lock.json` for client dependencies and CI. The
+existing `pnpm-lock.yaml` only describes root tooling, not the client workspace.
 
 ## Tech Stack
 
-- **Client**: React 19, Vite, Tailwind CSS v4, FabricJS (planned), TypeScript
+- **Client**: React 19, Vite, Tailwind CSS v4, FabricJS, TypeScript
+- **UI**: daisyUI 5 + shared React kit in `client/src/components/ui/`. Base UI has been removed. Buttons and basic fields are migrated; custom widgets and overlays retain their existing implementations.
 - **Server**: Go, `coder/websocket`, built-in Cloudflare tunnel support
 - **Shared types**: TypeScript package `@zaff/shared`, consumed by client
 - **Card data**: MTGJSON API (deck lists), Scryfall (card images)
@@ -201,55 +206,242 @@ Shared zones:
 
 #### Routes
 
-Two pages, resolved from the path in `client/src/router.ts` (base `/collectible-card-gaming/`):
+React Router owns navigation through `appRoutes` in `client/src/App.tsx` and
+`registroRoutes` in `mtglog/RegistroPages.tsx`. `router.ts` holds shared paths and
+the Vite basename (`/collectible-card-gaming/`).
 
 ```
-/        → MtgLog       registro partite — the app's home
-/zaff    → JoinScreen → DeckPicker → DeckPreview → GameView
-             (join)      (pickDeck)   (previewDeck)   (game)
+/                         → Registro overview
+/games                    → saved games
+/games/new                → new game
+/games/:gameId             → game detail / image export
+/games/:gameId/edit        → edit the saved game
+/games/:gameId/rematch     → rematch from the saved game
+/decks                    → saved decks
+/decks/new                → new deck / imported draft
+/decks/:deckId             → saved deck detail / card view
+/decks/:deckId/stats       → saved deck composition / mana / token charts
+/decks/:deckId/edit        → edit the saved deck
+/stats                    → statistics menu
+/stats/decks               → deck statistics
+/stats/players             → player standings
+/stats/players/:playerName → individual player statistics / image export
+/stats/matchups            → matchup statistics
+/stats/matchups/A/vs/B     → exact formation statistics / image export
+/more                     → account / other actions
+/players                  → player roster
+/zaff                     → JoinScreen → DeckPicker → DeckPreview → GameView
 ```
 
-`useRoute()` uses `history.pushState` + `popstate`; the ZAFF sub-screens stay internal
-state (a refresh under `/zaff` lands on the join screen). The build emits `404.html` as
-a copy of `index.html` so GitHub Pages serves the deep link.
+Registro sections, saved game/deck details, and editors are pages. Their URLs
+survive refresh and login; persisted records reopen by ID through existing services.
+Older `?partita=ID` links redirect to `/games/:gameId`. Imported deck input is carried
+in router history state. Unsaved form changes are not persisted across refresh.
+Game forms guard navigation/Back and refresh; editor persistence blocks leaving
+until the write completes. The bottom navigation uses real router links.
+Deck list and deck statistics link to the same `/decks/:deckId` page. Saving or
+cancelling an existing deck edit returns to its detail; creating a deck opens its
+new detail page. Shared breadcrumbs show the page hierarchy (Home → section →
+record → editor), independent of browser history.
+Saved-deck charts use `/decks/:deckId/stats`, with a breadcrumb back to the deck.
+Detail and statistics pages share `mtglog/useSavedDeck.ts`; chart rendering stays
+in `DeckStatsContents`. The editor's local statistics preview uses its unsaved
+draft, so it remains a task dialog and never substitutes the persisted card list.
+Player and matchup details are routed pages, reusing Registro's shared games,
+personal/group charts, and image export components. Matchup URLs accept any
+formation size: `/stats/matchups/A/vs/B/vs/C`. They match the exact set of names,
+independent of URL order. Encode each name through `router.ts` helpers and read
+it once through the paired path readers; names may contain spaces, slashes, or
+literal percent encodings. Derived matchup keys use JSON arrays, not delimiters
+that can also appear inside a name. No selected-row/modal state is needed.
+
+ZAFF's live-game sub-screens remain internal state: a refresh under `/zaff` lands
+on the join screen. Leaving that route unmounts its connection. The build emits
+`404.html` as a copy of `index.html` so GitHub Pages serves all deep links.
 
 WebSocket is opened only when entering `GameView`. Deck selection/preview is purely client-side using MTGJSON API.
 
 #### Shared UI kit (`client/src/components/ui/`)
 
-Both halves of the app are built from these; prefer extending them over new one-off classes.
+Both halves of the app use this kit. Extend it instead of introducing parallel
+Registro and ZAFF implementations. Some legacy controls still bypass it.
 
 | Component | Purpose |
 |-----------|---------|
-| `Button` / `ButtonLink` | `primary` (gradient), `ghost`, `link`, `danger` × `sm`/`md`/`lg` |
-| `Field` | `TextField`, `SelectField`, `TextAreaField` (label + control + error), `density="compact"` for dense forms |
+| `Button` / `ButtonLink` / `ButtonRouteLink` | daisyUI `primary`, outlined `ghost`, soft secondary `link`, `danger`, and text-style `text` × `sm`/`md`/`lg`/`xl`. `link` is a historical variant name; use `ButtonRouteLink` for internal navigation and `ButtonLink` for external links. |
+| `Field` | daisyUI `TextField`, `SelectField`, `TextAreaField` (label + control + associated hint/error), `density="compact"` for dense forms |
 | `Panel` | `CenteredPanel` — the full-screen mask (ZAFF join, registro login, deck picker) |
-| `Modal` | Overlay with ✕/Esc/backdrop close; `level={2}` stacks over another modal |
+| `SectionPage` / `Breadcrumbs` | Shared routed page shell: mobile widths, heading, daisyUI breadcrumb hierarchy, safe-area padding |
+| `Modal` | Task overlay with ✕/Esc/backdrop close; `level={2}` stacks over another task |
 | `FilterTabs`, `Badge`, `NumberStepper` | Group/source filters, pills, −/+ numeric input |
+| `Tile` | `GridTile` and the existing navigation illustrations |
 | `styles.ts` | `PANEL`, `FIELD_*`, `HEADING_*`, `TEXT_*`, `cx()` |
 
 Fonts: Cinzel (`font-serif`) is for headings only — always via `HEADING_*`. Everything
 else uses Inter (`font-sans`). Mana symbols come from mana-font via `mtglog/ManaIcon`.
 
-#### Working on the UI
+#### UI Best Practices — Registro and ZAFF
 
-The app is converging on one design system. New UI work reaches for what already
-exists before inventing anything:
+These rules apply to both routes and every new or changed UI component. Existing
+one-off controls are migration work, not examples to copy. The assessment and
+implementation sequence are in [plans/PLAN_DAISYUI_MIGRATION.md](plans/PLAN_DAISYUI_MIGRATION.md).
 
-1. **Use the kit.** A button is `Button`, a form control is a `Field`, a full-screen
-   mask is `CenteredPanel`, an overlay is `Modal`. Don't hand-roll the classes again.
-2. **Extend, don't fork.** If the kit is close but not quite right, add a variant,
-   a size or a prop to the shared component so every screen gets it — a new
-   one-off `className` on one screen is the thing to avoid.
-3. **Take colors, spacing and type from the tokens** in `styles.ts` and the Tailwind
-   `@theme` block in `index.css`, not from fresh hex values or ad-hoc sizes.
+**Library and migration boundary**
 
-When a request would break that — another button style, a different font, a new text
-color, a bespoke spacing scale — say so before building it. Explain that the app is
-moving toward a design system that holds together, and offer the consistent route:
-an existing variant, a new variant added to the shared component, or a token added
-to the theme. Then, if the user confirms they want the one-off anyway, build it —
-this is a nudge toward consistency, not a veto.
+- Use **daisyUI 5 + Tailwind CSS 4 + our shared React kit**. daisyUI
+  supplies component styles; React and native HTML supply interaction behavior.
+  Do not introduce another general-purpose UI library or start using Base UI.
+- The first migration pass covers shared buttons, button filters, and basic
+  input/select/textarea fields, plus shared page breadcrumbs. `index.css` enables
+  those daisyUI components and their field/label styles. Extend that allowlist
+  when implementing another shared primitive; do not use classes whose component
+  CSS is not enabled.
+- Custom pie charts, histograms, deck/card views, life-counter play areas,
+  and true task dialogs keep their domain behavior. Navigation sections use
+  React Router pages, composed with `SectionPage`; do not recreate section
+  overlays. An ordinary UI task should not expand into rewriting domain views. Existing
+  shared buttons/fields inside them naturally receive the common kit styles.
+- During migration, change shared implementations first so both routes receive
+  the same controls. After a primitive is migrated, its daisyUI implementation
+  is the only implementation for new uses; do not maintain a legacy twin.
+- Consult the official docs for the installed daisyUI major before using a new
+  component or modifier. Do not copy older Tailwind/daisyUI setup snippets.
+
+**Component reuse and simple APIs**
+
+- Search `components/ui/` and existing feature components before building.
+  Standard buttons, links styled as buttons, fields, badges, filters, panels,
+  pages, and dialogs must use shared components. Raw HTML controls belong inside
+  those shared implementations, not as freshly styled controls in screens.
+- Extend a shared component with a small typed prop or variant when needed.
+  A new shared primitive is appropriate when it establishes a common control
+  or behavior; do not create a second button, field, or modal for one route.
+- Put daisyUI component classes in the shared kit. Screen `className` props may
+  handle placement, width, and surrounding layout; do not override a control's
+  colors, font, radius, padding, focus, or disabled appearance at each call site.
+  Promote repeated visual choices to a shared size, variant, or theme token.
+- Keep component APIs easy to read: explicit props, standard HTML attributes,
+  typed values/callbacks, and local state for local interactions. Derive values
+  from existing data instead of storing synchronized copies. Keep visual
+  primitives free of API calls, database access, and game rules.
+- Reuse domain views when behavior matches. Adapt their input with existing
+  types/helpers instead of copying a Registro component into ZAFF. Share the
+  common presentation without coupling unrelated authentication or game flows.
+- MTG card artwork, mana symbols, charts, seat colors, Fabric canvas rendering,
+  and life-counter play areas are domain UI. Custom rendering is allowed where
+  daisyUI has no equivalent; compose standard controls from the kit and keep
+  the domain rendering reusable. This is not an exception for ordinary buttons
+  or bespoke modal behavior.
+
+**Theme, layout, and states**
+
+- Use one application theme across Registro and ZAFF. Keep theme definitions
+  in `index.css` and shared presentation helpers in `ui/styles.ts`. Once
+  migrated, use daisyUI semantic colors (`base-*`, `primary`, `accent`,
+  `success`, `warning`, `error`) instead of a second screen-specific palette.
+- Use the existing typography helpers: Cinzel for headings, Inter for body
+  and controls. Prefer daisyUI sizes and the Tailwind spacing scale. Introduce
+  special dimensions centrally only for a concrete need such as card ratios,
+  safe areas, canvas geometry, or large life-counter targets.
+- Build responsive layouts that support narrow phones, long names, scrolling,
+  and safe-area insets. Keep primary actions reachable and give small icon
+  controls enough room to tap. Preserve the existing iOS date/time fixes.
+- Include loading, empty, error, disabled, and saving states where relevant.
+  Preserve input on failed saves and prevent duplicate submissions. Use shared
+  feedback patterns when the same status appears in multiple screens.
+
+**Navigation and page structure**
+
+- Give app sections and persisted record details/editors a React Router route.
+  Keep route definitions in the existing trees and reuse `router.ts` paths.
+  Do not add modal state machines or direct `history.pushState`/`replaceState`
+  calls for navigation. The router handles the Vite deployment basename.
+- Compose Registro sections with `SectionPage`. Keep their narrow mobile widths,
+  normal document scrolling, safe-area padding, and bottom navigation. A page
+  has an `h1` and the shared breadcrumb trail; it does not lock background scrolling.
+- Breadcrumbs describe hierarchy, not the previous visited page. Supply linked
+  ancestors through `SectionPage`; it adds Home and the nonlinked current page
+  with `aria-current="page"`. Use saved record names when available, and keep
+  long labels readable on narrow phones. Do not recreate trails in each screen.
+- Put persisted IDs in the URL and load through existing services/shared data.
+  Do not require a clicked record in component state to reopen a page. Preserve
+  the requested URL through authentication and handle missing/forbidden records.
+- Use router links for navigation, including menus and the bottom bar. Browser
+  Back/Forward should follow visited pages; tapping the active section stays
+  there. Keep unsaved-game and save-in-progress guards through `useLeaveGuard`.
+- Reserve dialogs for short local tasks such as choosing cards/players/formats
+  and confirmations. Existing custom card views/life-counter interactions stay
+  intact; route changes do not justify rewriting their rendering.
+
+**Interaction and accessibility**
+
+- Use buttons for actions and anchors for navigation, preserving `href` and
+  the shared router paths and `ButtonRouteLink`/React Router `Link`. Label every
+  input and icon-only control. Connect field
+  hints/errors with `aria-describedby` and mark invalid fields with
+  `aria-invalid`. Keep visible keyboard focus; color alone is not a status.
+- Filters use pressed-button semantics; only actual tab panels use tab roles
+  and tab keyboard behavior. Prefer native selects over custom listboxes unless
+  the feature needs search or another behavior a select cannot provide.
+- When undertaking a separate overlay migration, true blocking dialogs must
+  have an accessible name, initial focus, focus
+  containment/return, Escape and backdrop handling, and reliable scroll cleanup.
+  With daisyUI, implement native `<dialog>`/`showModal()` through the shared
+  React wrapper and synchronize close/cancel events with React state. Do not
+  use checkbox/URL hacks or assume styling supplies focus management.
+- Task dialogs cover the page and its bottom navigation. Full-screen card
+  viewers/pickers must remain above their parent dialog; a larger `z-index`
+  cannot escape a native dialog's top layer. Handle this in the shared overlay
+  implementation when migrating true dialogs.
+
+**API, hook, and type reuse**
+
+- Reuse the existing data boundary before adding requests:
+
+  | Need | Reuse |
+  |------|-------|
+  | Saved deck read/write/subscriptions | `services/savedDecks.ts` |
+  | Read-only saved deck page loading/subscriptions | `mtglog/useSavedDeck.ts` |
+  | Registro game statistics / player and matchup data | `useRegistro()` shared games and `mtglog/stats.ts` |
+  | Deck parsing, normalization, identity | `services/deckCards.ts` |
+  | ZAFF deck adapters, validation, expansion | `services/playableDeck.ts` |
+  | MTGJSON deck index/details | `services/mtgjson.ts` |
+  | Card search/images/autocomplete | `services/scryfall.ts` and `mtglog/useDeckImages.ts` |
+  | Scryfall request queue and verified resolution | `services/scryfallLookup.ts` |
+  | Live game connection/actions | `network/useSocket.ts`, `network/socket.ts`, `@zaff/shared` |
+  | Existing database client, table constants, subscriptions | `services/supabase.ts` |
+
+- New remote requests and database operations belong in a named service, with
+  shared types and error handling. Components call that service directly or
+  through a hook when React lifecycle/subscription behavior needs reuse. Do
+  not create another client, endpoint string, cache, or transport in a screen.
+- Registro still has direct queries/auth calls and an in-component precon
+  loader. Do not multiply those patterns. When related work needs the same
+  operation again, extract/extend a service rather than copying the query.
+  Do not rewrite all persistence as part of an unrelated styling change.
+- Preserve saved-deck revisions/conflict handling, card identities, subscription
+  cleanup, and full-state WebSocket replacement. A UI library change must not
+  change data sources, storage formats, or game action payloads incidentally.
+
+**Verification and review**
+
+- For executable UI changes, run `npm run build` and the relevant existing
+  interaction tests. Shared behavior changes need focused coverage, especially
+  forms, asynchronous saving, dialog close/focus, and nested overlays. Cosmetic
+  changes do not need tests that only assert classes.
+- Visually check affected screens on phone and desktop. Changes to shared
+  controls need a representative Registro screen and a ZAFF screen; dialog
+  changes also need keyboard, nested-dialog, navigation, and scroll checks.
+- `npm run lint` is currently not wired in the client. Do not report it as a
+  passing check. Documentation-only changes need document/diff checks.
+- Before handing off, inspect the diff for duplicated controls/services,
+  screen-level appearance overrides, and unexplained custom CSS. State which
+  shared components/APIs were reused or extended and what was verified.
+  These are agent/review rules; they do not constitute an automated lint gate.
+
+If a requested design needs a one-off style, explain the shared component or
+theme change that would keep both routes consistent and use that route by
+default. Honor an explicit user choice for a one-off without asking again.
 
 #### Socket Layer
 
@@ -271,7 +463,7 @@ Message handling in `useSocket`:
 #### Deck Confirmation → LOAD_DECK Flow
 
 1. User clicks "Confirm Deck" in `DeckPreview`
-2. `App` switches to `game` screen, passes `selectedDeck` + `connection` to `GameView`
+2. `ZaffApp` switches to `game` screen, passes `selectedDeck` + `connection` to `GameView`
 3. `GameView` mounts → `useSocket` opens WebSocket
 4. On `connected` + `selectedDeck` present: `useEffect` fires (once, via ref guard)
 5. Expands deck cards by count (4× of a card = 4 entries), sends:
@@ -298,10 +490,12 @@ Message handling in `useSocket`:
 | `server/state.go` | Go GameState, Player, Card structs, zone init |
 | `server/client.go` | Client: ReadLoop, handleMessage dispatch |
 | `server/tunnel.go` | Built-in Cloudflare tunnel support |
-| `client/src/App.tsx` | Route + screen state machine |
-| `client/src/router.ts` | Two-route router (`/`, `/zaff`) |
+| `client/src/App.tsx` | React Router tree and app shell |
+| `client/src/components/ZaffApp.tsx` | ZAFF screen state machine |
+| `client/src/components/mtglog/RegistroPages.tsx` | Registro route definitions and page composition |
+| `client/src/router.ts` | Shared route paths, basename, and share-link hrefs |
 | `client/src/components/ui/` | Shared UI kit (buttons, fields, panel, modal…) |
-| `client/src/components/MtgLog.tsx` | Registro partite home (header, standings, modals) |
+| `client/src/components/MtgLog.tsx` | Registro authentication, shared data, and page outlet |
 | `client/src/components/GameView.tsx` | Game screen, LOAD_DECK dispatch |
 | `client/src/components/DeckPreview.tsx` | Deck review before confirmation |
 | `client/src/network/useSocket.ts` | Central client message handler |

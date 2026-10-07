@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router';
 import DeckCardsView from './DeckCards';
 import { getCard } from '../../services/scryfall';
 vi.mock('../../services/scryfall', () => ({ getCard: vi.fn(), isMissing: (name: string) => name === 'Unknown', getToken: () => undefined }));
@@ -10,7 +11,7 @@ const card = { name: 'Delver', scryfallId: 'pinned', oracleId: 'oracle', exactMa
 beforeEach(() => { localStorage.clear(); vi.clearAllMocks(); vi.mocked(getCard).mockImplementation(name => name === 'Delver' ? card as never : undefined); });
 describe('Registro card controls with pinned identities', () => {
   it('keeps grid/list and color/type controls, front/back viewing and statistics working', async () => {
-    const user = userEvent.setup(); render(<DeckCardsView cards={[{ name: 'Delver', qty: 2, scryfallId: 'pinned' }]} />);
+    const user = userEvent.setup(); render(<MemoryRouter><DeckCardsView cards={[{ name: 'Delver', qty: 2, scryfallId: 'pinned' }]} statsTo="/decks/deck/stats" /></MemoryRouter>);
     expect(getCard).toHaveBeenCalledWith('Delver', 'pinned');
     await user.click(screen.getByRole('button', { name: /Lista/ }));
     await user.click(screen.getByRole('button', { name: /Tipo/ }));
@@ -18,8 +19,9 @@ describe('Registro card controls with pinned identities', () => {
     const viewer = screen.getByRole('dialog', { name: 'Delver' });
     await user.click(within(viewer).getByRole('button', { name: /Gira la carta/ }));
     expect(within(viewer).getByRole('img', { name: 'Delver' })).toHaveAttribute('src', 'back.jpg');
-    await user.keyboard('{Escape}'); await user.click(screen.getByRole('button', { name: 'Statistiche del mazzo' }));
-    expect(screen.getByText('Statistiche mazzo')).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    expect(screen.getByRole('link', { name: 'Statistiche del mazzo' })).toHaveAttribute('href', '/decks/deck/stats');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
   it('keeps correction and quantity actions available for unresolved groups', async () => {
     const user = userEvent.setup(); const fix = vi.fn(); const qty = vi.fn();

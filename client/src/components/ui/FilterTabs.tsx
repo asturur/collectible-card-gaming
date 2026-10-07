@@ -1,4 +1,5 @@
 import { cx } from './styles';
+import Button from './Button';
 
 export interface FilterTabOption {
   value: string;
@@ -17,20 +18,15 @@ export default function FilterTabs({ options, value, onChange, className }: Filt
   return (
     <div className={cx('flex flex-wrap gap-2', className)}>
       {options.map((option) => (
-        <button
+        <Button
           key={option.value}
-          type="button"
+          size="sm"
+          variant={value === option.value ? 'primary' : 'ghost'}
           onClick={() => onChange(option.value)}
           aria-pressed={value === option.value}
-          className={cx(
-            'rounded-lg border px-3 py-1.5 text-[13px] transition',
-            value === option.value
-              ? 'border-transparent bg-gradient-to-r from-zaff-primary to-zaff-accent font-semibold text-zaff-bg'
-              : 'border-zaff-border bg-zaff-surface text-zaff-muted hover:text-zaff-text'
-          )}
         >
           {option.label}
-        </button>
+        </Button>
       ))}
     </div>
   );

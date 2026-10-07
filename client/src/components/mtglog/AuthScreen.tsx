@@ -234,13 +234,15 @@ export default function AuthScreen({ onOpenZaff, recovery = false, linkExpired =
       </Button>
 
       {!recovery && mode === 'signin' && (
-        <button
-          type="button"
+        <Button
+          variant="text"
+          size="sm"
+          fullWidth
           onClick={() => goTo('forgot')}
-          className="mt-3 block w-full py-1 text-center text-sm text-zaff-muted underline transition-colors hover:text-zaff-primary"
+          className="mt-3"
         >
           Password dimenticata?
-        </button>
+        </Button>
       )}
 
       {!recovery && mode !== 'forgot' && (

@@ -5,7 +5,7 @@ import tailwindcss from '@tailwindcss/vite';
 
 /**
  * GitHub Pages serve 404.html per ogni indirizzo che non è un file: copiandoci
- * dentro index.html, un refresh su /collectible-card-gaming/zaff riapre l'app
+ * dentro index.html, un refresh su qualsiasi sezione (es. /collectible-card-gaming/stats) riapre l'app
  * invece della pagina di errore, e il router legge il percorso come al solito.
  */
 function githubPagesSpaFallback(): Plugin {

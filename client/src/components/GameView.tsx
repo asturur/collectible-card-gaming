@@ -3,6 +3,7 @@ import { ActionTypes } from '@zaff/shared';
 import { useSocket } from '../network/useSocket';
 import { expandPlayableDeck, type PlayableDeck } from '../services/playableDeck';
 import GameCanvas from './GameCanvas';
+import Button from './ui/Button';
 
 interface GameViewProps {
   address: string;
@@ -89,12 +90,13 @@ export default function GameView({ address, playerName, selectedDeck, onDisconne
               </span>
             ))}
           </span>
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={handleDisconnect}
-            className="rounded-md border border-zaff-border px-3 py-1 text-sm text-zaff-muted transition-colors hover:bg-zaff-border hover:text-zaff-text"
           >
             Disconnect
-          </button>
+          </Button>
         </div>
       </header>
 

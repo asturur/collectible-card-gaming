@@ -1,17 +1,65 @@
 @import "tailwindcss";
 
-@theme {
-  /* ZAFF brand colors -- dark theme */
-  --color-zaff-bg: #0f172a;
-  --color-zaff-surface: #1e293b;
-  --color-zaff-primary: #6366f1;
-  --color-zaff-primary-hover: #818cf8;
-  --color-zaff-text: #f8fafc;
-  --color-zaff-muted: #94a3b8;
-  --color-zaff-border: #334155;
-  --color-zaff-gold: #f5c451;
-  --color-zaff-accent: #22d3ee;
-  --color-zaff-highlight: #ec4899;
+/* Shared standard controls and routed-page breadcrumbs. Custom overlays,
+   deck views, charts, and game controls keep their existing rendering. */
+@plugin "daisyui" {
+  themes: false;
+  include: button, input, select, textarea, fieldset, label, breadcrumbs;
+}
+
+@plugin "daisyui/theme" {
+  name: "zaff";
+  default: true;
+  color-scheme: dark;
+
+  --color-base-100: #0f172a;
+  --color-base-200: #1e293b;
+  --color-base-300: #334155;
+  --color-base-content: #f8fafc;
+  /* The existing light indigo supports dark text on solid primary buttons. */
+  --color-primary: #818cf8;
+  --color-primary-content: #0f172a;
+  --color-secondary: #f5c451;
+  --color-secondary-content: #0f172a;
+  --color-accent: #22d3ee;
+  --color-accent-content: #0f172a;
+  --color-neutral: #334155;
+  --color-neutral-content: #f8fafc;
+  --color-info: #22d3ee;
+  --color-info-content: #0f172a;
+  --color-success: #4ade80;
+  --color-success-content: #0f172a;
+  --color-warning: #fbbf24;
+  --color-warning-content: #0f172a;
+  --color-error: #f87171;
+  --color-error-content: #0f172a;
+
+  --radius-selector: 0.5rem;
+  --radius-field: 0.5rem;
+  --radius-box: 1rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+
+  /* Compatibility roles for existing brand and domain presentation. */
+  --color-brand-primary: #6366f1;
+  --color-muted: #94a3b8;
+  --color-highlight: #ec4899;
+}
+
+@theme inline {
+  --color-zaff-bg: var(--color-base-100);
+  --color-zaff-surface: var(--color-base-200);
+  --color-zaff-primary: var(--color-brand-primary);
+  --color-zaff-primary-hover: var(--color-primary);
+  --color-zaff-text: var(--color-base-content);
+  --color-zaff-muted: var(--color-muted);
+  --color-zaff-border: var(--color-base-300);
+  --color-zaff-gold: var(--color-secondary);
+  --color-zaff-accent: var(--color-accent);
+  --color-zaff-highlight: var(--color-highlight);
 
   --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
   --font-serif: 'Cinzel', Georgia, serif;

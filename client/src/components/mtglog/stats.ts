@@ -76,12 +76,17 @@ export interface MatchupPlayerRow {
 }
 
 export interface MatchupRow {
-  /** Chiave stabile per React/selezione: nomi ordinati e uniti da "|". */
+  /** Chiave stabile per React/selezione: elenco JSON dei nomi ordinati. */
   key: string;
   /** Etichetta da mostrare: nomi uniti da " vs ", nello stesso ordine della chiave. */
   label: string;
   games: number;
   players: MatchupPlayerRow[];
+}
+
+/** Exact formations are order-independent; JSON keeps delimiters inside names unambiguous. */
+export function matchupKey(names: readonly string[]): string {
+  return JSON.stringify([...new Set(names.map(name => name.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b)));
 }
 
 /**
@@ -99,7 +104,7 @@ export function computeMatchups(list: Game[]): MatchupRow[] {
     );
     if (names.length < 2) return;
 
-    const key = names.join('|');
+    const key = matchupKey(names);
     const entry = byKey.get(key) ?? { names, games: 0, wins: {} };
     entry.games += 1;
     game.players.forEach((p) => {
@@ -111,7 +116,7 @@ export function computeMatchups(list: Game[]): MatchupRow[] {
 
   return [...byKey.values()]
     .map((entry) => ({
-      key: entry.names.join('|'),
+      key: matchupKey(entry.names),
       label: entry.names.join(' vs '),
       games: entry.games,
       players: entry.names.map((name) => ({ name, w: entry.wins[name] ?? 0 })),

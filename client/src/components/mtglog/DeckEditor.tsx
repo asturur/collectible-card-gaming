@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { MAX_DECK_NAME_LENGTH } from '../../services/supabase';
+import { canEdit, MAX_DECK_NAME_LENGTH } from '../../services/supabase';
 import { saveSavedDeck, getSavedDeck, DeckConflictError, UnresolvedCardsError } from '../../services/savedDecks';
 import { autocompleteCards } from '../../services/scryfall';
 import type { DeckEntry } from '../../services/deckCards';
@@ -13,9 +13,11 @@ import { cx, FIELD_CONTROL_SM, FIELD_LABEL, TEXT_MINI, TEXT_MUTED } from '../ui/
 
 interface DeckEditorProps {
   deckId: string | null;
+  userId?: string;
   initialDraft?: { name: string; cards: DraftCard[] } | null;
   onBack: () => void;
-  onSaved: () => void;
+  onSaved: (id: string) => void;
+  onLoaded?: (name: string) => void;
   onPersistingChange?: (busy: boolean) => void;
 }
 
@@ -68,12 +70,12 @@ function detectLandColors(cardNames: string[]): Set<string> {
 /** Creazione/modifica manuale di un mazzo, con autocomplete carte (Scryfall),
  *  rilevamento automatico dei colori dalle terre base, e import (file ManaBox
  *  passato come `initialDraft`, o mazzo precon Commander cercato qui).
- *  Va mostrato dentro un `Modal` (titolo e chiusura li mette il riquadro). */
+ *  La pagina gestisce titolo e navigazione; i selettori carte restano dialoghi. */
 /** Parti del mazzo che contano per accorgersi di una modifica altrui. */
 /** Formati selezionabili per un mazzo (usati anche dal filtro nella lista mazzi). */
 export const DECK_FORMATS = ['Commander', 'Standard', 'Modern', 'Pauper', 'Altro'];
 
-export default function DeckEditor({ deckId, initialDraft, onBack, onSaved, onPersistingChange }: DeckEditorProps) {
+export default function DeckEditor({ deckId, userId, initialDraft, onBack, onSaved, onLoaded, onPersistingChange }: DeckEditorProps) {
   const [name, setName] = useState(initialDraft?.name ?? '');
   const [source, setSource] = useState('');
   const [format, setFormat] = useState('');
@@ -93,6 +95,7 @@ export default function DeckEditor({ deckId, initialDraft, onBack, onSaved, onPe
   >(null);
   const [loading, setLoading] = useState(Boolean(deckId));
   const [saving, setSaving] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [error, setError] = useState('');
   const [unresolved, setUnresolved] = useState(false);
   const [persisting, setPersisting] = useState(false);
@@ -118,15 +121,20 @@ export default function DeckEditor({ deckId, initialDraft, onBack, onSaved, onPe
     }
     getSavedDeck(deckId).then(deck => {
       if (cancelled) return;
+      if (userId && !canEdit(deck.createdBy, userId)) throw new Error('Puoi modificare solo i mazzi che hai salvato.');
       openedRevision.current = deck.revision;
       setName(deck.name); setSource(deck.source); setFormat(deck.format);
       setColors(new Set(deck.colors)); setDraft(deck.cards);
+      onLoaded?.(deck.name);
     }).catch(err => {
-      if (!cancelled) setError('Non riesco a leggere il mazzo: ' + err.message);
+      if (!cancelled) {
+        setLoadFailed(true);
+        setError('Non riesco a leggere il mazzo: ' + err.message);
+      }
     }).finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [deckId]);
+  }, [deckId, userId]);
 
   useEffect(() => {
     const q = cardSearch.trim();
@@ -325,7 +333,7 @@ export default function DeckEditor({ deckId, initialDraft, onBack, onSaved, onPe
           allowUnresolved, signal: controller.signal, onPersisting: persist,
         });
       }
-      onSaved();
+      onSaved(input.id);
     } catch (err) {
       if (!controller.signal.aborted) {
         setError('Salvataggio mazzo non riuscito: ' + (err instanceof Error ? err.message : String((err as { message?: string }).message ?? err)));
@@ -343,6 +351,7 @@ export default function DeckEditor({ deckId, initialDraft, onBack, onSaved, onPe
   if (loading) {
     return <p className={TEXT_MUTED}>Caricamento…</p>;
   }
+  if (loadFailed) return <p role="alert" className="text-sm text-red-400">{error}</p>;
 
   const mainTotal = draft.filter((c) => normalizeSection(c.section) === 'main').reduce((sum, c) => sum + c.qty, 0);
   const sideTotal = total - mainTotal;

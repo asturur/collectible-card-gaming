@@ -1,20 +1,18 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
-import { canEdit, MAX_DECK_NAME_LENGTH } from '../../services/supabase';
-import { listSavedDecks, deleteSavedDeck, subscribeSavedDecks, type SavedDeck } from '../../services/savedDecks';
+import { MAX_DECK_NAME_LENGTH } from '../../services/supabase';
+import { listSavedDecks, subscribeSavedDecks, type SavedDeck } from '../../services/savedDecks';
 import { parseDeckText, type DeckEntry } from '../../services/deckCards';
 import { ManaIcons, ManaPips } from './ManaIcon';
-import DeckCardsView from './DeckCards';
 import { DECK_FORMATS } from './DeckEditor';
 import FilterTabs from '../ui/FilterTabs';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
-import Badge from '../ui/Badge';
 import { cx, TEXT_MINI, TEXT_MUTED } from '../ui/styles';
+import { Link } from 'react-router';
+import { paths } from '../../router';
 
 interface DeckListProps {
-  userId: string;
   onCreate: () => void;
-  onEdit: (id: string) => void;
   onImportFile: (name: string, cards: DeckCard[]) => void;
 }
 
@@ -23,30 +21,11 @@ type Deck = SavedDeck;
 const parseManaboxText = (text: string) => parseDeckText(text);
 const parsePastedDeckList = (text: string) => parseDeckText(text);
 
-function deckTotal(d: Deck): number {
-  return d.cards.reduce((sum, c) => sum + c.qty, 0);
-}
-
-function sourceLabel(source: string): string | null {
-  if (source === 'precon') return 'Precon';
-  if (source === 'brew') return 'Homebrew';
-  return null;
-}
-
-/** Pillola "Homebrew"/"Precon" accanto al nome del mazzo. */
-function SourceBadge({ source }: { source: string }) {
-  const label = sourceLabel(source);
-  if (!label) return null;
-  return <Badge tone={source === 'brew' ? 'brew' : 'precon'}>{label}</Badge>;
-}
-
-/** Lista mazzi salvati + dettaglio, con creazione/modifica/cancellazione (Step 5).
- *  Va mostrata dentro un `Modal`; il dettaglio mazzo si apre come riquadro sopra. */
-export default function DeckList({ userId, onCreate, onEdit, onImportFile }: DeckListProps) {
+/** Saved-deck links with filters and local creation/import tasks. */
+export default function DeckList({ onCreate, onImportFile }: DeckListProps) {
   const [decks, setDecks] = useState<Deck[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [pasteOpen, setPasteOpen] = useState(false);
   const [pasteError, setPasteError] = useState('');
@@ -99,12 +78,6 @@ export default function DeckList({ userId, onCreate, onEdit, onImportFile }: Dec
     return () => { cancelled = true; stop(); };
   }, []);
 
-  async function handleDelete(id: string): Promise<boolean> {
-    if (!confirm('Cancellare questo mazzo? Le partite che lo usano già continueranno a mostrarne solo il nome.')) return false;
-    try { await deleteSavedDeck(id); return true; }
-    catch (err) { setError('Cancellazione mazzo non riuscita: ' + (err as Error).message); return false; }
-  }
-
   function toggleColorFilter(c: string) {
     setColorFilter((prev) => {
       const next = new Set(prev);
@@ -120,8 +93,6 @@ export default function DeckList({ userId, onCreate, onEdit, onImportFile }: Dec
       [...colorFilter].every((c) => d.colors.includes(c)) && (formatFilter === 'all' || d.format === formatFilter)
   );
   const filtersActive = colorFilter.size > 0 || formatFilter !== 'all';
-
-  const selectedDeck = decks.find((d) => d.id === selectedId) ?? null;
 
   return (
     <>
@@ -168,9 +139,8 @@ export default function DeckList({ userId, onCreate, onEdit, onImportFile }: Dec
               <li key={d.id}>
                 {/* Una sola azione per riga: tutta la riga apre il mazzo.
                     Modifica e cancella (solo mazzi propri) stanno nel dettaglio. */}
-                <button
-                  type="button"
-                  onClick={() => setSelectedId(d.id)}
+                <Link
+                  to={paths.deck(d.id)}
                   title={d.name}
                   className="mb-2 flex w-full items-center gap-1.5 overflow-hidden rounded-lg border border-zaff-border bg-zaff-bg py-3 pl-3.5 pr-2 text-left transition hover:border-zaff-primary active:border-zaff-primary"
                 >
@@ -179,7 +149,7 @@ export default function DeckList({ userId, onCreate, onEdit, onImportFile }: Dec
                   <span className="ml-auto shrink-0 pl-2 text-2xl leading-none text-zaff-muted" aria-hidden="true">
                     ›
                   </span>
-                </button>
+                </Link>
               </li>
             ))}
           </ul>
@@ -297,49 +267,6 @@ export default function DeckList({ userId, onCreate, onEdit, onImportFile }: Dec
         </Modal>
       )}
 
-      {selectedDeck && (
-        <Modal level={2} title={selectedDeck.name} onClose={() => setSelectedId(null)}>
-          <p className={`mb-2.5 flex items-center gap-2 ${TEXT_MINI}`}>
-            <SourceBadge source={selectedDeck.source} />
-            {deckTotal(selectedDeck)} carte
-          </p>
-
-          {selectedDeck.colors.length > 0 && (
-            <div className="mb-2.5">
-              <ManaPips colors={selectedDeck.colors} />
-            </div>
-          )}
-
-          {canEdit(selectedDeck.createdBy, userId) && (
-            // Solo per i mazzi propri.
-            <div className="mb-3 grid grid-cols-2 gap-2.5">
-              <Button
-                variant="ghost"
-                fullWidth
-                onClick={() => {
-                  const id = selectedDeck.id;
-                  setSelectedId(null);
-                  onEdit(id);
-                }}
-              >
-                ✏️ Modifica
-              </Button>
-              <Button
-                variant="ghost"
-                fullWidth
-                className="hover:border-red-400 hover:text-red-400"
-                onClick={async () => {
-                  if (await handleDelete(selectedDeck.id)) setSelectedId(null);
-                }}
-              >
-                🗑️ Cancella
-              </Button>
-            </div>
-          )}
-
-          <DeckCardsView cards={selectedDeck.cards} />
-        </Modal>
-      )}
     </>
   );
 }

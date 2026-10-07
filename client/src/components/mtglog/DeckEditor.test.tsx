@@ -12,13 +12,26 @@ const deck = { id: 'deck', name: 'Saved', source: 'brew', format: 'Modern', colo
   cards: [{ name: 'Island', qty: 2, section: 'main', scryfallId: 'original-id', oracleId: 'original-oracle' }, { name: 'Forest', qty: 1, section: 'side' }] };
 beforeEach(() => { vi.clearAllMocks(); vi.mocked(getSavedDeck).mockResolvedValue(deck as never); vi.mocked(saveSavedDeck).mockResolvedValue(); });
 describe('Registro save controls', () => {
+  it('shows a missing-deck error without offering an empty editor', async () => {
+    vi.mocked(getSavedDeck).mockRejectedValueOnce(new Error('Questo mazzo non esiste più.'));
+    render(<DeckEditor deckId="missing" userId="u1" onBack={() => {}} onSaved={() => {}} />);
+    expect(await screen.findByRole('alert')).toHaveTextContent('Questo mazzo non esiste più.');
+    expect(screen.queryByLabelText('Nome mazzo')).not.toBeInTheDocument();
+    expect(saveSavedDeck).not.toHaveBeenCalled();
+  });
+  it('prevents editing a saved deck owned by another user', async () => {
+    vi.mocked(getSavedDeck).mockResolvedValueOnce({ ...deck, createdBy: 'u2' } as never);
+    render(<DeckEditor deckId="deck" userId="u1" onBack={() => {}} onSaved={() => {}} />);
+    expect(await screen.findByRole('alert')).toHaveTextContent('Puoi modificare solo i mazzi che hai salvato.');
+    expect(screen.queryByRole('button', { name: 'Salva Modifiche' })).not.toBeInTheDocument();
+  });
   it('preserves IDs/format/colors and removes a group at zero copies', async () => {
     const user = userEvent.setup(); const saved = vi.fn(); render(<DeckEditor deckId="deck" onBack={() => {}} onSaved={saved} />);
     await screen.findByDisplayValue('Saved'); await user.click(screen.getByRole('button', { name: 'Remove Forest (1)' }));
     await user.click(screen.getByRole('button', { name: 'Remove Island (2)' }));
     await user.click(screen.getByRole('button', { name: 'Salva Modifiche' }));
     expect(saveSavedDeck).toHaveBeenCalledWith(expect.objectContaining({ expectedRevision: 4, format: 'Modern', colors: ['U'], cards: [expect.objectContaining({ qty: 1, scryfallId: 'original-id', oracleId: 'original-oracle' })] }), expect.anything());
-    expect(saved).toHaveBeenCalled();
+    expect(saved).toHaveBeenCalledWith('deck');
   });
   it('keeps the draft on failure and offers an explicit unresolved save', async () => {
     vi.mocked(saveSavedDeck).mockRejectedValueOnce(new UnresolvedCardsError(['Unknown']));

@@ -28,6 +28,7 @@ interface GameFormProps {
   rematchFrom?: Game | null;
   onBack: () => void;
   onSaved?: () => void;
+  onSavingChange?: (saving: boolean) => void;
 }
 
 const FORMATS = ['Commander', 'Standard', 'Modern', 'Pauper', 'Draft', 'Two-Headed Giant', 'Amichevole'];
@@ -145,8 +146,8 @@ function emptyPlayerRow(): PlayerRow {
 
 /** Form "Nuova partita"/"Modifica partita": giocatori dinamici, select mazzo/nome,
  *  punti vita, vincitore, note. Salva (insert) o aggiorna (update) su `partite`.
- *  Va mostrato dentro un `Modal` (titolo e chiusura li mette il riquadro). */
-export default function GameForm({ editingGame, rematchFrom, onBack, onSaved }: GameFormProps) {
+ *  La pagina gestisce titolo, navigazione e protezione durante il salvataggio. */
+export default function GameForm({ editingGame, rematchFrom, onBack, onSaved, onSavingChange }: GameFormProps) {
   const [playerNames, setPlayerNames] = useState<string[]>([]);
   /** Nomi in elenco appena letti (lo stato si aggiorna solo al render dopo). */
   const loadedNames = useRef<string[]>([]);
@@ -442,13 +443,18 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved }: 
     }
 
     setSaving(true);
-    const { error: saveError } = editingGame
-      ? await supabase.from(TABLE_GAMES).update(row).eq('id', gameId)
-      : await supabase.from(TABLE_GAMES).insert({ id: gameId, ...row });
-    setSaving(false);
-    if (saveError) {
-      setError('Salvataggio partita non riuscito: ' + saveError.message);
+    onSavingChange?.(true);
+    try {
+      const { error: saveError } = editingGame
+        ? await supabase.from(TABLE_GAMES).update(row).eq('id', gameId)
+        : await supabase.from(TABLE_GAMES).insert({ id: gameId, ...row });
+      if (saveError) throw saveError;
+    } catch (err) {
+      setError('Salvataggio partita non riuscito: ' + (err as { message: string }).message);
       return;
+    } finally {
+      setSaving(false);
+      onSavingChange?.(false);
     }
     rememberStartLife(gameId, startLife);
     if (!editingGame) {

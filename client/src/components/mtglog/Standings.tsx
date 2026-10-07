@@ -1,4 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
+import { Link } from 'react-router';
+import { paths } from '../../router';
 import type { Game } from './GameList';
 import type { TallyRow } from './stats';
 import { PIE_COLORS, pieSlicePath } from './stats';
@@ -13,15 +15,10 @@ import {
   todayLabel,
   useImageExport,
 } from './ImageExport';
-import Modal from '../ui/Modal';
 import { cx, HEADING_SECTION, TEXT_MINI, TEXT_MUTED } from '../ui/styles';
 
 interface StandingsProps {
   rows: TallyRow[];
-  /** Serve a calcolare, per il giocatore aperto nel dettaglio, quali mazzi ha
-   *  usato lui — solo le sue partite, non quelle giocate da altri con lo
-   *  stesso mazzo. */
-  games: Game[];
   /** La torta compare solo quando si guarda un gruppo preciso, come nell'originale. */
   showPie: boolean;
 }
@@ -63,7 +60,7 @@ function GroupPieSection({ rows, idSuffix }: { rows: TallyRow[]; idSuffix: strin
       </p>
       <div className="flex flex-wrap items-center gap-5">
         <GlossyPie slices={slices} idSuffix={idSuffix} />
-        <div className="flex flex-col gap-1.5 text-sm text-zaff-muted">
+        <div className="flex min-w-0 max-w-full flex-col gap-1.5 text-sm text-zaff-muted [overflow-wrap:anywhere]">
           {slices.map((s) => (
             <div key={s.name} className="text-zaff-text">
               <span
@@ -79,16 +76,14 @@ function GroupPieSection({ rows, idSuffix }: { rows: TallyRow[]; idSuffix: strin
   );
 }
 
-/** Elenco giocatori: una riga ciascuno, solo nome e mini-torta. Con `onSelect`
- *  le righe sono toccabili (apre il dettaglio); senza, è la versione statica
- *  per l'immagine esportata. */
+/** Player links keep the existing rows and mini charts. Exports use static rows. */
 function PlayerRows({
   rows,
-  onSelect,
+  interactive = false,
   tight = false,
 }: {
   rows: TallyRow[];
-  onSelect?: (name: string) => void;
+  interactive?: boolean;
   /** Senza il margine sopra (quando sopra c'è già una scritta). */
   tight?: boolean;
 }) {
@@ -107,20 +102,19 @@ function PlayerRows({
         );
         return (
           <li key={t.name}>
-            {onSelect ? (
+            {interactive ? (
               // Riquadro con bordo, come le righe di "Partite Salvate": si vede
-              // che è un tasto e si illumina al passaggio/tocco. La freccia
+              // che è un link e si illumina al passaggio/tocco. La freccia
               // a destra dice che si apre il dettaglio.
-              <button
-                type="button"
-                onClick={() => onSelect(t.name)}
+              <Link
+                to={paths.player(t.name)}
                 className="mb-2 flex w-full items-center gap-3 rounded-lg border border-zaff-border bg-zaff-bg px-3.5 py-3 text-left transition hover:border-zaff-primary active:border-zaff-primary"
               >
                 {content}
                 <span className="shrink-0 text-xl leading-none text-zaff-muted" aria-hidden="true">
                   ›
                 </span>
-              </button>
+              </Link>
             ) : (
               <div className="mb-2 flex w-full items-center gap-3 rounded-lg border border-zaff-border bg-zaff-bg px-3.5 py-3">
                 {content}
@@ -210,20 +204,36 @@ function PlayerDetail({
   );
 }
 
-/** Riquadro del dettaglio giocatore, con il suo bottone di esportazione in
- *  immagine (ha un proprio meccanismo, separato da quello dell'elenco). */
-function PlayerDetailModal({
+/** Routed player detail reuses the same personal charts and image export. */
+export function PlayerStatsDetail({
   row,
-  deckStats,
-  onClose,
+  games,
 }: {
   row: TallyRow;
-  deckStats: PlayerDeckStat[];
-  onClose: () => void;
+  games: Game[];
 }) {
+  /** Mazzi usati dal giocatore aperto, solo le SUE partite: stesso identico
+   *  calcolo di `computeDeckStats` in GameStats.tsx ma filtrato su un solo
+   *  giocatore, così un mazzo condiviso col gruppo mostra qui solo quanto è
+   *  andato bene a lui, non il suo risultato complessivo. */
+  const deckStats = useMemo(() => {
+    const tally: Record<string, { g: number; w: number }> = {};
+    games.forEach((g) => {
+      g.players.forEach((p) => {
+        if (p.name !== row.name) return;
+        const deck = (p.deck || '').trim() || 'Mazzo non indicato';
+        tally[deck] = tally[deck] || { g: 0, w: 0 };
+        tally[deck].g++;
+        if (p.winner) tally[deck].w++;
+      });
+    });
+    return Object.entries(tally)
+      .map(([deck, t]) => ({ deck, g: t.g, w: t.w, pct: t.g ? Math.round((t.w / t.g) * 100) : 0 }))
+      .sort((a, b) => b.g - a.g || b.pct - a.pct);
+  }, [row.name, games]);
   const exporter = useImageExport();
   return (
-    <Modal level={2} title={row.name} onClose={onClose}>
+    <>
       <PlayerDetail row={row} deckStats={deckStats} idSuffix="player" />
 
       <div className="mt-4">
@@ -244,7 +254,7 @@ function PlayerDetailModal({
         <ExportHeader title={row.name} subtitle={`Statistiche Giocatore · aggiornato al ${todayLabel()}`} />
         <PlayerDetail row={row} deckStats={deckStats} idSuffix="player-export" />
       </ExportCardHost>
-    </Modal>
+    </>
   );
 }
 
@@ -256,31 +266,8 @@ function PlayerDetailModal({
  * percentuale di vittoria propria (quella SUA con quel mazzo, non quella
  * del mazzo in generale se lo hanno usato anche altri).
  */
-export default function Standings({ rows, games, showPie }: StandingsProps) {
-  const [selectedName, setSelectedName] = useState<string | null>(null);
+export default function Standings({ rows, showPie }: StandingsProps) {
   const exporter = useImageExport();
-
-  const selectedRow = rows.find((r) => r.name === selectedName) ?? null;
-  /** Mazzi usati dal giocatore aperto, solo le SUE partite: stesso identico
-   *  calcolo di `computeDeckStats` in GameStats.tsx ma filtrato su un solo
-   *  giocatore, così un mazzo condiviso col gruppo mostra qui solo quanto è
-   *  andato bene a lui, non il suo risultato complessivo. */
-  const selectedDeckStats = useMemo(() => {
-    if (!selectedName) return [];
-    const tally: Record<string, { g: number; w: number }> = {};
-    games.forEach((g) => {
-      g.players.forEach((p) => {
-        if (p.name !== selectedName) return;
-        const deck = (p.deck || '').trim() || 'Mazzo non indicato';
-        tally[deck] = tally[deck] || { g: 0, w: 0 };
-        tally[deck].g++;
-        if (p.winner) tally[deck].w++;
-      });
-    });
-    return Object.entries(tally)
-      .map(([deck, t]) => ({ deck, g: t.g, w: t.w, pct: t.g ? Math.round((t.w / t.g) * 100) : 0 }))
-      .sort((a, b) => b.g - a.g || b.pct - a.pct);
-  }, [selectedName, games]);
 
   if (rows.length === 0) {
     return <p className={cx('mt-4', TEXT_MUTED)}>Ancora nessuna partita qui: la classifica compare da qui.</p>;
@@ -291,7 +278,7 @@ export default function Standings({ rows, games, showPie }: StandingsProps) {
       {showPie && <GroupPieSection rows={rows} idSuffix="group" />}
 
       <p className={cx('mb-2 mt-4', TEXT_MINI)}>Tocca un giocatore per vedere le sue statistiche.</p>
-      <PlayerRows rows={rows} onSelect={setSelectedName} tight />
+      <PlayerRows rows={rows} interactive tight />
 
       <div className="mt-4">
         <ExportButton
@@ -309,10 +296,6 @@ export default function Standings({ rows, games, showPie }: StandingsProps) {
       <ExportCardHost cardRef={exporter.cardRef}>
         <PlayersStatsCard rows={rows} showPie={showPie} />
       </ExportCardHost>
-
-      {selectedRow && (
-        <PlayerDetailModal row={selectedRow} deckStats={selectedDeckStats} onClose={() => setSelectedName(null)} />
-      )}
     </>
   );
 }

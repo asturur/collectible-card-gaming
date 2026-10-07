@@ -33,6 +33,8 @@ describe('JoinScreen', () => {
 
     const alerts = screen.getAllByRole('alert');
     expect(alerts.some((a) => a.textContent === 'Server address is required')).toBe(true);
+    expect(addressInput).toHaveAttribute('aria-invalid', 'true');
+    expect(addressInput).toHaveAccessibleDescription('Server address is required');
   });
 
   it('shows validation error for empty player name', async () => {
@@ -101,6 +103,8 @@ describe('JoinScreen', () => {
     await user.type(addressInput, 'a');
     const remaining = screen.queryAllByRole('alert');
     expect(remaining.every((a) => a.textContent !== 'Server address is required')).toBe(true);
+    expect(addressInput).not.toHaveAttribute('aria-invalid');
+    expect(addressInput).not.toHaveAttribute('aria-describedby');
   });
 
   it('clears name error when user starts typing in name field', async () => {

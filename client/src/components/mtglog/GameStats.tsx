@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { subscribeToTable, supabase, TABLE_GAMES } from '../../services/supabase';
-import { listSavedDecks, subscribeSavedDecks } from '../../services/savedDecks';
+import { listSavedDecks, subscribeSavedDecks, type SavedDeck } from '../../services/savedDecks';
 import type { Game } from './GameList';
 import { rowToGame } from './stats';
 import Badge from '../ui/Badge';
-import DeckViewContents, { type DeckViewCard } from './DeckView';
-import Modal from '../ui/Modal';
+import { Link } from 'react-router';
+import { paths } from '../../router';
 import {
   ExportButton,
   ExportCardHost,
@@ -17,13 +17,7 @@ import {
 } from './ImageExport';
 import { cx, FIELD_LABEL, TEXT_MINI, TEXT_MUTED } from '../ui/styles';
 
-interface DeckSourceRow {
-  name: string;
-  source: string;
-  /** Colori e carte, per aprire il mazzo in sola visualizzazione dal tocco sulla riga. */
-  colors: string[];
-  cards: DeckViewCard[];
-}
+type DeckSourceRow = Pick<SavedDeck, 'id' | 'name' | 'source'>;
 
 interface DeckStatRow {
   deck: string;
@@ -31,12 +25,13 @@ interface DeckStatRow {
   w: number;
   pct: number;
   source: string;
+  deckId?: string;
 }
 
 /** Percentuale di vittoria per mazzo, volutamente su TUTTE le partite di tutti
  *  i gruppi: le statistiche di un mazzo non dipendono da con chi l'hai giocato. */
 function computeDeckStats(games: Game[], decks: DeckSourceRow[]): DeckStatRow[] {
-  const sourceByName = new Map(decks.map((d) => [d.name, d.source || '']));
+  const savedByName = new Map(decks.map((d) => [d.name, d]));
   const tally: Record<string, { g: number; w: number }> = {};
   games.forEach((g) =>
     g.players.forEach((p) => {
@@ -52,7 +47,8 @@ function computeDeckStats(games: Game[], decks: DeckSourceRow[]): DeckStatRow[] 
     g: t.g,
     w: t.w,
     pct: t.g ? Math.round((t.w / t.g) * 100) : 0,
-    source: sourceByName.get(deck) || '',
+    source: savedByName.get(deck)?.source || '',
+    deckId: savedByName.get(deck)?.id,
   }));
 }
 
@@ -87,14 +83,15 @@ function WinRateBar({ pct }: { pct: number }) {
 
 /** Un mazzo, in un riquadro con bordo (così si vede dove finisce un mazzo e
  *  comincia il successivo, e a quale appartiene la barra), su tre righe:
- *  nome / origine + partite, vittorie, % / barra. Con `onSelect` è un tasto
- *  che apre il mazzo; senza, è la versione statica per l'immagine esportata. */
-function DeckRow({ r, onSelect }: { r: DeckStatRow; onSelect?: (deck: string) => void }) {
+ *  nome / origine + partite, vittorie, % / barra. I mazzi salvati sono link;
+ *  l'immagine esportata mantiene la versione statica. */
+function DeckRow({ r, interactive }: { r: DeckStatRow; interactive: boolean }) {
+  const to = interactive && r.deckId ? paths.deck(r.deckId) : undefined;
   const inner = (
     <>
       <div className="flex items-center gap-2">
         <b className="block min-w-0 flex-1 truncate text-[16px] font-semibold text-zaff-text">{r.deck}</b>
-        {onSelect && (
+        {to && (
           <span className="shrink-0 text-xl leading-none text-zaff-muted" aria-hidden="true">
             ›
           </span>
@@ -106,32 +103,32 @@ function DeckRow({ r, onSelect }: { r: DeckStatRow; onSelect?: (deck: string) =>
           {r.g} partite · {r.w} vittorie · {r.pct}%
         </span>
       </div>
+      {interactive && !r.deckId && <p className={cx('mt-1', TEXT_MINI)}>Lista carte non disponibile: mazzo non salvato o cancellato.</p>}
       <div className="mt-2">
         <WinRateBar pct={r.pct} />
       </div>
     </>
   );
   const box = 'mb-3 block w-full rounded-lg border border-zaff-border bg-zaff-bg px-3.5 py-3 text-left';
-  return onSelect ? (
-    <button
-      type="button"
-      onClick={() => onSelect(r.deck)}
+  return to ? (
+    <Link
+      to={to}
       className={`${box} transition hover:border-zaff-primary active:border-zaff-primary`}
     >
       {inner}
-    </button>
+    </Link>
   ) : (
     <div className={box}>{inner}</div>
   );
 }
 
 /** Elenco mazzi: lo stesso identico a schermo e nell'immagine esportata. */
-function DeckStatsList({ rows, onSelect }: { rows: DeckStatRow[]; onSelect?: (deck: string) => void }) {
+function DeckStatsList({ rows, interactive = false }: { rows: DeckStatRow[]; interactive?: boolean }) {
   if (rows.length === 0) return <p className={TEXT_MINI}>Nessun mazzo con partite registrate.</p>;
   return (
     <div>
       {rows.map((r) => (
-        <DeckRow key={r.deck} r={r} onSelect={onSelect} />
+        <DeckRow key={r.deck} r={r} interactive={interactive} />
       ))}
     </div>
   );
@@ -141,7 +138,7 @@ function DeckStatsList({ rows, onSelect }: { rows: DeckStatRow[]; onSelect?: (de
  * Statistiche mazzi: due tasti per l'ordinamento (percentuale di vittoria o
  * partite giocate) e l'elenco dei mazzi con la barra della percentuale di
  * vittoria; esportabile in immagine.
- * Va mostrata dentro un `Modal` (la classifica giocatori ha la sua schermata).
+ * Le righe dei mazzi salvati portano alla pagina del mazzo.
  */
 export default function GameStats() {
   const [games, setGames] = useState<Game[]>([]);
@@ -149,8 +146,6 @@ export default function GameStats() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [sort, setSort] = useState<DeckSort>('games');
-  /** Nome del mazzo aperto in sola visualizzazione (tocco su una riga). */
-  const [openDeck, setOpenDeck] = useState<string | null>(null);
   const exporter = useImageExport();
 
   async function loadData() {
@@ -161,9 +156,7 @@ export default function GameStats() {
       ]);
       if (games.error) throw games.error;
       setGames((games.data ?? []).map(rowToGame));
-      setDecks(deckRows.map(row => ({ name: row.name, source: row.source, colors: row.colors,
-        cards: row.cards.map(c => ({ ...c, section: c.section ?? 'main' })),
-      })));
+      setDecks(deckRows);
       setError('');
     } catch (err) { setError('Non riesco a leggere le statistiche: ' + (err as Error).message); }
   }
@@ -193,7 +186,6 @@ export default function GameStats() {
     return <p className={TEXT_MUTED}>Caricamento…</p>;
   }
 
-  const openedDeck = openDeck ? (decks.find((d) => d.name === openDeck) ?? null) : null;
   const sortLabel = SORT_OPTIONS.find((o) => o.value === sort)?.label ?? '';
 
   return (
@@ -219,7 +211,7 @@ export default function GameStats() {
       </div>
 
       <p className={cx('mb-2', TEXT_MINI)}>Tocca un mazzo per vederne la lista carte.</p>
-      <DeckStatsList rows={rows} onSelect={setOpenDeck} />
+      <DeckStatsList rows={rows} interactive />
 
       <div className="mt-4">
         <ExportButton
@@ -242,19 +234,6 @@ export default function GameStats() {
         />
         <DeckStatsList rows={rows} />
       </ExportCardHost>
-
-      {openDeck && (
-        <Modal level={2} title={openDeck} onClose={() => setOpenDeck(null)}>
-          {openedDeck ? (
-            <DeckViewContents source={openedDeck.source} colors={openedDeck.colors} cards={openedDeck.cards} />
-          ) : (
-            <p className={TEXT_MUTED}>
-              Questo mazzo non è tra i mazzi salvati (forse è stato cancellato, oppure il nome è stato scritto a mano
-              nella partita), quindi non ho la sua lista carte.
-            </p>
-          )}
-        </Modal>
-      )}
 
       {error && (
         <p className="mt-3 text-sm text-red-400" role="alert">

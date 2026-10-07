@@ -1,4 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
+import { Link } from 'react-router';
+import { paths } from '../../router';
 import type { Game } from './GameList';
 import GlossyPie from './GlossyPie';
 import {
@@ -12,7 +14,6 @@ import {
   useImageExport,
 } from './ImageExport';
 import { computeMatchups, PIE_COLORS, pieSlicePath, type MatchupRow } from './stats';
-import Modal from '../ui/Modal';
 import { cx, TEXT_MINI, TEXT_MUTED } from '../ui/styles';
 
 interface MatchupStatsProps {
@@ -51,12 +52,12 @@ function MatchupDetail({ selected, idSuffix }: { selected: MatchupRow; idSuffix:
               key={p.name}
               className="flex items-center justify-between gap-2.5 border-b border-zaff-border py-2 last:border-b-0"
             >
-              <span className="flex items-center gap-2 text-[15px] text-zaff-text">
+              <span className="flex min-w-0 flex-1 items-center gap-2 text-[15px] text-zaff-text">
                 <span
                   className="inline-block h-[11px] w-[11px] shrink-0 rounded-full"
                   style={{ background: PIE_COLORS[i % PIE_COLORS.length] }}
                 />
-                {p.name}
+                <span className="min-w-0 [overflow-wrap:anywhere]">{p.name}</span>
               </span>
               <span className={cx('shrink-0 whitespace-nowrap', TEXT_MINI)}>
                 {p.w} vittorie · {losses} sconfitte · {pct}%
@@ -69,7 +70,7 @@ function MatchupDetail({ selected, idSuffix }: { selected: MatchupRow; idSuffix:
       {totalWins > 0 ? (
         <div className="mt-4 flex flex-wrap items-center gap-5">
           <GlossyPie slices={slices} idSuffix={idSuffix} />
-          <div className="flex flex-col gap-1.5 text-sm text-zaff-muted">
+          <div className="flex min-w-0 max-w-full flex-col gap-1.5 text-sm text-zaff-muted [overflow-wrap:anywhere]">
             {slices.map((s) => (
               <div key={s.name} className="text-zaff-text">
                 <span
@@ -88,25 +89,9 @@ function MatchupDetail({ selected, idSuffix }: { selected: MatchupRow; idSuffix:
   );
 }
 
-/**
- * Statistiche per ogni combinazione di giocatori che si è davvero sfidata
- * (2 o più, esattamente quella formazione): un bottone per combinazione,
- * che apre il dettaglio con partite totali, vittorie di ciascuno e torta,
- * esportabile in immagine (una sfida alla volta).
- * Le combinazioni mai giocate non compaiono: derivano solo dalle partite salvate.
- * Pensato per stare dentro il proprio `Modal` (titolo "Statistiche per
- * Sfida" già lì), quindi qui non c'è una propria intestazione.
- */
+/** Exact formations link to their refreshable statistics page. */
 export default function MatchupStats({ games }: MatchupStatsProps) {
   const matchups = useMemo(() => computeMatchups(games), [games]);
-  const [openKey, setOpenKey] = useState<string | null>(null);
-  const exporter = useImageExport();
-  const selected = matchups.find((m) => m.key === openKey) ?? null;
-
-  function openMatchup(key: string | null) {
-    exporter.reset();
-    setOpenKey(key);
-  }
 
   if (matchups.length === 0) {
     return (
@@ -122,9 +107,8 @@ export default function MatchupStats({ games }: MatchupStatsProps) {
       <ul>
         {matchups.map((m) => (
           <li key={m.key}>
-            <button
-              type="button"
-              onClick={() => openMatchup(m.key)}
+            <Link
+              to={paths.matchup(m.players.map(player => player.name))}
               className="mb-2 flex w-full items-center gap-3 rounded-lg border border-zaff-border bg-zaff-bg px-3.5 py-3 text-left transition hover:border-zaff-primary active:border-zaff-primary"
             >
               <span className="min-w-0 flex-1">
@@ -138,35 +122,39 @@ export default function MatchupStats({ games }: MatchupStatsProps) {
               <span className="shrink-0 text-2xl leading-none text-zaff-muted" aria-hidden="true">
                 ›
               </span>
-            </button>
+            </Link>
           </li>
         ))}
       </ul>
+    </>
+  );
+}
 
-      {selected && (
-        <Modal level={2} title={selected.label} onClose={() => openMatchup(null)}>
-          <MatchupDetail selected={selected} idSuffix="matchup" />
+/** The existing detail and export share one presentation on the routed page. */
+export function MatchupStatsDetail({ selected }: { selected: MatchupRow }) {
+  const exporter = useImageExport();
+  return (
+    <>
+      <MatchupDetail selected={selected} idSuffix="matchup" />
 
-          <div className="mt-4">
-            <ExportButton
-              exporting={exporter.exporting}
-              onClick={() =>
-                exporter.exportImage({
-                  fileName: `sfida_${safeFileName(selected.label) || 'magic'}_${todayIso()}.jpg`,
-                  shareTitle: selected.label,
-                  shareText: 'Statistiche della sfida ' + selected.label,
-                })
-              }
-            />
-          </div>
-          <ExportedImage image={exporter.image} error={exporter.error} alt={`Statistiche della sfida ${selected.label}`} />
+      <div className="mt-4">
+        <ExportButton
+          exporting={exporter.exporting}
+          onClick={() =>
+            exporter.exportImage({
+              fileName: `sfida_${safeFileName(selected.label) || 'magic'}_${todayIso()}.jpg`,
+              shareTitle: selected.label,
+              shareText: 'Statistiche della sfida ' + selected.label,
+            })
+          }
+        />
+      </div>
+      <ExportedImage image={exporter.image} error={exporter.error} alt={`Statistiche della sfida ${selected.label}`} />
 
-          <ExportCardHost cardRef={exporter.cardRef}>
-            <ExportHeader title={selected.label} subtitle={`Statistiche per Sfida · aggiornato al ${todayLabel()}`} />
-            <MatchupDetail selected={selected} idSuffix="matchup-export" />
-          </ExportCardHost>
-        </Modal>
-      )}
+      <ExportCardHost cardRef={exporter.cardRef}>
+        <ExportHeader title={selected.label} subtitle={`Statistiche per Sfida · aggiornato al ${todayLabel()}`} />
+        <MatchupDetail selected={selected} idSuffix="matchup-export" />
+      </ExportCardHost>
     </>
   );
 }

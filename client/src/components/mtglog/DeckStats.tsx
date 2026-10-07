@@ -5,7 +5,7 @@ import { useDeckImages, useTokenImages } from './useDeckImages';
 import GlossyPie from './GlossyPie';
 import { computeDeckStats, computeTokens, MANA_COLORS, MANA_LABELS, type CurveKey, type Slice } from './deckMath';
 import { pieSlicePath } from './stats';
-import Button from '../ui/Button';
+import Button, { ButtonRouteLink } from '../ui/Button';
 import Modal from '../ui/Modal';
 import { cx, TEXT_MINI } from '../ui/styles';
 
@@ -287,7 +287,17 @@ function HistogramIcon() {
   );
 }
 
-/** Pulsante in evidenza (colori del tasto principale) + finestra "Statistiche mazzo". */
+/** Saved-deck statistics have a refreshable page. */
+export function DeckStatsLink({ to }: { to: string }) {
+  return (
+    <ButtonRouteLink to={to} size="lg" fullWidth>
+      <HistogramIcon />
+      Statistiche del mazzo
+    </ButtonRouteLink>
+  );
+}
+
+/** Local editor preview computes statistics from the current unsaved draft. */
 export function DeckStatsButton({ cards, deckName }: { cards: DeckStatsItem[]; deckName?: string }) {
   const [open, setOpen] = useState(false);
   return (
