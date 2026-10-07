@@ -371,19 +371,23 @@ export default function LifeCounter({ players, startLife, resume, onCancel, onFi
           onClick={() => setMenuOpen(false)}
         >
           <div
-            className="flex w-full max-w-xs flex-col gap-3 rounded-2xl border border-zaff-border bg-zaff-surface p-5 shadow-xl"
+            className="grid w-full max-w-sm grid-cols-2 gap-3 rounded-2xl border border-zaff-border bg-zaff-surface p-4 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
+            {/* Quattro tasti in griglia 2x2: grandi e uguali, facili da toccare. */}
             <Button
               variant="ghost"
+              className="flex h-24 flex-col gap-1 text-base"
               onClick={() => {
                 setMenuOpen(false);
                 openHighRoll();
               }}
             >
-              🎲 High Roll
+              <span className="text-3xl leading-none">🎲</span>
+              High Roll
             </Button>
             <Button
+              className="flex h-24 text-base"
               onClick={() =>
                 onFinish(
                   Object.fromEntries(lives.map((p) => [p.name, p.life])),
@@ -394,16 +398,12 @@ export default function LifeCounter({ players, startLife, resume, onCancel, onFi
             >
               Fine Partita
             </Button>
-            <Button variant="ghost" onClick={onCancel}>
+            <Button variant="ghost" className="flex h-24 text-base" onClick={onCancel}>
               Annulla
             </Button>
-            <button
-              type="button"
-              onClick={() => setMenuOpen(false)}
-              className="py-1 text-sm text-zaff-muted active:text-zaff-text"
-            >
+            <Button variant="ghost" className="flex h-24 text-base" onClick={() => setMenuOpen(false)}>
               Torna al gioco
-            </button>
+            </Button>
           </div>
         </div>
       )}
