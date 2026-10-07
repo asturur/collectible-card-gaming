@@ -71,7 +71,7 @@ function Preview({
         type="button"
         onClick={onClose}
         aria-label="Chiudi senza scegliere"
-        className="absolute right-3 top-3 flex h-11 w-11 items-center justify-center rounded-full border-2 border-white/60 bg-black/60 text-white"
+        className="absolute right-3 top-[calc(0.75rem+env(safe-area-inset-top))] flex h-11 w-11 items-center justify-center rounded-full border-2 border-white/60 bg-black/60 text-white"
       >
         <CloseIcon />
       </button>
@@ -190,7 +190,7 @@ export default function CardPicker({
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-zaff-bg text-zaff-text">
-      <div className="flex items-center justify-between gap-3 border-b border-zaff-border px-4 py-3">
+      <div className="flex items-center justify-between gap-3 border-b border-zaff-border px-4 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top))]">
         <div className="min-w-0">
           <h2 className="text-lg font-semibold">{mode === 'add' ? 'Aggiungi carte' : 'Trova la carta giusta'}</h2>
           {totals && (

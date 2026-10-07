@@ -61,8 +61,8 @@ export default function Modal({ title, subtitle, wide = false, xl = false, level
       }}
       // Livello 1: sotto c'è la barra di navigazione fissa (BottomNav), quindi
       // in fondo si lascia spazio perché non copra l'ultimo contenuto.
-      className={`fixed inset-0 flex items-start justify-center overflow-y-auto bg-black/70 px-3 py-4 sm:px-4 sm:py-10 ${
-        level === 2 ? 'z-30' : 'z-20 pb-[calc(5.5rem+env(safe-area-inset-bottom))]'
+      className={`fixed inset-0 flex items-start justify-center overflow-y-auto bg-black/70 px-3 pt-[calc(1rem+env(safe-area-inset-top))] sm:px-4 sm:py-10 ${
+        level === 2 ? 'z-30 pb-4' : 'z-20 pb-[calc(5.5rem+env(safe-area-inset-bottom))]'
       }`}
     >
       <div

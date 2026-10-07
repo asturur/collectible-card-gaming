@@ -10,21 +10,12 @@ import GameList, { type Game } from './mtglog/GameList';
 import GameStats from './mtglog/GameStats';
 import Standings from './mtglog/Standings';
 import MatchupStats from './mtglog/MatchupStats';
-import { computeTally, rowToGame } from './mtglog/stats';
+import { computeTally, dateLabel, rowToGame } from './mtglog/stats';
+import { ManaIcons } from './mtglog/ManaIcon';
 import BottomNav, { type NavTab } from './mtglog/BottomNav';
 import Modal from './ui/Modal';
 import Button, { ButtonLink } from './ui/Button';
-import {
-  CrossedSwordsIcon,
-  DeckBackArt,
-  GridTile,
-  OpenBookIcon,
-  PlayersIcon,
-  PodiumIcon,
-  StatsRingIcon,
-  SwordShieldIcon,
-  TILE_GRID,
-} from './ui/Tile';
+import { CrossedSwordsIcon, GridTile, PodiumIcon, StatsRingIcon, TILE_GRID } from './ui/Tile';
 import { cx, HEADING_PAGE, PANEL, TEXT_MUTED } from './ui/styles';
 import { navLinkProps } from '../router';
 
@@ -203,6 +194,14 @@ export default function MtgLog({ onOpenZaff }: MtgLogProps) {
   }
 
   const userId = session.user.id;
+  // Ultima partita giocata (per data, poi orario di inizio, poi id).
+  const lastGame =
+    [...games].sort(
+      (x, y) =>
+        y.date.localeCompare(x.date) ||
+        (y.startedAt ?? '').localeCompare(x.startedAt ?? '') ||
+        y.id.localeCompare(x.id)
+    )[0] ?? null;
   const standings = computeTally(games);
 
   function closeModal() {
@@ -232,7 +231,7 @@ export default function MtgLog({ onOpenZaff }: MtgLogProps) {
 
   return (
     <div className="min-h-screen bg-zaff-bg text-zaff-text">
-      <div className="mx-auto w-full max-w-[1180px] px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-6 sm:px-5 sm:pt-7">
+      <div className="mx-auto w-full max-w-[1180px] px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-[calc(1.5rem+env(safe-area-inset-top))] sm:px-5 sm:pt-7">
         <header className="border-b-2 border-zaff-text pb-4 sm:pb-[18px]">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="min-w-0">
@@ -241,50 +240,71 @@ export default function MtgLog({ onOpenZaff }: MtgLogProps) {
                 Chi gioca, con che mazzo, come è finita. Condiviso con tutto il gruppo.
               </p>
             </div>
-
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="truncate text-xs text-zaff-muted">{session.user.email}</span>
-              <Button variant="ghost" onClick={() => supabase?.auth.signOut()}>
-                Esci
-              </Button>
-              <ButtonLink {...navLinkProps('zaff', onOpenZaff)} variant="ghost">
-                Vai a ZAFF →
-              </ButtonLink>
-            </div>
           </div>
 
           <div className="mtg-sep" />
 
-          {/* Tasti principali: stessa misura e forma per tutti (a prescindere dal
-              testo) — più facili da individuare e "toccare" col dito su schermo
-              piccolo. Classifica e statistiche per sfida stavano prima sempre
-              aperte qui in testata: ora sono due tessere come le altre, per una
-              home più semplice e "da app". */}
-          <div className={TILE_GRID}>
-            <GridTile
-              graphic={<SwordShieldIcon />}
-              label="Nuova Partita"
+          {/* Pagina iniziale essenziale: un solo grande tasto per iniziare e
+              l'ultima partita giocata. Tutto il resto (partite, mazzi,
+              statistiche, giocatori, ZAFF, esci) è nella barra in basso. */}
+          <button
+            type="button"
+            onClick={() => {
+              setEditingGame(null);
+              setRematchFrom(null);
+              setOpenModal('newGame');
+            }}
+            className="flex w-full items-center gap-4 rounded-xl bg-gradient-to-r from-zaff-primary to-zaff-accent px-5 py-5 text-left text-zaff-bg shadow-lg transition active:scale-[0.98]"
+          >
+            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-black/20 text-4xl font-light leading-none">
+              +
+            </span>
+            <span className="min-w-0">
+              <span className="block text-2xl font-bold leading-tight">Nuova Partita</span>
+              <span className="block text-sm font-medium opacity-80">Segna-punti e risultato</span>
+            </span>
+          </button>
+
+          <h2 className="mb-2 mt-6 text-sm font-semibold uppercase tracking-wide text-zaff-muted">Ultima partita</h2>
+          {lastGame ? (
+            <button
+              type="button"
               onClick={() => {
                 setEditingGame(null);
                 setRematchFrom(null);
-                setOpenModal('newGame');
+                setSharedGameId(lastGame.id);
+                setOpenModal('games');
               }}
-            />
-            <GridTile graphic={<OpenBookIcon />} label="Partite Salvate" onClick={() => setOpenModal('games')} />
-            <GridTile graphic={<StatsRingIcon />} label="Statistiche Mazzi" onClick={() => setOpenModal('stats')} />
-            <GridTile
-              graphic={<PodiumIcon />}
-              label="Statistiche Giocatori"
-              onClick={() => setOpenModal('playerStats')}
-            />
-            <GridTile
-              graphic={<CrossedSwordsIcon />}
-              label="Statistiche per Sfida"
-              onClick={() => setOpenModal('matchups')}
-            />
-            <GridTile graphic={<PlayersIcon />} label="Gestisci Giocatori" onClick={() => setOpenModal('players')} />
-            <GridTile graphic={<DeckBackArt />} label="Gestisci Mazzi" onClick={() => setOpenModal('decks')} />
-          </div>
+              className="flex w-full items-center gap-3.5 rounded-lg border border-zaff-border bg-zaff-bg px-3.5 py-3 text-left transition hover:border-zaff-primary active:border-zaff-primary"
+            >
+              <span className="shrink-0 whitespace-nowrap border-r border-zaff-border pr-3 text-sm text-zaff-muted">
+                {dateLabel(lastGame.date)}
+              </span>
+              <span className="flex min-w-0 flex-1 flex-col gap-1.5">
+                {[...lastGame.players]
+                  .sort((x, y) => Number(y.winner) - Number(x.winner))
+                  .map((p, i) => (
+                    <span
+                      key={i}
+                      className={`whitespace-nowrap text-sm ${p.winner ? 'font-bold text-zaff-text' : 'text-zaff-muted'}`}
+                    >
+                      <span className="inline-block w-6 text-center" aria-hidden="true">
+                        {p.winner ? '🎉' : ''}
+                      </span>
+                      <span className="ml-1">{p.name}</span>
+                      <ManaIcons colors={p.colors} className="ml-1.5 text-[13px]" />
+                    </span>
+                  ))}
+              </span>
+              <span className="shrink-0 text-2xl leading-none text-zaff-muted" aria-hidden="true">
+                ›
+              </span>
+            </button>
+          ) : (
+            <p className="rounded-lg border border-dashed border-zaff-border p-4 text-sm text-zaff-muted">
+              Ancora nessuna partita registrata: tocca &quot;Nuova Partita&quot; per iniziare.
+            </p>
+          )}
         </header>
       </div>
 
