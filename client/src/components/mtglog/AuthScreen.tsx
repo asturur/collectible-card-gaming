@@ -177,7 +177,12 @@ export default function AuthScreen({ onOpenZaff, recovery = false, linkExpired =
       {!recovery && (
         <TextField
           id="auth-email"
+          name="username"
           type="email"
+          inputMode="email"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
           label="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -189,7 +194,11 @@ export default function AuthScreen({ onOpenZaff, recovery = false, linkExpired =
 
       {(recovery || mode !== 'forgot') && (
         <TextField
+          // key: cambia con la modalità, così il browser rivaluta il campo
+          // (password esistente nel login, password nuova nella registrazione).
+          key={recovery ? 'recovery' : mode}
           id="auth-password"
+          name={mode === 'signin' && !recovery ? 'password' : 'new-password'}
           type="password"
           label={recovery ? 'Nuova password' : 'Password'}
           value={password}
@@ -203,6 +212,7 @@ export default function AuthScreen({ onOpenZaff, recovery = false, linkExpired =
       {recovery && (
         <TextField
           id="auth-password2"
+          name="new-password-confirm"
           type="password"
           label="Ripeti la nuova password"
           value={password2}
