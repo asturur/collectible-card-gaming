@@ -1,0 +1,316 @@
+import { useEffect, useState, type ReactNode } from 'react';
+import { useLocation, useNavigate, useParams, type RouteObject } from 'react-router';
+import { useRegistro } from '../MtgLog';
+import HomeOverview from './HomeOverview';
+import PlayersRoster from './PlayersRoster';
+import DeckList from './DeckList';
+import DeckEditor from './DeckEditor';
+import DeckViewContents from './DeckView';
+import DeckStatsContents from './DeckStats';
+import { useSavedDeck } from './useSavedDeck';
+import GameForm from './GameForm';
+import GameList, { type Game } from './GameList';
+import GameStats from './GameStats';
+import Standings, { PlayerStatsDetail } from './Standings';
+import MatchupStats, { MatchupStatsDetail } from './MatchupStats';
+import { computeMatchups, computeTally, matchupKey } from './stats';
+import SectionPage from '../ui/SectionPage';
+import Button, { ButtonRouteLink } from '../ui/Button';
+import { CrossedSwordsIcon, GridTile, PodiumIcon, StatsRingIcon, TILE_GRID } from '../ui/Tile';
+import { HEADING_PAGE, TEXT_MUTED } from '../ui/styles';
+import { useLeaveGuard } from '../ui/useLeaveGuard';
+import { canEdit, supabase } from '../../services/supabase';
+import { deleteSavedDeck } from '../../services/savedDecks';
+import type { DeckEntry } from '../../services/deckCards';
+import { matchupNamesFromPath, paths, playerNameFromPath } from '../../router';
+
+const DECKS_CRUMB = { label: 'Mazzi', to: paths.decks };
+const GAMES_CRUMB = { label: 'Partite', to: paths.games };
+const STATS_CRUMB = { label: 'Statistiche', to: paths.stats };
+
+/** All game statistics use the already mounted Registro query and subscription. */
+function GameStatisticsData({ children }: { children: ReactNode }) {
+  const { gamesLoading, gamesError } = useRegistro();
+  if (gamesLoading) return <p className={TEXT_MUTED}>Caricamento…</p>;
+  if (gamesError) return <p role="alert">{gamesError}</p>;
+  return children;
+}
+
+function RegistroHome() {
+  const { games, deckCount, gamesError } = useRegistro();
+  return (
+    <main className="mx-auto w-full max-w-[1180px] px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-[calc(1.5rem+env(safe-area-inset-top))] sm:px-5 sm:pt-7">
+      <header className="border-b-2 border-zaff-text pb-4 sm:pb-[18px]">
+        <h1 className={HEADING_PAGE}>Registro partite di Magic</h1>
+        <p className="text-sm text-zaff-muted">Chi gioca, con che mazzo, come è finita. Condiviso con tutto il gruppo.</p>
+        <div className="mtg-sep" />
+        {gamesError && <p role="alert">{gamesError}</p>}
+        <HomeOverview games={games} deckCount={deckCount} />
+      </header>
+    </main>
+  );
+}
+
+function GamesPage() {
+  const { userId } = useRegistro();
+  const { gameId } = useParams();
+  const navigate = useNavigate();
+  return (
+    <SectionPage title={gameId ? 'Dettaglio Partita' : 'Partite Salvate'} wide xl={Boolean(gameId)} ancestors={gameId ? [GAMES_CRUMB] : []}>
+      <GameList userId={userId} onEdit={(game) => { void navigate(paths.editGame(game.id)); }} onRematch={(game) => { void navigate(paths.rematch(game.id)); }} />
+    </SectionPage>
+  );
+}
+
+function GameEditorPage({ rematch = false }: { rematch?: boolean }) {
+  const { gameId } = useParams();
+  return <GameEditorSession key={`${gameId ?? 'new'}:${rematch}`} gameId={gameId} rematch={rematch} />;
+}
+
+function GameEditorSession({ gameId, rematch }: { gameId?: string; rematch: boolean }) {
+  const { userId, games, gamesLoading, gamesError } = useRegistro();
+  const navigate = useNavigate();
+  const candidate = gameId ? games.find((g) => g.id === gameId) : null;
+  const forbidden = Boolean(candidate && !rematch && !canEdit(candidate.createdBy, userId));
+  // The form's original record is also its conflict baseline. Realtime updates
+  // must not replace it or discard a draft if someone deletes the record.
+  const [game, setGame] = useState<Game | null>(null);
+  useEffect(() => {
+    if (!game && candidate && !forbidden && !gamesError) setGame(candidate);
+  }, [game, candidate, forbidden, gamesError]);
+  const ready = !gameId || Boolean(game);
+  const waiting = gameId && !game && (gamesLoading || (candidate && !forbidden && !gamesError));
+  const guard = useLeaveGuard(ready ? 'Uscire dalla partita? Quello che non hai salvato andrà perso.' : undefined);
+  const backTo = gameId ? paths.game(gameId) : paths.games;
+  return (
+    <SectionPage title={rematch ? 'Rivincita' : gameId ? 'Modifica Partita' : 'Nuova Partita'} wide ancestors={[
+      GAMES_CRUMB, ...(gameId ? [{ label: 'Dettaglio Partita', to: paths.game(gameId) }] : []),
+    ]}>
+      {waiting ? <p className={TEXT_MUTED}>Caricamento…</p> : !ready ? <p role="alert">{gamesError || (forbidden ? 'Puoi modificare solo le partite che hai salvato.' : 'Partita non trovata.')}</p> : (
+        <GameForm
+          key={gameId ?? 'new'}
+          editingGame={rematch ? null : game}
+          rematchFrom={rematch ? game : null}
+          onSavingChange={guard.onPersistingChange}
+          onBack={() => { void navigate(backTo); }}
+          onSaved={() => guard.onSaved(paths.games)}
+        />
+      )}
+    </SectionPage>
+  );
+}
+
+function DecksPage() {
+  const navigate = useNavigate();
+  return (
+    <SectionPage title="Mazzi Salvati">
+      <DeckList
+        onCreate={() => { void navigate(paths.newDeck); }}
+        onImportFile={(name, cards) => { void navigate(paths.newDeck, { state: { draft: { name, cards } } }); }}
+      />
+    </SectionPage>
+  );
+}
+
+function DeckDetailPage() {
+  const { deckId } = useParams();
+  return <DeckDetailSession key={deckId} deckId={deckId!} />;
+}
+
+function DeckDetailSession({ deckId }: { deckId: string }) {
+  const { userId } = useRegistro();
+  const { deck, loading, error } = useSavedDeck(deckId);
+  const [deleteError, setDeleteError] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const guard = useLeaveGuard();
+
+  async function handleDelete() {
+    if (!deck || deleting || !canEdit(deck.createdBy, userId)) return;
+    if (!window.confirm('Cancellare questo mazzo? Le partite che lo usano già continueranno a mostrarne solo il nome.')) return;
+    setDeleteError('');
+    setDeleting(true);
+    guard.onPersistingChange(true);
+    try {
+      await deleteSavedDeck(deckId);
+      guard.onSaved(paths.decks);
+    } catch (err) {
+      setDeleteError('Cancellazione mazzo non riuscita: ' + (err as Error).message);
+    } finally {
+      setDeleting(false);
+      guard.onPersistingChange(false);
+    }
+  }
+
+  return (
+    <SectionPage title={deck?.name ?? 'Dettaglio Mazzo'} ancestors={[DECKS_CRUMB]}>
+      {loading ? <p className={TEXT_MUTED}>Caricamento…</p> : deck && <>
+        {canEdit(deck.createdBy, userId) && (
+          <div className="mb-3 grid grid-cols-2 gap-2.5">
+            {deleting ? <Button variant="ghost" fullWidth disabled>✏️ Modifica</Button>
+              : <ButtonRouteLink to={paths.editDeck(deckId)} variant="ghost" fullWidth>✏️ Modifica</ButtonRouteLink>}
+            <Button variant="danger" fullWidth disabled={deleting} onClick={handleDelete}>
+              {deleting ? 'Cancellazione…' : '🗑️ Cancella'}
+            </Button>
+          </div>
+        )}
+        <DeckViewContents source={deck.source} colors={deck.colors} cards={deck.cards.map(c => ({ ...c, section: c.section ?? 'main' }))} statsTo={paths.savedDeckStats(deckId)} />
+      </>}
+      {(error || deleteError) && <p className="mt-3 text-sm text-error" role="alert">{error || deleteError}</p>}
+    </SectionPage>
+  );
+}
+
+function SavedDeckStatsPage() {
+  const { deckId } = useParams();
+  const { deck, loading, error } = useSavedDeck(deckId!);
+  return (
+    <SectionPage title="Statistiche Mazzo" subtitle={deck?.name} ancestors={[
+      DECKS_CRUMB, { label: deck?.name ?? 'Dettaglio Mazzo', to: paths.deck(deckId!) },
+    ]}>
+      {loading ? <p className={TEXT_MUTED}>Caricamento…</p>
+        : deck && <DeckStatsContents key={deckId} cards={deck.cards} />}
+      {error && <p className="text-sm text-error" role="alert">{error}</p>}
+    </SectionPage>
+  );
+}
+
+function DeckEditorPage() {
+  const { deckId } = useParams();
+  const location = useLocation();
+  return <DeckEditorSession key={deckId ?? location.key} deckId={deckId} />;
+}
+
+function DeckEditorSession({ deckId }: { deckId?: string }) {
+  const { userId } = useRegistro();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [deckName, setDeckName] = useState('Dettaglio Mazzo');
+  const guard = useLeaveGuard();
+  const backTo = deckId ? paths.deck(deckId) : paths.decks;
+  const state = location.state as { draft?: { name: string; cards: DeckEntry[] } } | null;
+  return (
+    <SectionPage title={deckId ? 'Modifica Mazzo' : 'Nuovo Mazzo'} ancestors={[
+      DECKS_CRUMB, ...(deckId ? [{ label: deckName, to: paths.deck(deckId) }] : []),
+    ]}>
+      <DeckEditor
+        deckId={deckId ?? null}
+        userId={userId}
+        initialDraft={state?.draft}
+        onPersistingChange={guard.onPersistingChange}
+        onLoaded={setDeckName}
+        onBack={() => { void navigate(backTo); }}
+        onSaved={(id) => guard.onSaved(paths.deck(id))}
+      />
+    </SectionPage>
+  );
+}
+
+function StatsMenuPage() {
+  return (
+    <SectionPage title="Statistiche">
+      <div className={TILE_GRID}>
+        <GridTile graphic={<StatsRingIcon />} label="Mazzi" to={paths.deckStats} />
+        <GridTile graphic={<PodiumIcon />} label="Giocatori" to={paths.playerStats} />
+        <GridTile graphic={<CrossedSwordsIcon />} label="Per Sfida" to={paths.matchups} />
+      </div>
+    </SectionPage>
+  );
+}
+
+function PlayerStatsPage() {
+  const { games } = useRegistro();
+  return (
+    <SectionPage title="Statistiche Giocatori" subtitle="Classifica generale: partite vinte da ciascuno e come si dividono tutte le vittorie." wide ancestors={[STATS_CRUMB]}>
+      <GameStatisticsData><Standings rows={computeTally(games)} showPie /></GameStatisticsData>
+    </SectionPage>
+  );
+}
+
+function PlayerDetailPage() {
+  const { games } = useRegistro();
+  const { pathname } = useLocation();
+  const playerName = playerNameFromPath(pathname);
+  const row = computeTally(games).find(player => player.name === playerName);
+  return (
+    <SectionPage title={playerName ?? 'Statistiche Giocatore'} subtitle="Statistiche Giocatore" ancestors={[
+      STATS_CRUMB, { label: 'Giocatori', to: paths.playerStats },
+    ]}>
+      <GameStatisticsData>
+        {row ? <PlayerStatsDetail key={row.name} row={row} games={games} />
+          : <p role="alert">Nessuna partita registrata per questo giocatore.</p>}
+      </GameStatisticsData>
+    </SectionPage>
+  );
+}
+
+function MatchupsPage() {
+  const { games } = useRegistro();
+  return <SectionPage title="Statistiche per Sfida" wide ancestors={[STATS_CRUMB]}><GameStatisticsData><MatchupStats games={games} /></GameStatisticsData></SectionPage>;
+}
+
+function MatchupDetailPage() {
+  const { games } = useRegistro();
+  const { pathname } = useLocation();
+  const names = matchupNamesFromPath(pathname);
+  const selected = names ? computeMatchups(games).find(matchup => matchup.key === matchupKey(names)) : undefined;
+  return (
+    <SectionPage title={selected?.label ?? names?.join(' vs ') ?? 'Dettaglio Sfida'} subtitle="Statistiche per Sfida" ancestors={[
+      STATS_CRUMB, { label: 'Sfide', to: paths.matchups },
+    ]}>
+      <GameStatisticsData>
+        {selected ? <MatchupStatsDetail key={selected.key} selected={selected} />
+          : <p role="alert">{names ? 'Nessuna partita registrata con questa formazione.' : 'Indirizzo della sfida non valido.'}</p>}
+      </GameStatisticsData>
+    </SectionPage>
+  );
+}
+
+function MorePage() {
+  const { email } = useRegistro();
+  return (
+    <SectionPage title="Altro">
+      <p className="mb-3 truncate text-sm text-zaff-muted">{email}</p>
+      <div className="flex flex-col gap-2.5">
+        <ButtonRouteLink to={paths.players} variant="ghost" size="lg" fullWidth>Gestisci Giocatori</ButtonRouteLink>
+        <ButtonRouteLink to={paths.zaff} variant="ghost" size="lg" fullWidth>Vai a ZAFF →</ButtonRouteLink>
+        <Button variant="ghost" size="lg" fullWidth onClick={() => supabase?.auth.signOut()}>Esci</Button>
+      </div>
+    </SectionPage>
+  );
+}
+
+function PlayersPage() {
+  const { userId } = useRegistro();
+  return (
+    <SectionPage title="Giocatori" subtitle="Rinomina o cancella i nomi in elenco. Le partite già salvate mantengono comunque il nome che avevano." ancestors={[{ label: 'Altro', to: paths.more }]}>
+      <PlayersRoster userId={userId} />
+    </SectionPage>
+  );
+}
+
+function NotFoundPage() {
+  return <SectionPage title="Pagina non trovata"><p className={TEXT_MUTED}>Questo indirizzo non corrisponde a una sezione del registro.</p></SectionPage>;
+}
+
+export const registroRoutes: RouteObject[] = [
+  { index: true, element: <RegistroHome /> },
+  { path: 'games', element: <GamesPage /> },
+  { path: 'games/new', element: <GameEditorPage /> },
+  { path: 'games/:gameId', element: <GamesPage /> },
+  { path: 'games/:gameId/edit', element: <GameEditorPage /> },
+  { path: 'games/:gameId/rematch', element: <GameEditorPage rematch /> },
+  { path: 'decks', element: <DecksPage /> },
+  { path: 'decks/new', element: <DeckEditorPage /> },
+  { path: 'decks/:deckId', element: <DeckDetailPage /> },
+  { path: 'decks/:deckId/stats', element: <SavedDeckStatsPage /> },
+  { path: 'decks/:deckId/edit', element: <DeckEditorPage /> },
+  { path: 'stats', element: <StatsMenuPage /> },
+  { path: 'stats/decks', element: <SectionPage title="Statistiche Mazzi" subtitle="Percentuale di vittoria di ogni mazzo, su tutte le partite." wide ancestors={[STATS_CRUMB]}><GameStats /></SectionPage> },
+  { path: 'stats/players', element: <PlayerStatsPage /> },
+  { path: 'stats/players/:playerName', element: <PlayerDetailPage /> },
+  { path: 'stats/matchups', element: <MatchupsPage /> },
+  { path: 'stats/matchups/*', element: <MatchupDetailPage /> },
+  { path: 'more', element: <MorePage /> },
+  { path: 'players', element: <PlayersPage /> },
+  { path: '*', element: <NotFoundPage /> },
+];
