@@ -66,6 +66,18 @@ export default function DeckStatsContents({ cards }: { cards: DeckStatsItem[] })
   useDeckImages(cards.map((c) => c.name));
   const stats = computeDeckStats(cards, getCard);
   const [openToken, setOpenToken] = useState<ScryToken | null>(null);
+  // Come in ManaBox: con l'interruttore acceso, il mana generico dei costi
+  // ({1}, {2}…) entra nella torta come fetta grigia "Incolore".
+  const [countColorless, setCountColorless] = useState(false);
+  const costSlices: Slice[] = !countColorless || stats.genericCost === 0
+    ? stats.costPie
+    : (() => {
+        const hasC = stats.costPie.some((x) => x.key === 'C');
+        const merged = stats.costPie.map((x) => (x.key === 'C' ? { ...x, value: x.value + stats.genericCost } : x));
+        return hasC
+          ? merged
+          : [...merged, { key: 'C', label: MANA_LABELS.C, value: stats.genericCost, color: MANA_COLORS.C }];
+      })();
 
   // I token si chiedono dopo le carte: servono prima gli id che le carte dichiarano.
   const tokenIds = cards
@@ -124,10 +136,38 @@ export default function DeckStatsContents({ cards }: { cards: DeckStatsItem[] })
         ))}
       </div>
 
-      <ChartTitle note="Simboli colorati nei costi (GG = 2 verde; {W/U} = ½ + ½). Il mana generico non conta.">
+      <ChartTitle
+        note={
+          countColorless
+            ? 'Simboli colorati nei costi (GG = 2 verde; {W/U} = ½ + ½) più il mana incolore/generico ({1}, {2}…).'
+            : 'Simboli colorati nei costi (GG = 2 verde; {W/U} = ½ + ½). Il mana generico non conta.'
+        }
+      >
         Costi di mana
       </ChartTitle>
-      <PieChart slices={stats.costPie} idSuffix="deckstats-cost" unit="simboli" />
+      <PieChart slices={costSlices} idSuffix="deckstats-cost" unit="simboli" />
+      <button
+        type="button"
+        role="switch"
+        aria-checked={countColorless}
+        onClick={() => setCountColorless((v) => !v)}
+        className="mt-3 flex min-h-11 w-full items-center justify-between gap-3 rounded-lg border border-zaff-border px-3 text-left text-sm text-zaff-text transition active:scale-[0.99]"
+      >
+        <span>Conta il mana incolore</span>
+        <span
+          className={cx(
+            'relative h-6 w-11 shrink-0 rounded-full transition-colors',
+            countColorless ? 'bg-gradient-to-r from-zaff-primary to-zaff-accent' : 'bg-zaff-border'
+          )}
+        >
+          <span
+            className={cx(
+              'absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all',
+              countColorless ? 'left-[22px]' : 'left-0.5'
+            )}
+          />
+        </span>
+      </button>
 
       <ChartTitle note="Ogni fonte vale 1, divisa tra i colori che può fare (terra doppia ½ + ½, tripla ⅓ ciascuno).">
         Produzione di mana

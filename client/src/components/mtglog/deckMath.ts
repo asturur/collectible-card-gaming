@@ -68,6 +68,8 @@ export interface DeckStats {
   unknown: number;
   curve: CurveBar[];
   costPie: Slice[];
+  /** Mana generico dei costi ({2}, {3}…), per copia: serve al conteggio opzionale dell'incolore. */
+  genericCost: number;
   productionPie: Slice[];
   typePie: Slice[];
   subtypes: SubtypeChart[];
@@ -92,6 +94,11 @@ function costPips(manaCost: string): Partial<Record<ManaKey, number>> {
     }
   });
   return pips;
+}
+
+/** Mana generico di un costo ("{2}{G}{G}" → 2); {X} non conta. */
+function genericPips(manaCost: string): number {
+  return (manaCost.match(/\{(\d+)\}/g) ?? []).reduce((sum, sym) => sum + Number(sym.slice(1, -1)), 0);
 }
 
 /** Sottotipi: le parole dopo il trattino della riga dei tipi. */
@@ -125,6 +132,7 @@ export function computeDeckStats(
 
   const curveMap = new Map<number, Map<CurveKey, number>>();
   const cost: Record<ManaKey, number> = { W: 0, U: 0, B: 0, R: 0, G: 0, C: 0 };
+  let genericCost = 0;
   const production: Record<ManaKey, number> = { W: 0, U: 0, B: 0, R: 0, G: 0, C: 0 };
   const typeCount = new Map<TypeGroupId, number>();
   const subtypeCount = new Map<TypeGroupId, Map<string, number>>();
@@ -152,6 +160,7 @@ export function computeDeckStats(
     // Costi: simboli colorati, per copia.
     const pips = costPips(card.manaCost);
     (Object.keys(pips) as ManaKey[]).forEach((k) => (cost[k] += (pips[k] ?? 0) * item.qty));
+    genericCost += genericPips(card.manaCost) * item.qty;
 
     // Produzione: ogni fonte vale 1 in tutto, divisa in parti uguali tra i
     // colori che può fare (una terra doppia = ½ + ½, tripla = ⅓ ciascuno…),
@@ -208,6 +217,7 @@ export function computeDeckStats(
     unknown,
     curve,
     costPie: manaSlices(cost),
+    genericCost,
     productionPie: manaSlices(production),
     typePie,
     subtypes,
