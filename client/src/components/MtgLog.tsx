@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { isSupabaseConfigured, subscribeToTable, supabase, TABLE_DECKS, TABLE_GAMES } from '../services/supabase';
 import AuthScreen from './mtglog/AuthScreen';
@@ -87,6 +87,7 @@ function tabFor(modal: MtgLogModal): NavTab | null {
 export default function MtgLog({ onOpenZaff }: MtgLogProps) {
   const [session, setSession] = useState<Session | null | 'loading'>('loading');
   const [openModal, setOpenModal] = useState<MtgLogModal>(null);
+  const deckPersisting = useRef(false);
   const [deckEditor, setDeckEditor] = useState<
     null | {
       deckId: string | null;
@@ -382,12 +383,13 @@ export default function MtgLog({ onOpenZaff }: MtgLogProps) {
         <Modal
           level={2}
           title={deckEditor.deckId ? 'Modifica Mazzo' : 'Nuovo Mazzo'}
-          onClose={() => setDeckEditor(null)}
+          onClose={() => { if (!deckPersisting.current) setDeckEditor(null); }}
         >
           <DeckEditor
             deckId={deckEditor.deckId}
             initialDraft={deckEditor.draft}
-            onBack={() => setDeckEditor(null)}
+            onPersistingChange={(busy) => { deckPersisting.current = busy; }}
+            onBack={() => { if (!deckPersisting.current) setDeckEditor(null); }}
             onSaved={() => setDeckEditor(null)}
           />
         </Modal>

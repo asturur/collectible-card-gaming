@@ -11,6 +11,7 @@ export { useDeckImages };
 /** Carta di un mazzo, per questa vista (stessa forma di `DeckViewCard`). */
 export interface DeckCardsItem {
   name: string;
+  scryfallId?: string | null;
   qty: number;
   section?: 'main' | 'side' | string;
 }
@@ -75,7 +76,7 @@ function CardViewer({
   const touchX = useRef<number | null>(null);
 
   const item = items[index];
-  const card: ScryCard | undefined = getCard(item.name);
+  const card: ScryCard | undefined = getCard(item.name, item.scryfallId);
   const faceCount = card?.faces.length ?? 0;
   const image = card ? card.faces[Math.min(face, faceCount - 1)] : undefined;
 
@@ -227,7 +228,7 @@ function CardGrid({ cards, onOpen, editable }: ViewProps) {
   return (
     <div className="grid grid-cols-3 gap-x-2 gap-y-2.5 min-[560px]:grid-cols-4 min-[800px]:grid-cols-5">
       {cards.map((c) => {
-        const scry = getCard(c.name);
+        const scry = getCard(c.name, c.scryfallId);
         const img = scry?.faces[0];
         const missing = !scry && isMissing(c.name);
         return (
@@ -277,7 +278,7 @@ function CardList({ cards, onOpen, editable }: ViewProps) {
   return (
     <ul>
       {cards.map((c) => {
-        const scry = getCard(c.name);
+        const scry = getCard(c.name, c.scryfallId);
         const img = scry?.faces[0];
         const missing = !scry && isMissing(c.name);
         return (
@@ -387,7 +388,7 @@ export default function DeckCardsView({
   const sideGroups = groupCards(side, getCard, groupMode);
   const ordered = [...mainGroups, ...sideGroups].flatMap((g) => g.types.flatMap((t) => t.items));
 
-  useDeckImages(cards.map((c) => c.name));
+  useDeckImages(cards);
 
   function chooseMode(m: ViewMode) {
     setMode(m);

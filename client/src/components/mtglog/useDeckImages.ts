@@ -2,12 +2,13 @@ import { useEffect, useReducer } from 'react';
 import { cardKey, requestCards, requestTokens, subscribeCards } from '../../services/scryfall';
 
 /** Chiede a Scryfall le carte del mazzo e si riaggiorna quando arrivano. */
-export function useDeckImages(names: string[]) {
+export function useDeckImages(entries: (string | { name: string; scryfallId?: string | null })[]) {
   const [, bump] = useReducer((n: number) => n + 1, 0);
-  const signature = names.map(cardKey).join('|');
+  const cards = entries.map(c => typeof c === 'string' ? { name: c } : c);
+  const signature = cards.map(c => cardKey(c.name) + ':' + (c.scryfallId ?? '')).join('|');
   useEffect(() => subscribeCards(bump), []);
   useEffect(() => {
-    requestCards(names);
+    requestCards(cards.map(c => c.name), cards);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [signature]);
 }

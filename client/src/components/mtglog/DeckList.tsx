@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
-import { canEdit, MAX_DECK_NAME_LENGTH, supabase, TABLE_DECKS } from '../../services/supabase';
+import { canEdit, MAX_DECK_NAME_LENGTH } from '../../services/supabase';
+import { listSavedDecks, deleteSavedDeck, subscribeSavedDecks, type SavedDeck } from '../../services/savedDecks';
+import { parseDeckText, type DeckEntry } from '../../services/deckCards';
 import { ManaIcons, ManaPips } from './ManaIcon';
 import DeckCardsView from './DeckCards';
 import { DECK_FORMATS } from './DeckEditor';
@@ -16,97 +18,10 @@ interface DeckListProps {
   onImportFile: (name: string, cards: DeckCard[]) => void;
 }
 
-/** `section` distingue il mazzo vero e proprio dalla riserva, così la lista
- *  e l'editor possono mostrarli separati; i mazzi salvati prima di questa
- *  distinzione non hanno il campo e vengono trattati come "main". */
-interface DeckCard {
-  name: string;
-  qty: number;
-  section: 'main' | 'side';
-}
-
-/** Un mazzo letto da `mazzi.cards` può non avere ancora `section` (righe
- *  salvate prima di questa funzione): senza indicazione è sempre main deck. */
-function normalizeSection(raw: unknown): 'main' | 'side' {
-  return raw === 'side' ? 'side' : 'main';
-}
-
-/** Riconosce una riga "<copie> <nome carta> [(espansione) numero]": espansione
- *  e numero di collezione sono facoltativi e vengono ignorati. Usata sia per
- *  i file ManaBox sia per il testo copia-incolla da altre app. */
-function parseCardLine(line: string): { name: string; qty: number } | null {
-  const m = line.match(/^(\d+)\s+(.+)$/);
-  if (!m) return null;
-  const qty = parseInt(m[1], 10);
-  const rest = m[2].trim();
-  const setMatch = rest.match(/^(.*)\s+\([^)]+\)\s+\S+$/);
-  const name = (setMatch ? setMatch[1] : rest).trim();
-  if (!name || !qty) return null;
-  return { name, qty };
-}
-
-/** Legge un file di testo esportato da ManaBox: ogni riga è
- *  "<copie> <nome carta> [(espansione) numero]", sempre main deck (questo
- *  formato non distingue una riserva). */
-function parseManaboxText(text: string): DeckCard[] {
-  const merged: Record<string, DeckCard> = {};
-  text.split(/\r?\n/).forEach((rawLine) => {
-    const card = parseCardLine(rawLine.trim());
-    if (!card) return;
-    const key = card.name.toLowerCase();
-    merged[key] = merged[key] ?? { name: card.name, qty: 0, section: 'main' };
-    merged[key].qty += card.qty;
-  });
-  return Object.values(merged);
-}
-
-/** Riga di intestazione tipo "Deck", "Main Deck - 39", "Sideboard", "Sideboard 11":
- *  il numero dopo, quando c'è, conta i TIPI di carta (non il totale copie) e
- *  non serve per importare; dice solo da quel punto in poi se le righe
- *  seguenti sono main deck o sideboard. */
-const MAIN_HEADER_RE = /^(main\s*deck|mainboard|deck)\b/i;
-const SIDE_HEADER_RE = /^sideboard\b/i;
-
-/**
- * Legge un elenco mazzo copiato/incollato da un'altra app (es. l'elenco di
- * ManaBox copiato a mano, o l'export di MTG Scanner / Dragon Shield): righe
- * di intestazione ("Deck"/"Main Deck - 39", "Sideboard"), righe vuote e righe
- * carta ("<copie> <nome carta>") in qualsiasi combinazione. Le carte restano
- * divise per main deck/sideboard a seconda di sotto quale intestazione si
- * trovano (prima di qualsiasi intestazione si considerano main deck).
- */
-function parsePastedDeckList(text: string): DeckCard[] {
-  const merged: Record<string, DeckCard> = {};
-  let section: 'main' | 'side' = 'main';
-  text.split(/\r?\n/).forEach((rawLine) => {
-    const line = rawLine.trim();
-    if (!line) return;
-    if (MAIN_HEADER_RE.test(line)) {
-      section = 'main';
-      return;
-    }
-    if (SIDE_HEADER_RE.test(line)) {
-      section = 'side';
-      return;
-    }
-    const card = parseCardLine(line);
-    if (!card) return;
-    const key = section + '|' + card.name.toLowerCase();
-    merged[key] = merged[key] ?? { name: card.name, qty: 0, section };
-    merged[key].qty += card.qty;
-  });
-  return Object.values(merged);
-}
-
-interface Deck {
-  id: string;
-  name: string;
-  cards: DeckCard[];
-  source: string;
-  format: string;
-  colors: string[];
-  createdBy: string | null;
-}
+type DeckCard = DeckEntry;
+type Deck = SavedDeck;
+const parseManaboxText = (text: string) => parseDeckText(text);
+const parsePastedDeckList = (text: string) => parseDeckText(text);
 
 function deckTotal(d: Deck): number {
   return d.cards.reduce((sum, c) => sum + c.qty, 0);
@@ -172,52 +87,22 @@ export default function DeckList({ userId, onCreate, onEdit, onImportFile }: Dec
     onImportFile('', parsed);
   }
 
-  async function loadDecks() {
-    if (!supabase) return;
-    const { data, error: loadError } = await supabase.from(TABLE_DECKS).select('*').order('name');
-    if (loadError) {
-      setError('Non riesco a leggere i mazzi: ' + loadError.message);
-      return;
-    }
-    setDecks(
-      [...(data ?? [])]
-        .sort((a, b) => String(a.name ?? '').localeCompare(String(b.name ?? ''), 'it', { sensitivity: 'base' }))
-        .map((r) => ({
-        id: r.id,
-        name: r.name,
-        cards: (r.cards ?? []).map((c: { name: string; qty: number; section?: unknown }) => ({
-          name: c.name,
-          qty: c.qty,
-          section: normalizeSection(c.section),
-        })),
-        source: r.source ?? '',
-        format: r.format ?? '',
-        colors: r.colors ?? [],
-        createdBy: r.created_by ?? null,
-      }))
-    );
-  }
-
   useEffect(() => {
-    if (!supabase) {
-      setLoading(false);
-      return;
+    let cancelled = false;
+    async function load() {
+      try { const decks = await listSavedDecks(); if (!cancelled) { setDecks(decks); setError(''); } }
+      catch (err) { if (!cancelled) setError('Non riesco a leggere i mazzi: ' + (err as Error).message); }
+      finally { if (!cancelled) setLoading(false); }
     }
-    loadDecks().finally(() => setLoading(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    void load();
+    const stop = subscribeSavedDecks(load);
+    return () => { cancelled = true; stop(); };
   }, []);
 
-  /** True se il mazzo è stato davvero cancellato (non annullato, non in errore). */
   async function handleDelete(id: string): Promise<boolean> {
-    if (!supabase) return false;
     if (!confirm('Cancellare questo mazzo? Le partite che lo usano già continueranno a mostrarne solo il nome.')) return false;
-    const { error: deleteError } = await supabase.from(TABLE_DECKS).delete().eq('id', id);
-    if (deleteError) {
-      setError('Cancellazione mazzo non riuscita: ' + deleteError.message);
-      return false;
-    }
-    await loadDecks();
-    return true;
+    try { await deleteSavedDeck(id); return true; }
+    catch (err) { setError('Cancellazione mazzo non riuscita: ' + (err as Error).message); return false; }
   }
 
   function toggleColorFilter(c: string) {

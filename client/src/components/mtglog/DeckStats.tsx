@@ -11,6 +11,7 @@ import { cx, TEXT_MINI } from '../ui/styles';
 
 interface DeckStatsItem {
   name: string;
+  scryfallId?: string | null;
   qty: number;
   section?: string;
 }
@@ -63,7 +64,7 @@ function PieChart({ slices, idSuffix, unit }: { slices: Slice[]; idSuffix: strin
 const CURVE_HEIGHT = 150;
 
 export default function DeckStatsContents({ cards }: { cards: DeckStatsItem[] }) {
-  useDeckImages(cards.map((c) => c.name));
+  useDeckImages(cards);
   const stats = computeDeckStats(cards, getCard);
   const [openToken, setOpenToken] = useState<ScryToken | null>(null);
   // Come in ManaBox: con l'interruttore acceso, il mana generico dei costi
@@ -82,7 +83,7 @@ export default function DeckStatsContents({ cards }: { cards: DeckStatsItem[] })
   // I token si chiedono dopo le carte: servono prima gli id che le carte dichiarano.
   const tokenIds = cards
     .filter((c) => c.section !== 'side')
-    .flatMap((c) => getCard(c.name)?.tokens.map((t) => t.id) ?? []);
+    .flatMap((c) => getCard(c.name, c.scryfallId)?.tokens.map((t) => t.id) ?? []);
   useTokenImages(tokenIds);
   const tokens = computeTokens(cards, getCard, getToken);
   const maxToken = Math.max(1, ...tokens.groups.map((g) => g.count));

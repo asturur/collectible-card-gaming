@@ -1,14 +1,13 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { ActionTypes } from '@zaff/shared';
 import { useSocket } from '../network/useSocket';
-import type { MtgJsonDeck } from '../services/mtgjson';
-import { scryfallImageUrl } from '../services/mtgjson';
+import { expandPlayableDeck, type PlayableDeck } from '../services/playableDeck';
 import GameCanvas from './GameCanvas';
 
 interface GameViewProps {
   address: string;
   playerName: string;
-  selectedDeck: MtgJsonDeck | null;
+  selectedDeck: PlayableDeck | null;
   onDisconnect: () => void;
 }
 
@@ -19,26 +18,8 @@ export default function GameView({ address, playerName, selectedDeck, onDisconne
   // Dispatch LOAD_DECK once when connected with a selected deck
   useEffect(() => {
     if (status !== 'connected' || !selectedDeck || deckSentRef.current) return;
+    const cards = expandPlayableDeck(selectedDeck);
     deckSentRef.current = true;
-
-    const allBoards = [
-      ...selectedDeck.mainBoard,
-      ...selectedDeck.sideBoard,
-      ...selectedDeck.commander,
-    ];
-
-    // Expand each card entry by its count
-    const cards: { cardId: string; imageUrl: string }[] = [];
-    for (const card of allBoards) {
-      const scryfallId = card.identifiers.scryfallId;
-      if (!scryfallId) continue;
-      for (let i = 0; i < card.count; i++) {
-        cards.push({
-          cardId: scryfallId,
-          imageUrl: scryfallImageUrl(scryfallId),
-        });
-      }
-    }
 
     sendAction({
       type: ActionTypes.LOAD_DECK,

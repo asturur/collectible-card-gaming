@@ -1,18 +1,16 @@
-import { useMemo } from 'react';
-import { scryfallImageUrl, type MtgJsonDeck, type MtgJsonCard } from '../services/mtgjson';
+import { useMemo, useState } from 'react';
+import { dedupePlayableCards, expandPlayableDeck, type PlayableDeck, type PlayableCard } from '../services/playableDeck';
 import Button from './ui/Button';
 import { cx, HEADING_PANEL, HEADING_SECTION } from './ui/styles';
 
 interface DeckPreviewProps {
-  deck: MtgJsonDeck;
+  deck: PlayableDeck;
   onGoBack: () => void;
-  onConfirm: () => void;
+  onConfirm: () => Promise<void>;
 }
 
-function CardTile({ card }: { card: MtgJsonCard }) {
-  const imageUrl = card.identifiers.scryfallId
-    ? scryfallImageUrl(card.identifiers.scryfallId)
-    : null;
+function CardTile({ card }: { card: PlayableCard }) {
+  const imageUrl = card.imageUrl;
 
   return (
     <div className="relative max-w-64 shrink-0">
@@ -38,46 +36,30 @@ function CardTile({ card }: { card: MtgJsonCard }) {
   );
 }
 
-/** Deduplicate cards by scryfallId, summing counts */
-function dedupeCards(cards: MtgJsonCard[]): MtgJsonCard[] {
-  const byId = new Map<string, MtgJsonCard>();
-  for (const card of cards) {
-    const id = card.identifiers.scryfallId;
-    if (!id) continue;
-    const existing = byId.get(id);
-    if (existing) {
-      existing.count += card.count;
-    } else {
-      byId.set(id, { ...card });
-    }
-  }
-  return [...byId.values()];
-}
-
 /** Check if a card is a land by its type line */
-function isLand(card: MtgJsonCard): boolean {
+function isLand(card: PlayableCard): boolean {
   return card.type.toLowerCase().includes('land');
 }
 
 interface DeckSection {
   title: string;
-  cards: MtgJsonCard[];
+  cards: PlayableCard[];
 }
 
-function buildSections(deck: MtgJsonDeck): DeckSection[] {
+function buildSections(deck: PlayableDeck): DeckSection[] {
   const sections: DeckSection[] = [];
 
   // Commander
   if (deck.commander.length > 0) {
     sections.push({
       title: 'Commander',
-      cards: dedupeCards(deck.commander),
+      cards: dedupePlayableCards(deck.commander),
     });
   }
 
   // Main board — split into spells and lands
   if (deck.mainBoard.length > 0) {
-    const mainDeduped = dedupeCards(deck.mainBoard);
+    const mainDeduped = dedupePlayableCards(deck.mainBoard);
     const spells = mainDeduped.filter((c) => !isLand(c));
     const lands = mainDeduped.filter((c) => isLand(c));
 
@@ -99,7 +81,7 @@ function buildSections(deck: MtgJsonDeck): DeckSection[] {
   if (deck.sideBoard.length > 0) {
     sections.push({
       title: 'Sideboard',
-      cards: dedupeCards(deck.sideBoard),
+      cards: dedupePlayableCards(deck.sideBoard),
     });
   }
 
@@ -119,6 +101,15 @@ function countTotal(sections: DeckSection[]): { total: number; unique: number } 
 }
 
 export default function DeckPreview({ deck, onGoBack, onConfirm }: DeckPreviewProps) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  let validationError = '';
+  try { expandPlayableDeck(deck); } catch (err) { validationError = (err as Error).message; }
+  async function confirm() {
+    setBusy(true); setError('');
+    try { await onConfirm(); } catch (err) { setError((err as Error).message); }
+    finally { setBusy(false); }
+  }
   const sections = useMemo(() => buildSections(deck), [deck]);
   const { total, unique } = useMemo(() => countTotal(sections), [sections]);
 
@@ -145,7 +136,7 @@ export default function DeckPreview({ deck, onGoBack, onConfirm }: DeckPreviewPr
             <div className="flex flex-wrap gap-4">
               {section.cards.map((card) => (
                 <CardTile
-                  key={card.identifiers.scryfallId ?? card.name}
+                  key={card.scryfallId ?? card.name}
                   card={card}
                 />
               ))}
@@ -154,13 +145,14 @@ export default function DeckPreview({ deck, onGoBack, onConfirm }: DeckPreviewPr
         ))}
       </main>
 
+      {(error || validationError) && <p className="px-6 py-3 text-sm text-red-400" role="alert">{error || validationError}</p>}
       {/* Bottom action bar */}
       <footer className="flex items-center justify-between border-t border-zaff-border bg-zaff-surface px-6 py-4">
-        <Button variant="ghost" size="lg" onClick={onGoBack}>
+        <Button variant="ghost" size="lg" onClick={onGoBack} disabled={busy}>
           Go Back
         </Button>
-        <Button size="lg" onClick={onConfirm}>
-          Confirm Deck
+        <Button size="lg" onClick={confirm} disabled={busy || !!validationError}>
+          {busy ? 'Checking deck…' : 'Confirm Deck'}
         </Button>
       </footer>
     </div>

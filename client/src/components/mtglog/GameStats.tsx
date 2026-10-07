@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
-import { subscribeToTable, supabase, TABLE_DECKS, TABLE_GAMES } from '../../services/supabase';
+import { subscribeToTable, supabase, TABLE_GAMES } from '../../services/supabase';
+import { listSavedDecks, subscribeSavedDecks } from '../../services/savedDecks';
 import type { Game } from './GameList';
 import { rowToGame } from './stats';
 import Badge from '../ui/Badge';
-import DeckViewContents, { normalizeDeckCards, type DeckViewCard } from './DeckView';
+import DeckViewContents, { type DeckViewCard } from './DeckView';
 import Modal from '../ui/Modal';
 import {
   ExportButton,
@@ -154,23 +155,17 @@ export default function GameStats() {
 
   async function loadData() {
     if (!supabase) return;
-    const [{ data: gameRows, error: gameError }, { data: deckRows, error: deckError }] = await Promise.all([
-      supabase.from(TABLE_GAMES).select('*'),
-      supabase.from(TABLE_DECKS).select('name, source, colors, cards'),
-    ]);
-    if (gameError || deckError) {
-      setError('Non riesco a leggere le statistiche: ' + (gameError?.message || deckError?.message));
-      return;
-    }
-    setGames((gameRows ?? []).map(rowToGame));
-    setDecks(
-      (deckRows ?? []).map((row) => ({
-        name: row.name,
-        source: row.source ?? '',
-        colors: row.colors ?? [],
-        cards: normalizeDeckCards(row.cards),
-      }))
-    );
+    try {
+      const [games, deckRows] = await Promise.all([
+        supabase.from(TABLE_GAMES).select('*'), listSavedDecks(),
+      ]);
+      if (games.error) throw games.error;
+      setGames((games.data ?? []).map(rowToGame));
+      setDecks(deckRows.map(row => ({ name: row.name, source: row.source, colors: row.colors,
+        cards: row.cards.map(c => ({ ...c, section: c.section ?? 'main' })),
+      })));
+      setError('');
+    } catch (err) { setError('Non riesco a leggere le statistiche: ' + (err as Error).message); }
   }
 
   useEffect(() => {
@@ -180,7 +175,7 @@ export default function GameStats() {
     }
     loadData().finally(() => setLoading(false));
     const unsubGames = subscribeToTable(TABLE_GAMES, loadData);
-    const unsubDecks = subscribeToTable(TABLE_DECKS, loadData);
+    const unsubDecks = subscribeSavedDecks(loadData);
     return () => {
       unsubGames();
       unsubDecks();

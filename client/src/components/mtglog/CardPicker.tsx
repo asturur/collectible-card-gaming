@@ -144,13 +144,13 @@ export default function CardPicker({
   const token = useRef(0);
 
   useEffect(() => {
+    const mine = ++token.current;
     const q = query.trim();
     if (q.length < 2) {
       setResults([]);
       setSearching(false);
       return;
     }
-    const mine = ++token.current;
     setSearching(true);
     const timer = window.setTimeout(async () => {
       try {
@@ -166,7 +166,7 @@ export default function CardPicker({
         if (mine === token.current) setSearching(false);
       }
     }, 350);
-    return () => window.clearTimeout(timer);
+    return () => { token.current++; window.clearTimeout(timer); };
   }, [query]);
 
   function choose(card: ScryCard) {

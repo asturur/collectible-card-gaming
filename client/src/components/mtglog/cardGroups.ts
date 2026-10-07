@@ -87,9 +87,9 @@ export interface GroupedColor<T> {
 
 /** Raggruppa per colore → tipo → nome (`mode` 'color') oppure per tipo → nome
  *  (`mode` 'type'). `qty` serve per i totali. */
-export function groupCards<T extends { name: string; qty: number }>(
+export function groupCards<T extends { name: string; scryfallId?: string | null; qty: number }>(
   items: T[],
-  lookup: (name: string) => ScryCard | undefined,
+  lookup: (name: string, scryfallId?: string | null) => ScryCard | undefined,
   mode: GroupMode = 'color'
 ): GroupedColor<T>[] {
   const alpha = (list: T[]) => [...list].sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }));
@@ -98,7 +98,7 @@ export function groupCards<T extends { name: string; qty: number }>(
   if (mode === 'type') {
     const byType = new Map<string, T[]>();
     items.forEach((item) => {
-      const card = lookup(item.name);
+      const card = lookup(item.name, item.scryfallId);
       const key = card ? classify(card).type : '?';
       byType.set(key, [...(byType.get(key) ?? []), item]);
     });
@@ -121,7 +121,7 @@ export function groupCards<T extends { name: string; qty: number }>(
 
   const buckets = new Map<string, T[]>();
   items.forEach((item) => {
-    const { color, type } = classify(lookup(item.name));
+    const { color, type } = classify(lookup(item.name, item.scryfallId));
     const key = color + '|' + type;
     buckets.set(key, [...(buckets.get(key) ?? []), item]);
   });

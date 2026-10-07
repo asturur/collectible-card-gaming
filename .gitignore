@@ -1,6 +1,10 @@
 # Dependencies
 node_modules/
 
+# Local migration snapshots and Supabase CLI state
+.local/
+supabase/.temp/
+
 # Build output
 dist/
 *.tsbuildinfo
