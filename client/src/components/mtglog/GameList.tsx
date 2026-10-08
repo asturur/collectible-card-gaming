@@ -176,9 +176,9 @@ function ShareCardBody({ game, orderedPlayerIndices, playerTags, playerEmojis, h
         {/* 3 colonne di uguale larghezza (grid, non flex con pesi diversi),
             ciascuna con intestazione e contenuto centrati al suo interno. */}
         <div className="grid grid-cols-3 pb-1">
-          <div className="text-center text-[10px] uppercase tracking-wide text-zaff-muted">Nome Giocatore</div>
-          <div className="text-center text-[10px] uppercase tracking-wide text-zaff-muted">Mazzo Utilizzato</div>
-          <div className="text-center text-[10px] uppercase tracking-wide text-zaff-muted">Punti Vita Rimasti</div>
+          <div className="text-center text-[10px] uppercase tracking-wide text-zaff-muted">Giocatore</div>
+          <div className="text-center text-[10px] uppercase tracking-wide text-zaff-muted">Mazzo</div>
+          <div className="text-center text-[10px] uppercase tracking-wide text-zaff-muted">PV rimasti</div>
         </div>
         {orderedPlayerIndices.map((i) => {
           const p = game.players[i];
@@ -197,7 +197,7 @@ function ShareCardBody({ game, orderedPlayerIndices, playerTags, playerEmojis, h
               style={p.winner ? { background: 'rgba(248,250,252,0.05)' } : undefined}
             >
               <div className="flex flex-col items-center px-1 text-center">
-                <span className={`text-[15px] ${p.winner ? 'font-bold text-zaff-text' : 'text-zaff-muted'}`}>
+                <span className="text-[15px] font-bold text-zaff-text">
                   {p.winner && '🎉 '}
                   {playerEmojis[i] && `${playerEmojis[i]} `}
                   {p.name}

@@ -514,7 +514,7 @@ export default function DeckEditor({ deckId, userId, initialDraft, onBack, onSav
         </div>
       </div>
 
-      <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+      <div className="mb-2.5 mt-3 grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
         <TextField
           id="cardQty"
           label="Copie"
