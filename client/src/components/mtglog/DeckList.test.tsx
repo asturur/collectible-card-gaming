@@ -32,11 +32,13 @@ describe('Registro import and list controls', () => {
       .map(d => ({ ...d, source: 'brew', cards: [{ name: 'Island', qty: 1 }], cardRows: [], revision: 0 }));
     vi.mocked(listSavedDecks).mockResolvedValue(rows as never);
     const user = userEvent.setup(); render(<MemoryRouter><DeckList {...props()} /></MemoryRouter>); await screen.findByRole('link', { name: /Other/ });
-    await user.click(screen.getByRole('button', { name: 'Modern' }));
+    await user.click(screen.getByRole('button', { name: 'U' }));
     expect(screen.queryByRole('link', { name: /Other/ })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Own/ })).toHaveAttribute('href', '/decks/own');
+    await user.click(screen.getByRole('button', { name: 'Nessun filtro' }));
     await user.click(screen.getByRole('button', { name: 'G' }));
     expect(screen.queryByRole('link', { name: /Own/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Other/ })).toHaveAttribute('href', '/decks/other');
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 });
