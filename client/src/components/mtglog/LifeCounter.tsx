@@ -162,7 +162,7 @@ export default function LifeCounter({ players, startLife, resume, onCancel, onFi
   );
   /** Scheda di cui è aperto il pannello opzioni (una alla volta). */
   const [optionsFor, setOptionsFor] = useState<number | null>(null);
-  /** Popup delle opzioni di gioco (Annulla, High Roll, Fine Partita). */
+  /** Popup delle opzioni di gioco (Modifica Partita, High Roll, Fine Partita). */
   const [menuOpen, setMenuOpen] = useState(false);
   const [highRollOpen, setHighRollOpen] = useState(false);
   const [rolls, setRolls] = useState<RollResult[]>([]);
@@ -401,10 +401,10 @@ export default function LifeCounter({ players, startLife, resume, onCancel, onFi
               Fine Partita
             </Button>
             <Button variant="ghost" className="flex h-24 text-base" onClick={onCancel}>
-              Annulla
+              Modifica Partita
             </Button>
             <Button variant="ghost" className="flex h-24 text-base" onClick={() => setMenuOpen(false)}>
-              Torna al gioco
+              Torna al Gioco
             </Button>
           </div>
         </div>
