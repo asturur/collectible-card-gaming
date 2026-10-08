@@ -525,34 +525,7 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved, on
 
   return (
     <>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {/* Data e ora separate invece di un unico <input type="datetime-local">:
-            quel riquadro combinato ha una larghezza minima che su iPhone resta
-            più larga dello schermo anche dentro una colonna ristretta; data e
-            ora separate restano invece entrambe strette a sufficienza.
-            Il campo orario nativo, però, ha anche lui una larghezza minima
-            che Safari su iPhone non rispetta se il box è troppo stretto (la
-            disegna comunque, sbordando fuori): per questo i due campi sono
-            impilati invece che affiancati sugli schermi stretti, dove c'è
-            tutta la larghezza del modulo a disposizione per ciascuno; da
-            tablet in su, con più spazio, tornano affiancati. */}
-        <div className="mb-4 min-w-0">
-          <span className={FIELD_LABEL}>Data e ora di inizio</span>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <input
-              type="date"
-              value={startedAt.slice(0, 10)}
-              onChange={(e) => setStartedAt(`${e.target.value}T${startedAt.slice(11, 16) || '00:00'}`)}
-              className={cx(FIELD_CONTROL_SM, 'min-w-0 mtg-datetime-input')}
-            />
-            <input
-              type="time"
-              value={startedAt.slice(11, 16)}
-              onChange={(e) => setStartedAt(`${startedAt.slice(0, 10)}T${e.target.value || '00:00'}`)}
-              className={cx(FIELD_CONTROL_SM, 'min-w-0 mtg-datetime-input')}
-            />
-          </div>
-        </div>
+      <div className="grid grid-cols-1 gap-3">
         <div className="mb-4">
           <label className={FIELD_LABEL} htmlFor="fmt">
             Formato
@@ -866,6 +839,35 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved, on
           onChange={(next) => setStartLife(Math.max(1, parseInt(next, 10) || 1))}
           className="max-w-[190px]"
         />
+      </div>
+
+      {/* Data e ora separate invece di un unico <input type="datetime-local">:
+          quel riquadro combinato ha una larghezza minima che su iPhone resta
+          più larga dello schermo anche dentro una colonna ristretta; data e
+          ora separate restano invece entrambe strette a sufficienza.
+          Il campo orario nativo, però, ha anche lui una larghezza minima
+          che Safari su iPhone non rispetta se il box è troppo stretto (la
+          disegna comunque, sbordando fuori): per questo i due campi sono
+          impilati invece che affiancati sugli schermi stretti, dove c'è
+          tutta la larghezza del modulo a disposizione per ciascuno; da
+          tablet in su, con più spazio, tornano affiancati.
+          Stanno in fondo, prima degli appunti: di solito restano i valori di default. */}
+      <div className="mt-4 min-w-0">
+        <span className={FIELD_LABEL}>Data e ora di inizio</span>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <input
+            type="date"
+            value={startedAt.slice(0, 10)}
+            onChange={(e) => setStartedAt(`${e.target.value}T${startedAt.slice(11, 16) || '00:00'}`)}
+            className={cx(FIELD_CONTROL_SM, 'min-w-0 mtg-datetime-input')}
+          />
+          <input
+            type="time"
+            value={startedAt.slice(11, 16)}
+            onChange={(e) => setStartedAt(`${startedAt.slice(0, 10)}T${e.target.value || '00:00'}`)}
+            className={cx(FIELD_CONTROL_SM, 'min-w-0 mtg-datetime-input')}
+          />
+        </div>
       </div>
 
       <TextAreaField
