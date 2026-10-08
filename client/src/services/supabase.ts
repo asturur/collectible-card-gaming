@@ -11,8 +11,34 @@ const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string | und
 
 export const isSupabaseConfigured = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 
+/** Attese (ms) prima di ogni nuovo tentativo quando Supabase risponde "JWT issued at future". */
+const CLOCK_SKEW_RETRY_DELAYS_MS = [800, 1600, 2400];
+
+/**
+ * Supabase a volte rifiuta un token appena emesso con 401 "JWT issued at future":
+ * gli orologi dei suoi server hanno uno scarto di pochi secondi e passa da solo.
+ * Invece di mostrare l'errore, la richiesta viene ripetuta qualche volta a breve
+ * distanza. Si ripete solo quel preciso errore (la richiesta è stata rifiutata
+ * prima di essere eseguita, quindi riprovarla è sicuro anche per scritture).
+ */
+export async function fetchWithClockSkewRetry(
+  input: RequestInfo | URL,
+  init?: RequestInit,
+  delaysMs: number[] = CLOCK_SKEW_RETRY_DELAYS_MS
+): Promise<Response> {
+  for (let attempt = 0; ; attempt += 1) {
+    const response = await fetch(input, init);
+    if (response.status !== 401 || attempt >= delaysMs.length) return response;
+    const body = await response.clone().text().catch(() => '');
+    if (!body.includes('JWT issued at future')) return response;
+    await new Promise((resolve) => setTimeout(resolve, delaysMs[attempt]));
+  }
+}
+
 export const supabase =
-  SUPABASE_URL && SUPABASE_ANON_KEY ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+  SUPABASE_URL && SUPABASE_ANON_KEY
+    ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { global: { fetch: fetchWithClockSkewRetry } })
+    : null;
 
 // Table names in the shared Supabase project (see registro-partite-mtg.html)
 export const TABLE_GAMES = 'partite';
