@@ -13,13 +13,13 @@ import GameList, { type Game } from './GameList';
 import GameStats from './GameStats';
 import Standings, { PlayerStatsDetail } from './Standings';
 import MatchupStats, { MatchupStatsDetail } from './MatchupStats';
-import { computeMatchups, computeTally, matchupKey } from './stats';
+import { computeMatchups, computeTally, matchupKey, rowToGame } from './stats';
 import SectionPage from '../ui/SectionPage';
 import Button, { ButtonRouteLink } from '../ui/Button';
 import { CrossedSwordsIcon, GridTile, PodiumIcon, StatsRingIcon, TILE_GRID } from '../ui/Tile';
 import { HEADING_PAGE, TEXT_MUTED } from '../ui/styles';
 import { useLeaveGuard } from '../ui/useLeaveGuard';
-import { canEdit, supabase } from '../../services/supabase';
+import { canEdit, supabase, TABLE_GAMES } from '../../services/supabase';
 import { deleteSavedDeck } from '../../services/savedDecks';
 import type { DeckEntry } from '../../services/deckCards';
 import { matchupNamesFromPath, paths, playerNameFromPath } from '../../router';
@@ -70,7 +70,22 @@ function GameEditorPage({ rematch = false }: { rematch?: boolean }) {
 function GameEditorSession({ gameId, rematch }: { gameId?: string; rematch: boolean }) {
   const { userId, games, gamesLoading, gamesError } = useRegistro();
   const navigate = useNavigate();
-  const candidate = gameId ? games.find((g) => g.id === gameId) : null;
+  // L'elenco condiviso può non avere ancora una partita appena salvata (l'aggiornamento
+  // in tempo reale arriva dopo): in quel caso la leggo direttamente per id.
+  const [fetched, setFetched] = useState<Game | null>(null);
+  const [fetchDone, setFetchDone] = useState(false);
+  const inList = gameId ? games.find((g) => g.id === gameId) : null;
+  const candidate = gameId ? inList ?? fetched : null;
+  useEffect(() => {
+    if (!gameId || inList || gamesLoading || gamesError || fetchDone || !supabase) return;
+    let cancelled = false;
+    void supabase.from(TABLE_GAMES).select('*').eq('id', gameId).maybeSingle().then(({ data }) => {
+      if (cancelled) return;
+      if (data) setFetched(rowToGame(data));
+      setFetchDone(true);
+    });
+    return () => { cancelled = true; };
+  }, [gameId, inList, gamesLoading, gamesError, fetchDone]);
   const forbidden = Boolean(candidate && !rematch && !canEdit(candidate.createdBy, userId));
   // The form's original record is also its conflict baseline. Realtime updates
   // must not replace it or discard a draft if someone deletes the record.
@@ -79,7 +94,7 @@ function GameEditorSession({ gameId, rematch }: { gameId?: string; rematch: bool
     if (!game && candidate && !forbidden && !gamesError) setGame(candidate);
   }, [game, candidate, forbidden, gamesError]);
   const ready = !gameId || Boolean(game);
-  const waiting = gameId && !game && (gamesLoading || (candidate && !forbidden && !gamesError));
+  const waiting = gameId && !game && (gamesLoading || (candidate && !forbidden && !gamesError) || (!candidate && !fetchDone && !gamesError && Boolean(supabase)));
   const guard = useLeaveGuard(ready ? 'Uscire dalla partita? Quello che non hai salvato andrà perso.' : undefined);
   const backTo = gameId ? paths.game(gameId) : paths.games;
   return (
