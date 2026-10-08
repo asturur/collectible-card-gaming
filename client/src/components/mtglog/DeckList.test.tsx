@@ -22,10 +22,10 @@ describe('Registro import and list controls', () => {
     await user.click(screen.getByRole('button', { name: 'Importa' }));
     expect(p.onImportFile).toHaveBeenCalledWith('', [{ name: 'Island', qty: 3, section: 'main' }, { name: 'Forest', qty: 1, section: 'side' }]);
   });
-  it('imports a ManaBox file and ignores printing hints', async () => {
+  it('imports a ManaBox file and keeps set and collector number', async () => {
     const p = props(); const user = userEvent.setup(); const { container } = render(<MemoryRouter><DeckList {...p} /></MemoryRouter>);
     await user.upload(container.querySelector('input[type="file"]')!, new File(['2 Island (SET) 123\nSideboard\n1 Forest'], 'Test.txt', { type: 'text/plain' }));
-    await waitFor(() => expect(p.onImportFile).toHaveBeenCalledWith('Test', [{ name: 'Island', qty: 2, section: 'main' }, { name: 'Forest', qty: 1, section: 'side' }]));
+    await waitFor(() => expect(p.onImportFile).toHaveBeenCalledWith('Test', [{ name: 'Island', qty: 2, section: 'main', setCode: 'set', collectorNumber: '123' }, { name: 'Forest', qty: 1, section: 'side' }]));
   });
   it('preserves filters and links directly to the saved deck without opening a dialog', async () => {
     const rows = [{ id: 'own', name: 'Own', createdBy: 'own', colors: ['U'], format: 'Modern' }, { id: 'other', name: 'Other', createdBy: 'other', colors: ['G'], format: 'Commander' }]
