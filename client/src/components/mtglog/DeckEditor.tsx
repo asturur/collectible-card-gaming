@@ -360,12 +360,17 @@ export default function DeckEditor({ deckId, userId, initialDraft, onBack, onSav
     <>
       <fieldset disabled={saving}>
       {/* Totali sempre in vista mentre si scorre. */}
-      <div className="sticky top-0 z-10 -mx-1 mb-3.5 flex items-center justify-between gap-2 rounded-lg border border-zaff-primary bg-zaff-surface px-3 py-2 text-sm font-semibold text-zaff-text shadow-lg">
-        <span>Main Deck {mainTotal}</span>
-        <span>Sideboard {sideTotal}</span>
-        <span className="bg-gradient-to-r from-zaff-primary to-zaff-accent bg-clip-text text-lg font-bold text-transparent">
-          Totale {total}
-        </span>
+      <div className="sticky top-[env(safe-area-inset-top)] z-10 -mx-1 mb-3.5 rounded-lg border border-zaff-primary bg-zaff-surface px-3 py-2 text-sm font-semibold text-zaff-text shadow-lg">
+        <p className="mb-1 truncate text-base font-bold" title={name.trim() || 'Nuovo mazzo'}>
+          {name.trim() || 'Nuovo mazzo'}
+        </p>
+        <div className="flex items-center justify-between gap-2">
+          <span>Main Deck {mainTotal}</span>
+          <span>Sideboard {sideTotal}</span>
+          <span className="bg-gradient-to-r from-zaff-primary to-zaff-accent bg-clip-text text-lg font-bold text-transparent">
+            Totale {total}
+          </span>
+        </div>
       </div>
 
       <div className="mb-4">

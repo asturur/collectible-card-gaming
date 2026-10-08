@@ -295,10 +295,10 @@ function MorePage() {
 }
 
 function PlayersPage() {
-  const { userId } = useRegistro();
+  const { userId, games } = useRegistro();
   return (
-    <SectionPage title="Giocatori" subtitle="Rinomina o cancella i nomi in elenco. Le partite già salvate mantengono comunque il nome che avevano." ancestors={[{ label: 'Altro', to: paths.more }]}>
-      <PlayersRoster userId={userId} />
+    <SectionPage title="Giocatori" subtitle="Tocca un nome per vedere le partite giocate e le statistiche, o per rinominarlo o cancellarlo. Le partite già salvate mantengono comunque il nome che avevano." ancestors={[{ label: 'Altro', to: paths.more }]}>
+      <PlayersRoster userId={userId} games={games} />
     </SectionPage>
   );
 }

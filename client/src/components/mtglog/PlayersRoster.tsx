@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState } from 'react';
 import {
   canEdit,
   MAX_PLAYER_NAME_LENGTH,
@@ -8,37 +8,16 @@ import {
   TABLE_GAMES,
   TABLE_PLAYERS,
 } from '../../services/supabase';
-import Button from '../ui/Button';
-import { cx, FIELD_CONTROL_SM } from '../ui/styles';
+import Button, { ButtonRouteLink } from '../ui/Button';
+import Modal from '../ui/Modal';
+import { FIELD_CONTROL_SM } from '../ui/styles';
+import { paths } from '../../router';
+import type { Game } from './GameList';
 
 interface PlayersRosterProps {
   userId: string;
-}
-
-interface IconButtonProps {
-  label: string;
-  onClick: () => void;
-  tone?: 'default' | 'danger';
-  children: ReactNode;
-}
-
-/** Bottone quadrato con solo un'icona (emoji) e un'etichetta accessibile
- *  (title + aria-label): stesso stile usato in "Gestisci Mazzi". */
-function IconButton({ label, onClick, tone = 'default', children }: IconButtonProps) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      title={label}
-      aria-label={label}
-      className={cx(
-        'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-zaff-border bg-zaff-bg text-base leading-none text-zaff-muted transition',
-        tone === 'danger' ? 'hover:border-red-400 hover:text-red-400' : 'hover:border-zaff-gold hover:text-zaff-gold'
-      )}
-    >
-      {children}
-    </button>
-  );
+  /** Partite del registro, per contare quante ne ha giocate il giocatore aperto. */
+  games?: Game[];
 }
 
 interface RosterEntry {
@@ -65,9 +44,11 @@ interface GamePlayer {
 
 /** Rubrica giocatori condivisa: lista, aggiungi, rinomina (con propagazione), elimina.
  *  Va mostrata dentro un `Modal` (titolo e chiusura li mette il riquadro). */
-export default function PlayersRoster({ userId }: PlayersRosterProps) {
+export default function PlayersRoster({ userId, games = [] }: PlayersRosterProps) {
   const [roster, setRoster] = useState<RosterEntry[]>([]);
   const [newName, setNewName] = useState('');
+  /** Giocatore aperto (scheda con riepilogo e azioni). */
+  const [selected, setSelected] = useState<string | null>(null);
   const [renaming, setRenaming] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
   const [error, setError] = useState('');
@@ -177,6 +158,7 @@ export default function PlayersRoster({ userId }: PlayersRosterProps) {
       setError('Rinomina non riuscita: ' + renameError);
       return;
     }
+    setSelected(null);
     await loadRoster();
   }
 
@@ -206,12 +188,70 @@ export default function PlayersRoster({ userId }: PlayersRosterProps) {
       setError('Cancellazione non riuscita: ' + deleteError.message);
       return;
     }
+    setSelected(null);
     await loadRoster();
+  }
+
+  const selectedEntry = roster.find((r) => r.name === selected) ?? null;
+  const gamesPlayed = selectedEntry
+    ? games.filter((g) => g.players.some((p) => p.name === selectedEntry.name)).length
+    : 0;
+
+  function closeProfile() {
+    setSelected(null);
+    setRenaming(null);
+    setRenameConflict(null);
+    setError('');
+  }
+
+  function renderRenameConflict(conflict: NameConflict & { oldName: string }) {
+    if (conflict.wantsDifferent) {
+      const [s1, s2] = suggestAlternativeNames(conflict.existing);
+      return (
+        <div className="rounded-lg border border-red-400/40 bg-red-400/10 p-2.5 text-sm text-zaff-text">
+          <p className="mb-2 text-red-400">
+            Allora scegli un nome diverso da "{conflict.existing}": cambiare solo maiuscole o spazi non basta a
+            distinguerli. Ad esempio:
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {[s1, s2].map((suggestion) => (
+              <Button
+                key={suggestion}
+                size="sm"
+                onClick={() => {
+                  setRenameValue(suggestion);
+                  confirmRename(conflict.oldName, suggestion);
+                }}
+              >
+                {suggestion}
+              </Button>
+            ))}
+          </div>
+        </div>
+      );
+    }
+    return (
+      <div className="rounded-lg border border-amber-400/40 bg-amber-400/10 p-2.5 text-sm text-zaff-text">
+        <p className="mb-2">Esiste già un giocatore chiamato "{conflict.existing}". È la stessa persona?</p>
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" onClick={() => applyRename(conflict.oldName, conflict.typed)}>
+            Sì, è lui/lei
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setRenameConflict((c) => (c ? { ...c, wantsDifferent: true } : c))}
+          >
+            No, è un'altra persona
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   return (
     <>
-      <div className="mb-2 flex gap-2">
+      <div className="sticky top-[env(safe-area-inset-top)] z-10 -mx-1 mb-2 flex gap-2 bg-zaff-surface px-1 py-1">
         <input
           type="text"
           value={newName}
@@ -279,114 +319,92 @@ export default function PlayersRoster({ userId }: PlayersRosterProps) {
       ) : roster.length === 0 ? (
         <p className="text-sm text-zaff-muted">Ancora nessun giocatore in elenco.</p>
       ) : (
-        <ul className="divide-y divide-zaff-border">
+        <ul>
           {roster.map((r) => (
-            <li key={r.name} className="flex flex-col gap-2 py-2">
-              <div className="flex items-center justify-between gap-2">
-                {renaming === r.name ? (
-                  <>
-                    <input
-                      type="text"
-                      value={renameValue}
-                      onChange={(e) => {
-                        setRenameValue(e.target.value);
-                        setRenameConflict(null);
-                      }}
-                      onKeyDown={(e) => e.key === 'Enter' && confirmRename(r.name)}
-                      maxLength={MAX_PLAYER_NAME_LENGTH}
-                      autoFocus
-                      className={FIELD_CONTROL_SM}
-                    />
-                    <div className="flex shrink-0 gap-1.5">
-                      <Button variant="link" size="sm" onClick={() => confirmRename(r.name)}>
-                        Salva
-                      </Button>
-                      <Button
-                        variant="danger"
-                        size="sm"
-                        onClick={() => {
-                          setRenaming(null);
-                          setRenameConflict(null);
-                        }}
-                      >
-                        Annulla
-                      </Button>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <span className="min-w-0 flex-1 truncate text-[15px] text-zaff-text">{r.name}</span>
-                    {canEdit(r.createdBy, userId) && (
-                      <div className="flex shrink-0 gap-1.5">
-                        <IconButton label="Rinomina giocatore" onClick={() => startRename(r.name)}>
-                          ✏️
-                        </IconButton>
-                        <IconButton label="Cancella giocatore" tone="danger" onClick={() => handleDelete(r.name)}>
-                          🗑️
-                        </IconButton>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-
-              {renaming === r.name &&
-                renameConflict &&
-                renameConflict.oldName === r.name &&
-                (renameConflict.wantsDifferent ? (
-                  (() => {
-                    const [s1, s2] = suggestAlternativeNames(renameConflict.existing);
-                    return (
-                      <div className="rounded-lg border border-red-400/40 bg-red-400/10 p-2.5 text-sm text-zaff-text">
-                        <p className="mb-2 text-red-400">
-                          Allora scegli un nome diverso da "{renameConflict.existing}": cambiare solo maiuscole o
-                          spazi non basta a distinguerli. Ad esempio:
-                        </p>
-                        <div className="flex flex-wrap gap-2">
-                          <Button
-                            size="sm"
-                            onClick={() => {
-                              setRenameValue(s1);
-                              confirmRename(renameConflict.oldName, s1);
-                            }}
-                          >
-                            {s1}
-                          </Button>
-                          <Button
-                            size="sm"
-                            onClick={() => {
-                              setRenameValue(s2);
-                              confirmRename(renameConflict.oldName, s2);
-                            }}
-                          >
-                            {s2}
-                          </Button>
-                        </div>
-                      </div>
-                    );
-                  })()
-                ) : (
-                  <div className="rounded-lg border border-amber-400/40 bg-amber-400/10 p-2.5 text-sm text-zaff-text">
-                    <p className="mb-2">
-                      Esiste già un giocatore chiamato "{renameConflict.existing}". È la stessa persona?
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      <Button size="sm" onClick={() => applyRename(renameConflict.oldName, renameConflict.typed)}>
-                        Sì, è lui/lei
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setRenameConflict((c) => (c ? { ...c, wantsDifferent: true } : c))}
-                      >
-                        No, è un'altra persona
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+            <li key={r.name}>
+              {/* Una sola azione per riga: tutta la riga apre la scheda del giocatore. */}
+              <button
+                type="button"
+                onClick={() => {
+                  setError('');
+                  setSelected(r.name);
+                }}
+                title={r.name}
+                className="mb-2 flex w-full items-center gap-1.5 overflow-hidden rounded-lg border border-zaff-border bg-zaff-bg py-3 pl-3.5 pr-2 text-left transition hover:border-zaff-primary active:border-zaff-primary"
+              >
+                <span className="min-w-0 truncate text-[15px] text-zaff-text">{r.name}</span>
+                <span className="ml-auto shrink-0 pl-2 text-2xl leading-none text-zaff-muted" aria-hidden="true">
+                  ›
+                </span>
+              </button>
             </li>
           ))}
         </ul>
+      )}
+
+      {selectedEntry && (
+        <Modal level={2} title={selectedEntry.name} onClose={closeProfile}>
+          {renaming === selectedEntry.name ? (
+            <>
+              <input
+                type="text"
+                value={renameValue}
+                onChange={(e) => {
+                  setRenameValue(e.target.value);
+                  setRenameConflict(null);
+                }}
+                onKeyDown={(e) => e.key === 'Enter' && confirmRename(selectedEntry.name)}
+                maxLength={MAX_PLAYER_NAME_LENGTH}
+                aria-label="Nuovo nome del giocatore"
+                autoFocus
+                className={FIELD_CONTROL_SM}
+              />
+              <div className="mt-3 grid grid-cols-2 gap-2.5">
+                <Button fullWidth onClick={() => confirmRename(selectedEntry.name)}>
+                  Salva
+                </Button>
+                <Button
+                  fullWidth
+                  variant="ghost"
+                  onClick={() => {
+                    setRenaming(null);
+                    setRenameConflict(null);
+                  }}
+                >
+                  Annulla
+                </Button>
+              </div>
+              {renameConflict && renameConflict.oldName === selectedEntry.name && (
+                <div className="mt-3">{renderRenameConflict(renameConflict)}</div>
+              )}
+            </>
+          ) : (
+            <>
+              <p className="mb-3 text-[15px] text-zaff-text">
+                <span className="text-2xl font-bold">{gamesPlayed}</span>{' '}
+                {gamesPlayed === 1 ? 'partita giocata' : 'partite giocate'}
+              </p>
+              <ButtonRouteLink to={paths.player(selectedEntry.name)} size="lg" fullWidth className="mb-2.5">
+                📊 Statistiche giocatore
+              </ButtonRouteLink>
+              {canEdit(selectedEntry.createdBy, userId) && (
+                <div className="grid grid-cols-2 gap-2.5">
+                  <Button variant="ghost" fullWidth onClick={() => startRename(selectedEntry.name)}>
+                    ✏️ Modifica
+                  </Button>
+                  <Button variant="danger" fullWidth onClick={() => handleDelete(selectedEntry.name)}>
+                    🗑️ Cancella
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
+          {error && (
+            <p className="mt-3 text-sm text-red-400" role="alert">
+              {error}
+            </p>
+          )}
+        </Modal>
       )}
 
       {error && (

@@ -103,9 +103,10 @@ export default function DeckList({ onCreate, onImportFile }: DeckListProps) {
           <p className="text-sm text-zaff-muted">Ancora nessun mazzo salvato.</p>
         ) : (
           <>
-            <div className="mb-3 rounded-lg border border-zaff-border bg-zaff-bg p-2.5">
+            {/* Il filtro colore resta in cima mentre si scorre la lista. */}
+            <div className="sticky top-[env(safe-area-inset-top)] z-10 -mx-1 mb-2 rounded-lg border border-zaff-border bg-zaff-surface p-2.5 shadow-lg">
               <span className={cx('mb-1.5 block', TEXT_MINI)}>Colore</span>
-              <div className="mb-3 flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <ManaPips colors={colorFilter} onToggle={toggleColorFilter} />
                 <button
                   type="button"
@@ -121,6 +122,8 @@ export default function DeckList({ onCreate, onImportFile }: DeckListProps) {
                   Nessun filtro
                 </button>
               </div>
+            </div>
+            <div className="mb-3 rounded-lg border border-zaff-border bg-zaff-bg p-2.5">
               <span className={cx('mb-1.5 block', TEXT_MINI)}>Tipo</span>
               <FilterTabs
                 value={formatFilter}

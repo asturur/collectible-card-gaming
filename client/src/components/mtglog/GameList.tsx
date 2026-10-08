@@ -518,6 +518,8 @@ export default function GameList({ userId, onEdit, onRematch }: GameListProps) {
         </div>
       ) : (
         <>
+          {/* Ricerca e periodo restano in cima mentre si scorre l'elenco. */}
+          <div className="sticky top-[env(safe-area-inset-top)] z-10 -mx-1 mb-2 bg-zaff-surface px-1 pb-1 pt-1">
           <input
             type="search"
             value={query}
@@ -529,7 +531,6 @@ export default function GameList({ userId, onEdit, onRematch }: GameListProps) {
             className={cx(FIELD_CONTROL, 'mb-2.5 w-full')}
           />
           <FilterTabs
-            className="mb-2"
             value={periodFilter}
             onChange={(v) => setPeriodFilter(v as 'all' | '30' | 'year')}
             options={[
@@ -538,6 +539,7 @@ export default function GameList({ userId, onEdit, onRematch }: GameListProps) {
               { value: 'year', label: "Quest'anno" },
             ]}
           />
+          </div>
           {formats.length > 1 && (
             <FilterTabs
               className="mb-2.5"
