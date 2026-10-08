@@ -16,13 +16,17 @@ interface LifeCounterProps {
   startLife: number;
   /** Se presente, il conteggio riparte da questi valori (per nome giocatore). */
   resume?: Record<string, LifeCounterResume>;
-  onCancel: () => void;
-  onFinish: (
-    lives: Record<string, number>,
-    causes: Record<string, LossCause[]>,
-    poisons: Record<string, number>
-  ) => void;
+  /** "Modifica Partita": torna all'editor portando con sé i punteggi raggiunti
+   *  (per correggere un nome o un mazzo senza perdere il conteggio). */
+  onEdit: LifeCounterResult;
+  onFinish: LifeCounterResult;
 }
+
+type LifeCounterResult = (
+  lives: Record<string, number>,
+  causes: Record<string, LossCause[]>,
+  poisons: Record<string, number>
+) => void;
 
 interface LcPlayer {
   name: string;
@@ -142,7 +146,7 @@ const TAP_HIGHLIGHT_OFF = { WebkitTapHighlightColor: 'transparent' } as const;
  * di 180°, così legge dritto senza girare il telefono. High Roll (d20) per
  * decidere chi inizia.
  */
-export default function LifeCounter({ players, startLife, resume, onCancel, onFinish }: LifeCounterProps) {
+export default function LifeCounter({ players, startLife, resume, onEdit, onFinish }: LifeCounterProps) {
   useKeepScreenAwake();
 
   const [lives, setLives] = useState<LcPlayer[]>(
@@ -181,6 +185,15 @@ export default function LifeCounter({ players, startLife, resume, onCancel, onFi
   function openHighRoll() {
     setRolls(rollHighRoll(lives.map((p) => p.name)));
     setHighRollOpen(true);
+  }
+
+  /** Punteggi, cause di sconfitta e veleno di ogni giocatore, per nome. */
+  function snapshot(): Parameters<LifeCounterResult> {
+    return [
+      Object.fromEntries(lives.map((p) => [p.name, p.life])),
+      Object.fromEntries(lives.map((p) => [p.name, lossCauses(p)])),
+      Object.fromEntries(lives.map((p) => [p.name, p.poisonOn ? p.poison : 0])),
+    ];
   }
 
   const topRoll = rolls.length ? Math.max(...rolls.map((r) => r.roll)) : 0;
@@ -390,17 +403,11 @@ export default function LifeCounter({ players, startLife, resume, onCancel, onFi
             </Button>
             <Button
               className="flex h-24 text-base"
-              onClick={() =>
-                onFinish(
-                  Object.fromEntries(lives.map((p) => [p.name, p.life])),
-                  Object.fromEntries(lives.map((p) => [p.name, lossCauses(p)])),
-                  Object.fromEntries(lives.map((p) => [p.name, p.poisonOn ? p.poison : 0]))
-                )
-              }
+              onClick={() => onFinish(...snapshot())}
             >
               Fine Partita
             </Button>
-            <Button variant="ghost" className="flex h-24 text-base" onClick={onCancel}>
+            <Button variant="ghost" className="flex h-24 text-base" onClick={() => onEdit(...snapshot())}>
               Modifica Partita
             </Button>
             <Button variant="ghost" className="flex h-24 text-base" onClick={() => setMenuOpen(false)}>

@@ -367,6 +367,24 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved, on
     setLifeCounterOpen(false);
   }
 
+  /** "Modifica Partita" dal segna-punti: riporta nell'editor i punteggi raggiunti
+   *  (senza chiudere la partita né scegliere un vincitore), così si può correggere
+   *  un nome o un mazzo e poi "Riprendi Partita" da dove si era. */
+  function handleLifeCounterBackToEdit(
+    lives: Record<string, number>,
+    causes: Record<string, LossCause[]>,
+    poisons: Record<string, number>
+  ) {
+    setPlayers((prev) =>
+      prev.map((p) => {
+        const key = p.name.trim();
+        if (!(key in lives)) return p;
+        return { ...p, life: String(lives[key]), loss: causes[key] ?? [], poison: poisons[key] ?? 0 };
+      })
+    );
+    setLifeCounterOpen(false);
+  }
+
   async function handleSaveClick() {
     setMessage('');
     setError('');
@@ -490,13 +508,16 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved, on
     }
   });
 
+  /** "Riprendi Partita" serve se la partita è già salvata o se c'è già un punteggio nell'editor. */
+  const canResume = Boolean(editingGame) || Object.keys(resumeData).length > 0;
+
   if (lifeCounterOpen) {
     return (
       <LifeCounter
         players={players.map((p) => p.name.trim()).filter(Boolean)}
         startLife={startLife}
         resume={resumeCounter ? resumeData : undefined}
-        onCancel={() => setLifeCounterOpen(false)}
+        onEdit={handleLifeCounterBackToEdit}
         onFinish={handleLifeCounterFinish}
       />
     );
@@ -872,12 +893,12 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved, on
           navigazione): avvio del segna-punti e salvataggio sono raggiungibili
           senza scorrere. */}
       <div className="sticky bottom-[calc(4rem+env(safe-area-inset-bottom))] z-10 -mx-4 mt-4 flex flex-col gap-2.5 border-t border-zaff-border bg-zaff-surface px-4 py-3 sm:-mx-6 sm:px-6">
-        <div className={editingGame ? 'grid grid-cols-2 gap-2.5' : undefined}>
+        <div className={canResume ? 'grid grid-cols-2 gap-2.5' : undefined}>
           <Button onClick={() => handleOpenLifeCounter(false)} size="lg" fullWidth className="py-3.5 text-lg">
             <span className="text-xl leading-none">▶</span> Avvia Partita
           </Button>
-          {/* Solo per una partita già salvata: riparte dai punteggi registrati. */}
-          {editingGame && (
+          {/* Riparte dai punteggi registrati (partita salvata, o punteggio portato dal segna-punti). */}
+          {canResume && (
             <Button onClick={() => handleOpenLifeCounter(true)} size="lg" fullWidth className="py-3.5 text-lg">
               <span className="text-xl leading-none">⏯</span> Riprendi Partita
             </Button>
