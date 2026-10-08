@@ -9,11 +9,13 @@ interface SectionPageProps {
   ancestors?: readonly BreadcrumbLink[];
   wide?: boolean;
   xl?: boolean;
+  /** Il titolo resta fisso in cima mentre si scorre (moduli lunghi). */
+  stickyTitle?: boolean;
   children: ReactNode;
 }
 
 /** The former section panels keep their mobile widths, with normal page scroll. */
-export default function SectionPage({ title, subtitle, ancestors = [], wide, xl, children }: SectionPageProps) {
+export default function SectionPage({ title, subtitle, ancestors = [], wide, xl, stickyTitle, children }: SectionPageProps) {
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => { heading.current?.focus({ preventScroll: true }); }, [title]);
 
@@ -22,7 +24,11 @@ export default function SectionPage({ title, subtitle, ancestors = [], wide, xl,
       <div className={cx('mx-auto w-full', xl ? 'max-w-[900px]' : wide ? 'max-w-[680px]' : 'max-w-[560px]')}>
         <Breadcrumbs ancestors={[{ label: 'Home', to: paths.home }, ...ancestors]} current={title} />
         <section className="rounded-xl border border-zaff-border bg-zaff-surface p-4 sm:p-6">
-          <h1 ref={heading} tabIndex={-1} className={cx(HEADING_SECTION, 'mb-3 border-b border-zaff-border pb-1.5 outline-none [overflow-wrap:anywhere]')}>
+          <h1 ref={heading} tabIndex={-1} className={cx(
+              HEADING_SECTION,
+              'mb-3 border-b border-zaff-border pb-1.5 outline-none [overflow-wrap:anywhere]',
+              stickyTitle && 'sticky top-[env(safe-area-inset-top)] z-10 -mx-4 bg-zaff-surface px-4 pt-2 sm:-mx-6 sm:px-6'
+            )}>
             {title}
           </h1>
           {subtitle && <p className={cx('-mt-1 mb-3', TEXT_MINI)}>{subtitle}</p>}

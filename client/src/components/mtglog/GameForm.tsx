@@ -847,18 +847,6 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved, on
         />
       </div>
 
-      <div className={editingGame ? 'mt-4 grid grid-cols-2 gap-3' : 'mt-4'}>
-        <Button onClick={() => handleOpenLifeCounter(false)} size="lg" fullWidth className="py-3.5 text-lg">
-          <span className="text-xl leading-none">▶</span> Avvia Partita
-        </Button>
-        {/* Solo per una partita già salvata: riparte dai punteggi registrati. */}
-        {editingGame && (
-          <Button onClick={() => handleOpenLifeCounter(true)} size="lg" fullWidth className="py-3.5 text-lg">
-            <span className="text-xl leading-none">⏯</span> Riprendi Partita
-          </Button>
-        )}
-      </div>
-
       <TextAreaField
         id="notes"
         label="Appunti"
@@ -881,14 +869,28 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved, on
       </p>
 
       {/* Barra sempre in vista in fondo allo schermo (sopra la barra di
-          navigazione): il salvataggio è raggiungibile senza scorrere. */}
-      <div className="sticky bottom-[calc(4rem+env(safe-area-inset-bottom))] z-10 -mx-4 mt-4 grid grid-cols-2 gap-2.5 border-t border-zaff-border bg-zaff-surface px-4 py-3 sm:-mx-6 sm:px-6">
-        <Button fullWidth size="lg" onClick={handleSaveClick} disabled={saving}>
-          {editingGame ? 'Salva Modifiche' : 'Salva Partita'}
-        </Button>
-        <Button fullWidth size="lg" variant="ghost" onClick={onBack}>
-          Annulla
-        </Button>
+          navigazione): avvio del segna-punti e salvataggio sono raggiungibili
+          senza scorrere. */}
+      <div className="sticky bottom-[calc(4rem+env(safe-area-inset-bottom))] z-10 -mx-4 mt-4 flex flex-col gap-2.5 border-t border-zaff-border bg-zaff-surface px-4 py-3 sm:-mx-6 sm:px-6">
+        <div className={editingGame ? 'grid grid-cols-2 gap-2.5' : undefined}>
+          <Button onClick={() => handleOpenLifeCounter(false)} size="lg" fullWidth className="py-3.5 text-lg">
+            <span className="text-xl leading-none">▶</span> Avvia Partita
+          </Button>
+          {/* Solo per una partita già salvata: riparte dai punteggi registrati. */}
+          {editingGame && (
+            <Button onClick={() => handleOpenLifeCounter(true)} size="lg" fullWidth className="py-3.5 text-lg">
+              <span className="text-xl leading-none">⏯</span> Riprendi Partita
+            </Button>
+          )}
+        </div>
+        <div className="grid grid-cols-2 gap-2.5">
+          <Button fullWidth size="lg" onClick={handleSaveClick} disabled={saving}>
+            {editingGame ? 'Salva Modifiche' : 'Salva Partita'}
+          </Button>
+          <Button fullWidth size="lg" variant="ghost" onClick={onBack}>
+            Annulla
+          </Button>
+        </div>
       </div>
     </>
   );

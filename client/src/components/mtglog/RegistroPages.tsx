@@ -98,7 +98,7 @@ function GameEditorSession({ gameId, rematch }: { gameId?: string; rematch: bool
   const guard = useLeaveGuard(ready ? 'Uscire dalla partita? Quello che non hai salvato andrà perso.' : undefined);
   const backTo = gameId ? paths.game(gameId) : paths.games;
   return (
-    <SectionPage title={rematch ? 'Rivincita' : gameId ? 'Modifica Partita' : 'Nuova Partita'} wide ancestors={[
+    <SectionPage title={rematch ? 'Rivincita' : gameId ? 'Modifica Partita' : 'Nuova Partita'} wide stickyTitle ancestors={[
       GAMES_CRUMB, ...(gameId ? [{ label: 'Dettaglio Partita', to: paths.game(gameId) }] : []),
     ]}>
       {waiting ? <p className={TEXT_MUTED}>Caricamento…</p> : !ready ? <p role="alert">{gamesError || (forbidden ? 'Puoi modificare solo le partite che hai salvato.' : 'Partita non trovata.')}</p> : (
