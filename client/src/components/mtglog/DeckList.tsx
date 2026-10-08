@@ -221,7 +221,7 @@ export default function DeckList({ onCreate, onImportFile }: DeckListProps) {
                 setPasteOpen(true);
               }}
             >
-              📋 Incolla elenco
+              📋 Incolla Elenco da Testo
             </Button>
           </div>
         </Modal>
@@ -230,7 +230,7 @@ export default function DeckList({ onCreate, onImportFile }: DeckListProps) {
       {pasteOpen && (
         <Modal
           level={2}
-          title="Incolla elenco"
+          title="Incolla Elenco da Testo"
           onClose={() => {
             setPasteOpen(false);
             setPasteText('');

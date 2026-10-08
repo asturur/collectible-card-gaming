@@ -8,6 +8,7 @@ import DeckEditor from './DeckEditor';
 import DeckViewContents from './DeckView';
 import DeckStatsContents from './DeckStats';
 import { useSavedDeck } from './useSavedDeck';
+import { DeckActionsPanel, DeckExportDialog, DeckTabs, deckLink } from './DeckDetailActions';
 import GameForm from './GameForm';
 import GameList, { type Game } from './GameList';
 import GameStats from './GameStats';
@@ -137,7 +138,30 @@ function DeckDetailSession({ deckId }: { deckId: string }) {
   const { deck, loading, error } = useSavedDeck(deckId);
   const [deleteError, setDeleteError] = useState('');
   const [deleting, setDeleting] = useState(false);
+  const [actionsOpen, setActionsOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
+  const [shareNotice, setShareNotice] = useState('');
   const guard = useLeaveGuard();
+
+  async function handleShare() {
+    if (!deck) return;
+    const url = deckLink(deckId);
+    setShareNotice('');
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: deck.name, text: 'Mazzo di Magic: ' + deck.name, url });
+        return;
+      } catch {
+        // Annullato dall'utente o non disponibile: si prova a copiarlo.
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setShareNotice('Link copiato negli appunti.');
+    } catch {
+      setShareNotice(url);
+    }
+  }
 
   async function handleDelete() {
     if (!deck || deleting || !canEdit(deck.createdBy, userId)) return;
@@ -159,16 +183,24 @@ function DeckDetailSession({ deckId }: { deckId: string }) {
   return (
     <SectionPage title={deck?.name ?? 'Dettaglio Mazzo'} ancestors={[DECKS_CRUMB]}>
       {loading ? <p className={TEXT_MUTED}>Caricamento…</p> : deck && <>
-        {canEdit(deck.createdBy, userId) && (
-          <div className="mb-3 grid grid-cols-2 gap-2.5">
-            {deleting ? <Button variant="ghost" fullWidth disabled>✏️ Modifica</Button>
-              : <ButtonRouteLink to={paths.editDeck(deckId)} variant="ghost" fullWidth>✏️ Modifica</ButtonRouteLink>}
-            <Button variant="danger" fullWidth disabled={deleting} onClick={handleDelete}>
-              {deleting ? 'Cancellazione…' : '🗑️ Cancella'}
-            </Button>
-          </div>
+        <DeckTabs
+          statsTo={paths.savedDeckStats(deckId)}
+          actionsOpen={actionsOpen}
+          onShowDeck={() => setActionsOpen(false)}
+          onToggleActions={() => setActionsOpen((open) => !open)}
+        />
+        {actionsOpen && (
+          <DeckActionsPanel
+            editTo={canEdit(deck.createdBy, userId) ? paths.editDeck(deckId) : null}
+            deleting={deleting}
+            onDelete={handleDelete}
+            onShare={handleShare}
+            onExport={() => setExportOpen(true)}
+            notice={shareNotice}
+          />
         )}
-        <DeckViewContents title={deck.name} source={deck.source} colors={deck.colors} cards={deck.cards.map(c => ({ ...c, section: c.section ?? 'main' }))} statsTo={paths.savedDeckStats(deckId)} />
+        <DeckViewContents title={deck.name} source={deck.source} colors={deck.colors} cards={deck.cards.map(c => ({ ...c, section: c.section ?? 'main' }))} />
+        {exportOpen && <DeckExportDialog deckName={deck.name} cards={deck.cards} onClose={() => setExportOpen(false)} />}
       </>}
       {(error || deleteError) && <p className="mt-3 text-sm text-error" role="alert">{error || deleteError}</p>}
     </SectionPage>

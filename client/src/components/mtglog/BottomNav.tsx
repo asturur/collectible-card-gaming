@@ -2,20 +2,9 @@ import type { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router';
 import { paths } from '../../router';
 import { cx } from '../ui/styles';
+import { BarsIcon, CardsIcon, DotsIcon, ICON_PROPS } from '../ui/NavIcons';
 
 export type NavTab = 'games' | 'decks' | 'new' | 'stats' | 'more';
-
-const ICON_PROPS = {
-  width: 24,
-  height: 24,
-  viewBox: '0 0 24 24',
-  fill: 'none',
-  stroke: 'currentColor',
-  strokeWidth: 2,
-  strokeLinecap: 'round',
-  strokeLinejoin: 'round',
-  'aria-hidden': true,
-} as const;
 
 const TABS: { id: Exclude<NavTab, 'new'>; label: string; icon: ReactNode }[] = [
   {
@@ -31,32 +20,17 @@ const TABS: { id: Exclude<NavTab, 'new'>; label: string; icon: ReactNode }[] = [
   {
     id: 'decks',
     label: 'Mazzi',
-    icon: (
-      <svg {...ICON_PROPS}>
-        <rect x="7" y="4" width="12" height="16" rx="2" />
-        <path d="M4.5 7.5V17a2 2 0 0 0 1.5 1.9" />
-      </svg>
-    ),
+    icon: <CardsIcon />,
   },
   {
     id: 'stats',
     label: 'Statistiche',
-    icon: (
-      <svg {...ICON_PROPS}>
-        <path d="M5 20V11M12 20V4M19 20v-6" />
-      </svg>
-    ),
+    icon: <BarsIcon />,
   },
   {
     id: 'more',
     label: 'Altro',
-    icon: (
-      <svg {...ICON_PROPS}>
-        <circle cx="5" cy="12" r="1.2" fill="currentColor" />
-        <circle cx="12" cy="12" r="1.2" fill="currentColor" />
-        <circle cx="19" cy="12" r="1.2" fill="currentColor" />
-      </svg>
-    ),
+    icon: <DotsIcon />,
   },
 ];
 

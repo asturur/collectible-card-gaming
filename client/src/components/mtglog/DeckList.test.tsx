@@ -17,7 +17,7 @@ describe('Registro import and list controls', () => {
   });
   it('imports pasted sections and merges duplicate groups before editing', async () => {
     const p = props(); const user = userEvent.setup(); render(<MemoryRouter><DeckList {...p} /></MemoryRouter>);
-    await user.click(screen.getByRole('button', { name: /Crea Nuovo Mazzo/ })); await user.click(screen.getByRole('button', { name: /Incolla elenco/ }));
+    await user.click(screen.getByRole('button', { name: /Crea Nuovo Mazzo/ })); await user.click(screen.getByRole('button', { name: /Incolla Elenco da Testo/ }));
     await user.type(screen.getByRole('textbox'), 'Deck\n2 Island\n1 Island\nSideboard\n1 Forest');
     await user.click(screen.getByRole('button', { name: 'Importa' }));
     expect(p.onImportFile).toHaveBeenCalledWith('', [{ name: 'Island', qty: 3, section: 'main' }, { name: 'Forest', qty: 1, section: 'side' }]);

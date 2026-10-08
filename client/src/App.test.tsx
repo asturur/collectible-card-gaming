@@ -282,8 +282,12 @@ describe('Registro routes', () => {
 
   it.each([['u1', true], [null, true], ['u2', false]])('preserves saved-deck action permissions for owner %s', async (owner, editable) => {
     vi.mocked(getSavedDeck).mockResolvedValue({ ...savedDeck, createdBy: owner });
+    const user = userEvent.setup();
     openApp('/decks/d1');
     await screen.findByRole('heading', { name: 'Elfi' });
+    await user.click(screen.getByRole('button', { name: 'Azioni' }));
+    expect(screen.getByRole('button', { name: /Esporta/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Condividi/ })).toBeInTheDocument();
     expect(Boolean(screen.queryByRole('link', { name: /Modifica/ }))).toBe(editable);
     expect(Boolean(screen.queryByRole('button', { name: /Cancella/ }))).toBe(editable);
   });
@@ -296,6 +300,7 @@ describe('Registro routes', () => {
     expect(within(breadcrumbs).getAllByRole('listitem').map(item => item.textContent)).toEqual(['Home', 'Mazzi', 'Elfi', 'Modifica Mazzo']);
     await user.click(screen.getByRole('button', { name: 'Annulla mazzo' }));
     expect(await screen.findByRole('heading', { name: 'Elfi' })).toBeInTheDocument();
+    await user.click(await screen.findByRole('button', { name: 'Azioni' }));
     await user.click(screen.getByRole('link', { name: /Modifica/ }));
     await user.click(await screen.findByRole('button', { name: 'Salva mazzo' }));
     expect(await screen.findByRole('heading', { name: 'Elfi' })).toBeInTheDocument();
@@ -324,6 +329,7 @@ describe('Registro routes', () => {
     const user = userEvent.setup();
     openApp('/decks/d1');
     vi.mocked(window.confirm).mockReturnValue(false);
+    await user.click(await screen.findByRole('button', { name: 'Azioni' }));
     await user.click(await screen.findByRole('button', { name: /Cancella/ }));
     expect(deleteSavedDeck).not.toHaveBeenCalled();
     vi.mocked(window.confirm).mockReturnValue(true);
@@ -339,6 +345,7 @@ describe('Registro routes', () => {
     vi.mocked(deleteSavedDeck).mockImplementation(() => new Promise<void>(resolve => { done = resolve; }));
     const user = userEvent.setup();
     const { router } = openApp('/decks/d1');
+    await user.click(await screen.findByRole('button', { name: 'Azioni' }));
     await user.click(await screen.findByRole('button', { name: /Cancella/ }));
     expect(screen.getByRole('button', { name: 'Cancellazione…' })).toBeDisabled();
     await user.click(within(screen.getByRole('navigation', { name: 'Percorso di navigazione' })).getByRole('link', { name: 'Home' }));
@@ -384,10 +391,22 @@ describe('Registro routes', () => {
     expect(await screen.findByText(/Solo Main Deck · 30 carte/)).toBeInTheDocument();
   });
 
+  it('exports the deck as text to the clipboard from the actions panel', async () => {
+    const user = userEvent.setup();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    openApp('/decks/d1');
+    await user.click(await screen.findByRole('button', { name: 'Azioni' }));
+    await user.click(screen.getByRole('button', { name: /Esporta/ }));
+    await user.click(await screen.findByRole('button', { name: /Copia negli appunti/ }));
+    expect(writeText).toHaveBeenCalledWith('Deck\n30 Forest\n');
+    expect(await screen.findByText(/Elenco copiato negli appunti/)).toBeInTheDocument();
+  });
+
   it('uses a real deck-statistics link under the deployment base and supports history', async () => {
     const user = userEvent.setup();
     const { router } = openApp('/collectible-card-gaming/decks/d1', '/collectible-card-gaming');
-    const link = await screen.findByRole('link', { name: 'Statistiche del mazzo' });
+    const link = await screen.findByRole('link', { name: 'Stats' });
     expect(link).toHaveAttribute('href', '/collectible-card-gaming/decks/d1/stats');
     await user.click(link);
     expect(await screen.findByText(/Solo Main Deck · 30 carte/)).toBeInTheDocument();
