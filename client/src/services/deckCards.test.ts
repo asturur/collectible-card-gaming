@@ -7,7 +7,7 @@ const row = { name: 'Isola', qty: 2, section: 'main' as const, scryfallId: 'prin
 describe('deck data and gameplay', () => {
   it('parses file/paste printing hints, merges within sections and preserves labels', () => {
     expect(parseDeckText('Deck 3\n2 Isola (SET) 23\n1 isola\n0 ignored\nSideboard 1\n1 Isola\nMain Deck - 1\n1 Shrinking Storm')).toEqual([
-      { name: 'Isola', qty: 3, section: 'main' }, { name: 'Isola', qty: 1, section: 'side' }, { name: 'Shrinking Storm', qty: 1, section: 'main' },
+      { name: 'Isola', qty: 3, section: 'main', setCode: 'set', collectorNumber: '23' }, { name: 'Isola', qty: 1, section: 'side' }, { name: 'Shrinking Storm', qty: 1, section: 'main' },
     ]);
   });
   it('keeps the first group identity when aggregating quantities', () => {

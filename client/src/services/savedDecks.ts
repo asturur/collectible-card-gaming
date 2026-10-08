@@ -1,6 +1,6 @@
 import { supabase, TABLE_DECKS, TABLE_DECK_CARDS, subscribeToTable } from './supabase';
 import { entryKey, nameKey, normalizeEntries, serializeEntry, type DeckEntry } from './deckCards';
-import { cachedScryfallCard, cardIdentity, resolveScryfallNames } from './scryfallLookup';
+import { cachedScryfallCard, cardIdentity, fetchPrintings, firstImage, matchesName, resolveScryfallNames } from './scryfallLookup';
 import { getCard } from './scryfall';
 
 export interface SavedDeck {
@@ -14,13 +14,14 @@ export interface SavedDeck {
 interface CardRow {
   id: string; name: string; qty: number; section: 'main' | 'side'; position: number;
   scryfall_id: string | null; oracle_id: string | null; image_url: string | null; type_line: string | null;
+  set_code: string | null; collector_number: string | null;
 }
 interface DeckRow {
   id: string; name: string; source: string | null; format: string; colors: string[];
   created_by: string | null; revision: number; cards: DeckEntry[]; card_rows: CardRow[];
 }
 // Embedding the FK relation reads header/JSON/children from one database snapshot.
-const SELECT = 'id,name,source,format,colors,created_by,revision,cards,card_rows:mazzi-cards(id,name,qty,section,position,scryfall_id,oracle_id,image_url,type_line)';
+const SELECT = 'id,name,source,format,colors,created_by,revision,cards,card_rows:mazzi-cards(id,name,qty,section,position,scryfall_id,oracle_id,image_url,type_line,set_code,collector_number)';
 function client() {
   if (!supabase) throw new Error('Supabase non configurato.');
   return supabase;
@@ -29,6 +30,7 @@ function fromRow(row: DeckRow): SavedDeck {
   const cardRows = [...row.card_rows].sort((a, b) => a.position - b.position).map(c => ({
     id: c.id, name: c.name, qty: c.qty, section: c.section,
     scryfallId: c.scryfall_id, oracleId: c.oracle_id, imageUrl: c.image_url, typeLine: c.type_line,
+    setCode: c.set_code ?? null, collectorNumber: c.collector_number ?? null,
   }));
   const identities = new Map(cardRows.map(c => [entryKey(c), c]));
   const jsonCards = normalizeEntries(row.cards);
@@ -82,16 +84,35 @@ export async function saveSavedDeck(input: SaveDeckInput, options: {
   // Existing groups always keep their stored printing, even if a new lookup returns another one.
   const previous = input.expectedRevision === null ? [] : (await getSavedDeck(input.id)).cardRows;
   const assigned = new Map(previous.filter(c => c.scryfallId).map(c => [entryKey(c), c]));
+  // Stampa esatta richiesta con espansione + numero (es. da un elenco ManaBox): una sola richiesta per tutte.
+  const hinted = entries.filter(c => !assigned.has(entryKey(c)) && c.setCode && c.collectorNumber);
+  let printings: Awaited<ReturnType<typeof fetchPrintings>> = new Map();
+  if (hinted.length) {
+    try {
+      printings = await fetchPrintings(hinted.map(c => ({ setCode: c.setCode!, collectorNumber: c.collectorNumber! })));
+    } catch (err) {
+      if (options.signal?.aborted) throw err;
+      // Se la ricerca della stampa fallisce si ripiega sul nome, come per le carte senza espansione.
+    }
+  }
   const cards = entries.map(c => {
     const stored = assigned.get(entryKey(c));
     if (stored) return { ...c, scryfallId: stored.scryfallId, oracleId: stored.oracleId,
-      imageUrl: stored.imageUrl, typeLine: stored.typeLine };
+      imageUrl: stored.imageUrl, typeLine: stored.typeLine,
+      setCode: stored.setCode ?? null, collectorNumber: stored.collectorNumber ?? null };
+    const exact = c.setCode && c.collectorNumber ? printings.get(`${c.setCode}|${c.collectorNumber}`) : undefined;
+    if (exact && matchesName(exact, c.name) && firstImage(exact) && exact.type_line) {
+      return { ...c, ...cardIdentity(exact) };
+    }
+    // Senza una stampa verificata, espansione e numero scritti a mano non si salvano.
+    c = { ...c, setCode: null, collectorNumber: null };
     // IDs carried in a removed/re-added draft are not a new user-selectable identity.
     const cachedRaw = cachedScryfallCard(c.name);
     if (cachedRaw) return { ...c, ...cardIdentity(cachedRaw) };
     const cached = getCard(c.name);
     return { ...c, scryfallId: cached?.scryfallId ?? null, oracleId: cached?.oracleId ?? null,
-      imageUrl: cached?.faces[0]?.normal ?? null, typeLine: cached?.typeLine ?? null };
+      imageUrl: cached?.faces[0]?.normal ?? null, typeLine: cached?.typeLine ?? null,
+      setCode: null, collectorNumber: null };
   });
   const names = cards.filter(c => !c.scryfallId).map(c => c.name);
   if (names.length && !options.allowUnresolved) {

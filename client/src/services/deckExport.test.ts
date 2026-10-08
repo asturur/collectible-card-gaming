@@ -25,4 +25,9 @@ describe('deck export', () => {
     expect(deckFileName('Elfi / Verdi: "Top"?')).toBe('Elfi Verdi Top.txt');
     expect(deckFileName('   ')).toBe('mazzo.txt');
   });
+  it('scrive espansione e numero quando ci sono e li rilegge con lo stesso formato', () => {
+    const cards = [{ name: 'Forest', qty: 2, section: 'main' as const, setCode: 'mh3', collectorNumber: '123' }, { name: 'Island', qty: 1, section: 'side' as const }];
+    expect(formatDeckText(cards)).toBe('Deck\n2 Forest (MH3) 123\n\nSideboard\n1 Island\n');
+    expect(parseDeckText(formatDeckText(cards))).toEqual(cards);
+  });
 });

@@ -9,6 +9,9 @@ export interface DeckEntry {
   oracleId?: string | null;
   imageUrl?: string | null;
   typeLine?: string | null;
+  /** Espansione (codice Scryfall, minuscolo) e numero di collezione della stampa. */
+  setCode?: string | null;
+  collectorNumber?: string | null;
 }
 
 export const nameKey = (name: string): string => name.trim().toLowerCase();
@@ -29,7 +32,7 @@ export function normalizeEntries(cards: DeckEntry[]): DeckEntry[] {
   return [...groups.values()];
 }
 
-/** Printing hints are intentionally discarded: IDs are assigned automatically. */
+/** Le righe tipo "1 Forest (MH3) 123" conservano espansione e numero: servono a trovare la stampa esatta. */
 export function parseDeckText(text: string, recognizeSections = true): DeckEntry[] {
   const cards: DeckEntry[] = [];
   let section: DeckSection = 'main';
@@ -40,8 +43,11 @@ export function parseDeckText(text: string, recognizeSections = true): DeckEntry
     const match = line.match(/^(\d+)\s+(.+)$/);
     if (!match) continue;
     const qty = Number(match[1]);
-    const name = match[2].replace(/\s+\([^)]+\)\s+\S+$/, '').trim();
-    if (name && Number.isSafeInteger(qty) && qty > 0) cards.push({ name, qty, section });
+    const printing = match[2].match(/^(.*?)\s+\(([A-Za-z0-9]{2,6})\)\s+(\S+)$/);
+    const name = (printing ? printing[1] : match[2].replace(/\s+\([^)]+\)\s+\S+$/, '')).trim();
+    if (name && Number.isSafeInteger(qty) && qty > 0) {
+      cards.push(printing ? { name, qty, section, setCode: printing[2].toLowerCase(), collectorNumber: printing[3] } : { name, qty, section });
+    }
   }
   return normalizeEntries(cards);
 }
@@ -55,5 +61,6 @@ export function serializeEntry(card: DeckEntry) {
     name: card.name, qty: card.qty, section: card.section ?? 'main',
     scryfall_id: card.scryfallId ?? null, oracle_id: card.oracleId ?? null,
     image_url: card.imageUrl ?? null, type_line: card.typeLine ?? null,
+    set_code: card.setCode ?? null, collector_number: card.collectorNumber ?? null,
   };
 }

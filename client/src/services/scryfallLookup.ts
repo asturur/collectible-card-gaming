@@ -2,6 +2,8 @@
 export interface RawFaceImages { small?: string; normal?: string; art_crop?: string }
 export interface RawCard {
   id: string;
+  set?: string;
+  collector_number?: string;
   oracle_id?: string;
   name: string;
   printed_name?: string;
@@ -90,7 +92,25 @@ export function firstImage(card: RawCard): string | undefined {
 export function cardIdentity(card: RawCard) {
   if (!card.id || !firstImage(card) || !card.type_line) throw new Error(`Carta senza dati completi: ${card.name}`);
   return { scryfallId: card.id, oracleId: card.oracle_id ?? card.card_faces?.[0]?.oracle_id ?? null,
-    imageUrl: firstImage(card)!, typeLine: card.type_line };
+    imageUrl: firstImage(card)!, typeLine: card.type_line,
+    setCode: card.set ?? null, collectorNumber: card.collector_number ?? null };
+}
+
+/** Cerca le stampe esatte (espansione + numero) con una sola richiesta; chiave del risultato: "set|numero". */
+export async function fetchPrintings(hints: { setCode: string; collectorNumber: string }[]): Promise<Map<string, RawCard>> {
+  const found = new Map<string, RawCard>();
+  const unique = [...new Map(hints.map(h => [`${h.setCode}|${h.collectorNumber}`, h])).values()];
+  for (let i = 0; i < unique.length; i += 75) {
+    const batch = unique.slice(i, i + 75);
+    const response = await requestScryfall<{ data?: RawCard[] }>('/cards/collection', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ identifiers: batch.map(h => ({ set: h.setCode, collector_number: h.collectorNumber })) }),
+    });
+    for (const card of response.data.data ?? []) {
+      if (card.set && card.collector_number) found.set(`${card.set}|${card.collector_number}`, card);
+    }
+  }
+  return found;
 }
 
 async function resolveBatch(names: string[]): Promise<Map<string, RawCard>> {
