@@ -96,6 +96,20 @@ export function cardIdentity(card: RawCard) {
     setCode: card.set ?? null, collectorNumber: card.collector_number ?? null };
 }
 
+/** Espansione e numero di stampe già note per id Scryfall (una richiesta ogni 75 carte). */
+export async function fetchCardsById(ids: string[]): Promise<Map<string, RawCard>> {
+  const found = new Map<string, RawCard>();
+  const unique = [...new Set(ids)];
+  for (let i = 0; i < unique.length; i += 75) {
+    const response = await requestScryfall<{ data?: RawCard[] }>('/cards/collection', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ identifiers: unique.slice(i, i + 75).map(id => ({ id })) }),
+    });
+    for (const card of response.data.data ?? []) found.set(card.id, card);
+  }
+  return found;
+}
+
 /** Cerca le stampe esatte (espansione + numero) con una sola richiesta; chiave del risultato: "set|numero". */
 export async function fetchPrintings(hints: { setCode: string; collectorNumber: string }[]): Promise<Map<string, RawCard>> {
   const found = new Map<string, RawCard>();

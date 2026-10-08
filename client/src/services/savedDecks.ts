@@ -1,6 +1,6 @@
 import { supabase, TABLE_DECKS, TABLE_DECK_CARDS, subscribeToTable } from './supabase';
 import { entryKey, nameKey, normalizeEntries, serializeEntry, type DeckEntry } from './deckCards';
-import { cachedScryfallCard, cardIdentity, fetchPrintings, firstImage, matchesName, resolveScryfallNames } from './scryfallLookup';
+import { cachedScryfallCard, cardIdentity, fetchCardsById, fetchPrintings, firstImage, matchesName, resolveScryfallNames } from './scryfallLookup';
 import { getCard } from './scryfall';
 
 export interface SavedDeck {
@@ -95,6 +95,7 @@ export async function saveSavedDeck(input: SaveDeckInput, options: {
       // Se la ricerca della stampa fallisce si ripiega sul nome, come per le carte senza espansione.
     }
   }
+  const fromLocalMemory = new Set<string>();
   const cards = entries.map(c => {
     const stored = assigned.get(entryKey(c));
     if (stored) return { ...c, scryfallId: stored.scryfallId, oracleId: stored.oracleId,
@@ -110,6 +111,7 @@ export async function saveSavedDeck(input: SaveDeckInput, options: {
     const cachedRaw = cachedScryfallCard(c.name);
     if (cachedRaw) return { ...c, ...cardIdentity(cachedRaw) };
     const cached = getCard(c.name);
+    if (cached) fromLocalMemory.add(entryKey(c));
     return { ...c, scryfallId: cached?.scryfallId ?? null, oracleId: cached?.oracleId ?? null,
       imageUrl: cached?.faces[0]?.normal ?? null, typeLine: cached?.typeLine ?? null,
       setCode: null, collectorNumber: null };
@@ -127,6 +129,20 @@ export async function saveSavedDeck(input: SaveDeckInput, options: {
       const raw = resolved.get(nameKey(card.name));
       const identity = raw && cardIdentity(raw);
       if (identity) Object.assign(card, identity);
+    }
+  }
+  // Carte riconosciute dalla memoria locale (che non conserva l'espansione): la recupero dalla stampa già scelta.
+  const noSet = cards.filter(c => c.scryfallId && !c.setCode && fromLocalMemory.has(entryKey(c)));
+  if (noSet.length) {
+    try {
+      const byId = await fetchCardsById(noSet.map(c => c.scryfallId!));
+      for (const card of noSet) {
+        const raw = byId.get(card.scryfallId!);
+        if (raw?.set && raw.collector_number) { card.setCode = raw.set; card.collectorNumber = raw.collector_number; }
+      }
+    } catch (err) {
+      if (options.signal?.aborted) throw err;
+      // Espansione e numero sono facoltativi: senza di loro il mazzo si salva comunque.
     }
   }
   const unknown = cards.filter(c => !c.scryfallId || !c.imageUrl || !c.typeLine).map(c => c.name);
