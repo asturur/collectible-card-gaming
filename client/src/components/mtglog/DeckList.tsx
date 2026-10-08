@@ -3,8 +3,6 @@ import { MAX_DECK_NAME_LENGTH } from '../../services/supabase';
 import { listSavedDecks, subscribeSavedDecks, type SavedDeck } from '../../services/savedDecks';
 import { parseDeckText, type DeckEntry } from '../../services/deckCards';
 import { ManaIcons, ManaPips } from './ManaIcon';
-import { DECK_FORMATS } from './DeckEditor';
-import FilterTabs from '../ui/FilterTabs';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import { cx, TEXT_MINI, TEXT_MUTED } from '../ui/styles';
@@ -31,7 +29,6 @@ export default function DeckList({ onCreate, onImportFile }: DeckListProps) {
   const [pasteError, setPasteError] = useState('');
   const [pasteText, setPasteText] = useState('');
   const [colorFilter, setColorFilter] = useState<Set<string>>(new Set());
-  const [formatFilter, setFormatFilter] = useState('all');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   function handleFileChange(e: ChangeEvent<HTMLInputElement>) {
@@ -90,9 +87,9 @@ export default function DeckList({ onCreate, onImportFile }: DeckListProps) {
   // Colori: il mazzo deve contenerli tutti quelli selezionati (può averne altri).
   const visibleDecks = decks.filter(
     (d) =>
-      [...colorFilter].every((c) => d.colors.includes(c)) && (formatFilter === 'all' || d.format === formatFilter)
+      [...colorFilter].every((c) => d.colors.includes(c))
   );
-  const filtersActive = colorFilter.size > 0 || formatFilter !== 'all';
+  const filtersActive = colorFilter.size > 0;
 
   return (
     <>
@@ -122,14 +119,6 @@ export default function DeckList({ onCreate, onImportFile }: DeckListProps) {
                   Nessun filtro
                 </button>
               </div>
-            </div>
-            <div className="mb-3 rounded-lg border border-zaff-border bg-zaff-bg p-2.5">
-              <span className={cx('mb-1.5 block', TEXT_MINI)}>Tipo</span>
-              <FilterTabs
-                value={formatFilter}
-                onChange={setFormatFilter}
-                options={[{ value: 'all', label: 'Nessun filtro' }, ...DECK_FORMATS.map((f) => ({ value: f, label: f }))]}
-              />
             </div>
             {filtersActive && (
               <p className={cx('mb-2', TEXT_MINI)}>

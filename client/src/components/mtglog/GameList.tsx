@@ -340,7 +340,6 @@ export default function GameList({ userId, onEdit, onRematch }: GameListProps) {
   const [linkNotice, setLinkNotice] = useState('');
   // Ricerca e filtri dell'elenco (non toccano i dati, solo cosa si vede).
   const [query, setQuery] = useState('');
-  const [formatFilter, setFormatFilter] = useState('all');
   const [periodFilter, setPeriodFilter] = useState<'all' | '30' | 'year'>('all');
 
   async function loadGames() {
@@ -416,17 +415,12 @@ export default function GameList({ userId, onEdit, onRematch }: GameListProps) {
     }
   }
 
-  const formats = useMemo(
-    () => [...new Set(games.map((g) => g.format.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'it')),
-    [games]
-  );
   const visibleGames = useMemo(() => {
     const q = query.trim().toLowerCase();
     const now = new Date();
     const since30 = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
     const yearStart = `${now.getFullYear()}-01-01`;
     return games.filter((g) => {
-      if (formatFilter !== 'all' && g.format.trim() !== formatFilter) return false;
       if (periodFilter === '30' && g.date < since30) return false;
       if (periodFilter === 'year' && g.date < yearStart) return false;
       if (!q) return true;
@@ -435,8 +429,8 @@ export default function GameList({ userId, onEdit, onRematch }: GameListProps) {
         .toLowerCase();
       return haystack.includes(q);
     });
-  }, [games, query, formatFilter, periodFilter]);
-  const filtersActive = query.trim() !== '' || formatFilter !== 'all' || periodFilter !== 'all';
+  }, [games, query, periodFilter]);
+  const filtersActive = query.trim() !== '' || periodFilter !== 'all';
 
   async function handleDelete(id: string) {
     if (!supabase) return;
@@ -540,14 +534,6 @@ export default function GameList({ userId, onEdit, onRematch }: GameListProps) {
             ]}
           />
           </div>
-          {formats.length > 1 && (
-            <FilterTabs
-              className="mb-2.5"
-              value={formatFilter}
-              onChange={setFormatFilter}
-              options={[{ value: 'all', label: 'Tutti i formati' }, ...formats.map((f) => ({ value: f, label: f }))]}
-            />
-          )}
           <p className={`mb-2 ${TEXT_MINI}`}>
             {filtersActive ? `${visibleGames.length} di ${games.length} partite` : `${games.length} partite`}
             {filtersActive && (
@@ -558,7 +544,6 @@ export default function GameList({ userId, onEdit, onRematch }: GameListProps) {
                   className="underline"
                   onClick={() => {
                     setQuery('');
-                    setFormatFilter('all');
                     setPeriodFilter('all');
                   }}
                 >
