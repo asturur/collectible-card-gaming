@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import Button, { ButtonRouteLink } from '../ui/Button';
 import Modal from '../ui/Modal';
 import { BarsIcon, CardsIcon, DotsIcon } from '../ui/NavIcons';
@@ -12,34 +12,48 @@ export function deckLink(deckId: string): string {
   return `${window.location.origin}${appHref(paths.deck(deckId))}`;
 }
 
-const TAB_CLASS = 'h-16 min-h-16 w-full flex-col gap-0.5 px-1 text-xs';
+const TAB_CLASS = 'w-full gap-1.5 px-1';
+const TAB_ICON = 'size-5 shrink-0';
 
 interface DeckTabsProps {
+  /** Pagina in cui ci si trova: quel tasto è quello pieno (finché il pannello azioni è chiuso). */
+  active: 'deck' | 'stats';
+  deckTo: string;
   statsTo: string;
   actionsOpen: boolean;
-  onShowDeck: () => void;
+  onShowPage: () => void;
   onToggleActions: () => void;
 }
 
-/** Tre tasti affiancati in cima al mazzo: Deck (carte), Stats (statistiche) e Azioni (modifica, condividi, esporta, cancella). */
-export function DeckTabs({ statsTo, actionsOpen, onShowDeck, onToggleActions }: DeckTabsProps) {
-  return (
-    <div className="mb-3 grid grid-cols-3 gap-2">
-      <Button variant={actionsOpen ? 'ghost' : 'primary'} className={TAB_CLASS} aria-current="page" onClick={onShowDeck}>
-        <CardsIcon />
-        Deck
+/**
+ * Tre tasti affiancati, fissi in cima alle pagine del mazzo (Deck e Stats):
+ * Deck (carte), Stats (statistiche) e Azioni (modifica, condividi, esporta, cancella).
+ */
+export function DeckTabs({ active, deckTo, statsTo, actionsOpen, onShowPage, onToggleActions }: DeckTabsProps) {
+  const variantFor = (tab: 'deck' | 'stats') => (!actionsOpen && active === tab ? 'primary' : 'ghost');
+  const tab = (id: 'deck' | 'stats', to: string, icon: ReactNode, label: string) =>
+    active === id ? (
+      <Button variant={variantFor(id)} className={TAB_CLASS} aria-current="page" onClick={onShowPage}>
+        {icon}
+        {label}
       </Button>
-      <ButtonRouteLink to={statsTo} variant="ghost" className={TAB_CLASS}>
-        <BarsIcon />
-        Stats
+    ) : (
+      <ButtonRouteLink to={to} variant={variantFor(id)} className={TAB_CLASS}>
+        {icon}
+        {label}
       </ButtonRouteLink>
+    );
+  return (
+    <div className="sticky top-[env(safe-area-inset-top)] z-10 -mx-1 mb-2 grid grid-cols-3 gap-2 bg-zaff-surface px-1 pb-2 pt-1">
+      {tab('deck', deckTo, <CardsIcon className={TAB_ICON} />, 'Deck')}
+      {tab('stats', statsTo, <BarsIcon className={TAB_ICON} />, 'Stats')}
       <Button
         variant={actionsOpen ? 'primary' : 'ghost'}
         className={TAB_CLASS}
         aria-expanded={actionsOpen}
         onClick={onToggleActions}
       >
-        <DotsIcon />
+        <DotsIcon className={TAB_ICON} />
         Azioni
       </Button>
     </div>

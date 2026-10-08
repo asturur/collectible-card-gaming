@@ -403,7 +403,7 @@ export default function DeckCardsView({
       const el = sideRef.current;
       if (!el) return;
       const atBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2;
-      setActiveSection(el.getBoundingClientRect().top <= 140 || atBottom ? 'side' : 'main');
+      setActiveSection(el.getBoundingClientRect().top <= 150 || atBottom ? 'side' : 'main');
     }
     update();
     window.addEventListener('scroll', update, { passive: true, capture: true });
@@ -465,10 +465,11 @@ export default function DeckCardsView({
 
   return (
     <>
-      {/* Nell'editor i totali stanno già nella barra fissa in cima. */}
+      {/* Nell'editor i totali stanno già nella barra fissa in cima. Qui la barra sta
+          sotto i tre tasti fissi Deck / Stats / Azioni della pagina del mazzo. */}
       {!editable && (
         <>
-        <div className="sticky top-[env(safe-area-inset-top)] z-10 -mx-1 mb-3 rounded-lg border border-zaff-primary bg-zaff-surface px-3 py-2 text-sm font-semibold shadow-lg">
+        <div className="sticky top-[calc(3.25rem+env(safe-area-inset-top))] z-10 -mx-1 mb-3 rounded-lg border border-zaff-primary bg-zaff-surface px-3 py-2 text-sm font-semibold shadow-lg">
           {title && (
             <p className="mb-1 truncate text-base font-bold text-zaff-text" title={title}>
               {title}

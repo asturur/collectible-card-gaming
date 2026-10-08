@@ -11,10 +11,14 @@ export const ICON_PROPS = {
   'aria-hidden': true,
 } as const;
 
+interface IconProps {
+  className?: string;
+}
+
 /** Carte sovrapposte (Mazzi / Deck). */
-export function CardsIcon() {
+export function CardsIcon({ className }: IconProps) {
   return (
-    <svg {...ICON_PROPS}>
+    <svg {...ICON_PROPS} className={className}>
       <rect x="7" y="4" width="12" height="16" rx="2" />
       <path d="M4.5 7.5V17a2 2 0 0 0 1.5 1.9" />
     </svg>
@@ -22,18 +26,18 @@ export function CardsIcon() {
 }
 
 /** Istogramma (Statistiche / Stats). */
-export function BarsIcon() {
+export function BarsIcon({ className }: IconProps) {
   return (
-    <svg {...ICON_PROPS}>
+    <svg {...ICON_PROPS} className={className}>
       <path d="M5 20V11M12 20V4M19 20v-6" />
     </svg>
   );
 }
 
 /** Tre puntini (Altro / Azioni). */
-export function DotsIcon() {
+export function DotsIcon({ className }: IconProps) {
   return (
-    <svg {...ICON_PROPS}>
+    <svg {...ICON_PROPS} className={className}>
       <circle cx="5" cy="12" r="1.2" fill="currentColor" />
       <circle cx="12" cy="12" r="1.2" fill="currentColor" />
       <circle cx="19" cy="12" r="1.2" fill="currentColor" />

@@ -21,7 +21,7 @@ import { CrossedSwordsIcon, GridTile, PodiumIcon, StatsRingIcon, TILE_GRID } fro
 import { HEADING_PAGE, TEXT_MUTED } from '../ui/styles';
 import { useLeaveGuard } from '../ui/useLeaveGuard';
 import { canEdit, supabase, TABLE_GAMES } from '../../services/supabase';
-import { deleteSavedDeck } from '../../services/savedDecks';
+import { deleteSavedDeck, type SavedDeck } from '../../services/savedDecks';
 import type { DeckEntry } from '../../services/deckCards';
 import { matchupNamesFromPath, paths, playerNameFromPath } from '../../router';
 
@@ -133,9 +133,9 @@ function DeckDetailPage() {
   return <DeckDetailSession key={deckId} deckId={deckId!} />;
 }
 
-function DeckDetailSession({ deckId }: { deckId: string }) {
+/** Tasti fissi Deck / Stats / Azioni (con modifica, condividi, esporta, cancella) comuni alle pagine del mazzo. */
+function DeckPageFrame({ deckId, deck, active, children }: { deckId: string; deck: SavedDeck | null; active: 'deck' | 'stats'; children: ReactNode }) {
   const { userId } = useRegistro();
-  const { deck, loading, error } = useSavedDeck(deckId);
   const [deleteError, setDeleteError] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
@@ -181,28 +181,46 @@ function DeckDetailSession({ deckId }: { deckId: string }) {
   }
 
   return (
-    <SectionPage title={deck?.name ?? 'Dettaglio Mazzo'} ancestors={[DECKS_CRUMB]}>
-      {loading ? <p className={TEXT_MUTED}>Caricamento…</p> : deck && <>
-        <DeckTabs
-          statsTo={paths.savedDeckStats(deckId)}
-          actionsOpen={actionsOpen}
-          onShowDeck={() => setActionsOpen(false)}
-          onToggleActions={() => setActionsOpen((open) => !open)}
-        />
-        {actionsOpen && (
-          <DeckActionsPanel
-            editTo={canEdit(deck.createdBy, userId) ? paths.editDeck(deckId) : null}
-            deleting={deleting}
-            onDelete={handleDelete}
-            onShare={handleShare}
-            onExport={() => setExportOpen(true)}
-            notice={shareNotice}
+    <>
+      {deck && (
+        <>
+          <DeckTabs
+            active={active}
+            deckTo={paths.deck(deckId)}
+            statsTo={paths.savedDeckStats(deckId)}
+            actionsOpen={actionsOpen}
+            onShowPage={() => setActionsOpen(false)}
+            onToggleActions={() => setActionsOpen((open) => !open)}
           />
+          {actionsOpen && (
+            <DeckActionsPanel
+              editTo={canEdit(deck.createdBy, userId) ? paths.editDeck(deckId) : null}
+              deleting={deleting}
+              onDelete={handleDelete}
+              onShare={handleShare}
+              onExport={() => setExportOpen(true)}
+              notice={shareNotice}
+            />
+          )}
+        </>
+      )}
+      {children}
+      {deck && exportOpen && <DeckExportDialog deckName={deck.name} cards={deck.cards} onClose={() => setExportOpen(false)} />}
+      {deleteError && <p className="mt-3 text-sm text-error" role="alert">{deleteError}</p>}
+    </>
+  );
+}
+
+function DeckDetailSession({ deckId }: { deckId: string }) {
+  const { deck, loading, error } = useSavedDeck(deckId);
+  return (
+    <SectionPage title={deck?.name ?? 'Dettaglio Mazzo'} ancestors={[DECKS_CRUMB]}>
+      <DeckPageFrame deckId={deckId} deck={deck} active="deck">
+        {loading ? <p className={TEXT_MUTED}>Caricamento…</p> : deck && (
+          <DeckViewContents title={deck.name} source={deck.source} colors={deck.colors} cards={deck.cards.map(c => ({ ...c, section: c.section ?? 'main' }))} />
         )}
-        <DeckViewContents title={deck.name} source={deck.source} colors={deck.colors} cards={deck.cards.map(c => ({ ...c, section: c.section ?? 'main' }))} />
-        {exportOpen && <DeckExportDialog deckName={deck.name} cards={deck.cards} onClose={() => setExportOpen(false)} />}
-      </>}
-      {(error || deleteError) && <p className="mt-3 text-sm text-error" role="alert">{error || deleteError}</p>}
+        {error && <p className="mt-3 text-sm text-error" role="alert">{error}</p>}
+      </DeckPageFrame>
     </SectionPage>
   );
 }
@@ -214,9 +232,11 @@ function SavedDeckStatsPage() {
     <SectionPage title="Statistiche Mazzo" subtitle={deck?.name} ancestors={[
       DECKS_CRUMB, { label: deck?.name ?? 'Dettaglio Mazzo', to: paths.deck(deckId!) },
     ]}>
-      {loading ? <p className={TEXT_MUTED}>Caricamento…</p>
-        : deck && <DeckStatsContents key={deckId} cards={deck.cards} />}
-      {error && <p className="text-sm text-error" role="alert">{error}</p>}
+      <DeckPageFrame deckId={deckId!} deck={deck} active="stats">
+        {loading ? <p className={TEXT_MUTED}>Caricamento…</p>
+          : deck && <DeckStatsContents key={deckId} cards={deck.cards} />}
+        {error && <p className="text-sm text-error" role="alert">{error}</p>}
+      </DeckPageFrame>
     </SectionPage>
   );
 }
