@@ -70,6 +70,9 @@ function GameEditorPage({ rematch = false }: { rematch?: boolean }) {
 function GameEditorSession({ gameId, rematch }: { gameId?: string; rematch: boolean }) {
   const { userId, games, gamesLoading, gamesError } = useRegistro();
   const navigate = useNavigate();
+  // The form's original record is also its conflict baseline. Realtime updates
+  // must not replace it or discard a draft if someone deletes the record.
+  const [game, setGame] = useState<Game | null>(null);
   // L'elenco condiviso può non avere ancora una partita appena salvata (l'aggiornamento
   // in tempo reale arriva dopo): in quel caso la leggo direttamente per id.
   const [fetched, setFetched] = useState<Game | null>(null);
@@ -77,7 +80,7 @@ function GameEditorSession({ gameId, rematch }: { gameId?: string; rematch: bool
   const inList = gameId ? games.find((g) => g.id === gameId) : null;
   const candidate = gameId ? inList ?? fetched : null;
   useEffect(() => {
-    if (!gameId || inList || gamesLoading || gamesError || fetchDone || !supabase) return;
+    if (!gameId || game || inList || gamesLoading || gamesError || fetchDone || !supabase) return;
     let cancelled = false;
     void supabase.from(TABLE_GAMES).select('*').eq('id', gameId).maybeSingle().then(({ data }) => {
       if (cancelled) return;
@@ -85,11 +88,8 @@ function GameEditorSession({ gameId, rematch }: { gameId?: string; rematch: bool
       setFetchDone(true);
     });
     return () => { cancelled = true; };
-  }, [gameId, inList, gamesLoading, gamesError, fetchDone]);
+  }, [gameId, game, inList, gamesLoading, gamesError, fetchDone]);
   const forbidden = Boolean(candidate && !rematch && !canEdit(candidate.createdBy, userId));
-  // The form's original record is also its conflict baseline. Realtime updates
-  // must not replace it or discard a draft if someone deletes the record.
-  const [game, setGame] = useState<Game | null>(null);
   useEffect(() => {
     if (!game && candidate && !forbidden && !gamesError) setGame(candidate);
   }, [game, candidate, forbidden, gamesError]);

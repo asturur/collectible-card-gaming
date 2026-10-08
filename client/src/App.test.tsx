@@ -13,6 +13,8 @@ const mock = vi.hoisted(() => ({
   session: { user: { id: 'u1', email: 'test@example.com' } } as unknown,
   authListener: (_event: string, _session: unknown) => {},
   rows: [] as Record<string, unknown>[],
+  /** Id che l'elenco condiviso non restituisce ancora (ma la lettura per id sì). */
+  hiddenFromList: [] as string[],
   gamesError: null as { message: string } | null,
   subscribers: new Map<string, Set<() => void>>(),
 }));
@@ -37,10 +39,16 @@ vi.mock('./services/supabase', () => ({
       signOut: vi.fn(),
     },
     from: (table: string) => {
+      let wantedId: unknown = null;
       const query = {
         select: () => query,
         order: () => query,
-        then: (resolve: (value: unknown) => unknown) => Promise.resolve({ data: table === 'partite' ? mock.rows : [], count: 2, error: table === 'partite' ? mock.gamesError : null }).then(resolve),
+        eq: (_column: string, value: unknown) => { wantedId = value; return query; },
+        maybeSingle: () => Promise.resolve({
+          data: (table === 'partite' ? mock.rows : []).find((r) => r.id === wantedId) ?? null,
+          error: null,
+        }),
+        then: (resolve: (value: unknown) => unknown) => Promise.resolve({ data: table === 'partite' ? mock.rows.filter((r) => !mock.hiddenFromList.includes(String(r.id))) : [], count: 2, error: table === 'partite' ? mock.gamesError : null }).then(resolve),
       };
       return query;
     },
@@ -115,6 +123,7 @@ beforeEach(() => {
   mock.session = { user: { id: 'u1', email: 'test@example.com' } };
   mock.subscribers.clear();
   mock.gamesError = null;
+  mock.hiddenFromList = [];
   mock.rows = [{ id: 'g1', date: '2026-10-07', format: 'Commander', created_by: 'u1', players: [
     { name: 'Alice', deck: 'Draghi', colors: ['R'], life: 20, winner: true },
     { name: 'Bob', deck: 'Elfi', colors: ['G'], life: 0, winner: false },
@@ -537,6 +546,14 @@ describe('Registro routes', () => {
     mock.rows = [];
     await act(async () => { mock.subscribers.get('partite')?.forEach((onChange) => onChange()); });
     expect(screen.getByText('Note iniziali: Originale')).toBeInTheDocument();
+  });
+
+  it('opens a game for editing even if the shared list does not have it yet', async () => {
+    mock.rows[0].notes = 'Appena salvata';
+    mock.hiddenFromList = ['g1'];
+    openApp('/games/g1/edit');
+    expect(await screen.findByText('Note iniziali: Appena salvata')).toBeInTheDocument();
+    expect(screen.queryByText('Partita non trovata.')).not.toBeInTheDocument();
   });
 
   it.each(['/games/missing', '/games/missing/edit'])('handles a missing record at %s', async (path) => {
