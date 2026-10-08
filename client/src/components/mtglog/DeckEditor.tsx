@@ -361,8 +361,8 @@ export default function DeckEditor({ deckId, userId, initialDraft, onBack, onSav
       <fieldset disabled={saving}>
       {/* Totali sempre in vista mentre si scorre. */}
       <div className="sticky top-0 z-10 -mx-1 mb-3.5 flex items-center justify-between gap-2 rounded-lg border border-zaff-primary bg-zaff-surface px-3 py-2 text-sm font-semibold text-zaff-text shadow-lg">
-        <span>Main {mainTotal}</span>
-        <span>Side {sideTotal}</span>
+        <span>Main Deck {mainTotal}</span>
+        <span>Sideboard {sideTotal}</span>
         <span className="bg-gradient-to-r from-zaff-primary to-zaff-accent bg-clip-text text-lg font-bold text-transparent">
           Totale {total}
         </span>
@@ -567,7 +567,8 @@ export default function DeckEditor({ deckId, userId, initialDraft, onBack, onSav
         </Button>
       )}
       {/* Barra sempre in vista in fondo allo schermo: salvare senza scorrere. */}
-      <div className="sticky bottom-0 z-10 -mx-4 mt-4 grid grid-cols-2 gap-2.5 border-t border-zaff-border bg-zaff-surface px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 sm:-mx-6 sm:px-6">
+      {/* Sta sopra la barra di navigazione fissa (alta 4rem più la zona sicura). */}
+      <div className="sticky bottom-[calc(4rem+env(safe-area-inset-bottom))] z-10 -mx-4 mt-4 grid grid-cols-2 gap-2.5 border-t border-zaff-border bg-zaff-surface px-4 py-3 sm:-mx-6 sm:px-6">
         <Button size="lg" fullWidth onClick={() => handleSave()} disabled={saving}>
           {saving ? (persisting ? 'Salvataggio…' : 'Verifico le carte…') : deckId ? 'Salva Modifiche' : 'Salva Mazzo'}
         </Button>

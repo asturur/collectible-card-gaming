@@ -35,7 +35,9 @@ export default function DeckViewContents({
   colors,
   cards,
   statsTo,
+  title,
 }: {
+  title?: string;
   source: string;
   colors: string[];
   cards: DeckViewCard[];
@@ -56,7 +58,7 @@ export default function DeckViewContents({
         </div>
       )}
 
-      <DeckCardsView cards={cards} statsTo={statsTo} />
+      <DeckCardsView cards={cards} statsTo={statsTo} title={title} />
     </>
   );
 }

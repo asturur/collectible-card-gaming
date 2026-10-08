@@ -368,22 +368,51 @@ export default function DeckCardsView({
   cards,
   editable,
   statsTo,
+  title,
 }: {
   cards: DeckCardsItem[];
   editable?: DeckCardsEditable;
   statsTo?: string;
+  /** Nome del mazzo, mostrato nella barra fissa dei totali (solo in visualizzazione). */
+  title?: string;
 }) {
   const [mode, setMode] = useState<ViewMode>(readMode);
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   const [groupMode, setGroupMode] = useState<GroupMode>(readGroupMode);
+  /** Quale sezione si sta guardando scorrendo: illumina Main Deck o Sideboard nella barra fissa. */
+  const [activeSection, setActiveSection] = useState<'main' | 'side'>('main');
+  const sideRef = useRef<HTMLDivElement>(null);
 
   const main = cards.filter((c) => c.section !== 'side');
   const side = cards.filter((c) => c.section === 'side');
   const mainGroups = groupCards(main, getCard, groupMode);
   const sideGroups = groupCards(side, getCard, groupMode);
+  const hasSide = side.length > 0;
   const ordered = [...mainGroups, ...sideGroups].flatMap((g) => g.types.flatMap((t) => t.items));
 
   useDeckImages(cards);
+
+  useEffect(() => {
+    if (editable || !hasSide) {
+      setActiveSection('main');
+      return;
+    }
+    // La Sideboard si "accende" quando il suo titolo è salito sotto la barra
+    // fissa, o quando si è arrivati in fondo alla pagina.
+    function update() {
+      const el = sideRef.current;
+      if (!el) return;
+      const atBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2;
+      setActiveSection(el.getBoundingClientRect().top <= 140 || atBottom ? 'side' : 'main');
+    }
+    update();
+    window.addEventListener('scroll', update, { passive: true, capture: true });
+    window.addEventListener('resize', update);
+    return () => {
+      window.removeEventListener('scroll', update, { capture: true });
+      window.removeEventListener('resize', update);
+    };
+  }, [editable, hasSide, cards, mode, groupMode]);
 
   function chooseMode(m: ViewMode) {
     setMode(m);
@@ -439,10 +468,27 @@ export default function DeckCardsView({
       {/* Nell'editor i totali stanno già nella barra fissa in cima. */}
       {!editable && (
         <>
-        <div className="sticky top-0 z-10 -mx-1 mb-3 flex items-center justify-between gap-2 rounded-lg border border-zaff-primary bg-zaff-surface px-3 py-2 text-sm font-semibold text-zaff-text shadow-lg">
-          <span>Main {mainTotal}</span>
-          <span>Side {sideTotal}</span>
-          <span className="text-zaff-muted">Totale {mainTotal + sideTotal}</span>
+        <div className="sticky top-[env(safe-area-inset-top)] z-10 -mx-1 mb-3 rounded-lg border border-zaff-primary bg-zaff-surface px-3 py-2 text-sm font-semibold shadow-lg">
+          {title && (
+            <p className="mb-1 truncate text-base font-bold text-zaff-text" title={title}>
+              {title}
+            </p>
+          )}
+          <div className="flex items-center justify-between gap-2">
+            <span
+              aria-current={activeSection === 'main' ? 'true' : undefined}
+              className={activeSection === 'main' ? 'text-zaff-accent' : 'text-zaff-muted'}
+            >
+              Main Deck {mainTotal}
+            </span>
+            <span
+              aria-current={activeSection === 'side' ? 'true' : undefined}
+              className={activeSection === 'side' ? 'text-zaff-accent' : 'text-zaff-muted'}
+            >
+              Sideboard {sideTotal}
+            </span>
+            <span className="text-zaff-muted">Totale {mainTotal + sideTotal}</span>
+          </div>
         </div>
         {statsTo && <div className="mb-3"><DeckStatsLink to={statsTo} /></div>}
         </>
@@ -459,7 +505,9 @@ export default function DeckCardsView({
 
       <Section title="Main Deck" groups={mainGroups} total={mainTotal} mode={mode} onOpen={open} editable={editable} />
       {(side.length > 0 || editable) && (
-        <Section title="Sideboard" groups={sideGroups} total={sideTotal} mode={mode} onOpen={open} editable={editable} />
+        <div ref={sideRef}>
+          <Section title="Sideboard" groups={sideGroups} total={sideTotal} mode={mode} onOpen={open} editable={editable} />
+        </div>
       )}
 
       {openIndex !== null && <CardViewer items={ordered} startIndex={openIndex} onClose={() => setOpenIndex(null)} />}

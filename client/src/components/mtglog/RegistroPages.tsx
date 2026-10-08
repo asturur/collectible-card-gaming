@@ -153,7 +153,7 @@ function DeckDetailSession({ deckId }: { deckId: string }) {
             </Button>
           </div>
         )}
-        <DeckViewContents source={deck.source} colors={deck.colors} cards={deck.cards.map(c => ({ ...c, section: c.section ?? 'main' }))} statsTo={paths.savedDeckStats(deckId)} />
+        <DeckViewContents title={deck.name} source={deck.source} colors={deck.colors} cards={deck.cards.map(c => ({ ...c, section: c.section ?? 'main' }))} statsTo={paths.savedDeckStats(deckId)} />
       </>}
       {(error || deleteError) && <p className="mt-3 text-sm text-error" role="alert">{error || deleteError}</p>}
     </SectionPage>
