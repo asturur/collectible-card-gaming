@@ -379,8 +379,9 @@ describe('Registro routes', () => {
     expect(screen.getByRole('heading', { name: 'Produzione di mana' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Tipi di carte' })).toBeInTheDocument();
     const breadcrumbs = screen.getByRole('navigation', { name: 'Percorso di navigazione' });
-    expect(within(breadcrumbs).getAllByRole('listitem').map(item => item.textContent)).toEqual(['Home', 'Mazzi', 'Elfi', 'Statistiche Mazzo']);
-    expect(within(breadcrumbs).getByRole('link', { name: 'Elfi' })).toHaveAttribute('href', '/decks/d1');
+    expect(within(breadcrumbs).getAllByRole('listitem').map(item => item.textContent)).toEqual(['Home', 'Mazzi', 'Elfi']);
+    expect(screen.getByRole('heading', { name: 'Elfi' })).toBeInTheDocument();
+    expect(screen.getByText(/Main Deck 30/)).toBeInTheDocument();
     await user.click(screen.getByRole('switch', { name: 'Conta il mana incolore' }));
     expect(screen.getByRole('switch', { name: 'Conta il mana incolore' })).toHaveAttribute('aria-checked', 'true');
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
@@ -414,7 +415,7 @@ describe('Registro routes', () => {
     expect(await screen.findByRole('heading', { name: 'Elfi' })).toBeInTheDocument();
     await act(async () => { await router.navigate(1); });
     expect(await screen.findByText(/Solo Main Deck · 30 carte/)).toBeInTheDocument();
-    await user.click(within(screen.getByRole('navigation', { name: 'Percorso di navigazione' })).getByRole('link', { name: 'Elfi' }));
+    await user.click(screen.getByRole('link', { name: 'Deck' }));
     expect(await screen.findByRole('heading', { name: 'Elfi' })).toBeInTheDocument();
   });
 
@@ -436,8 +437,7 @@ describe('Registro routes', () => {
     await act(async () => { await router.navigate('/decks/d2/stats'); });
     expect(await screen.findByText(/Solo Main Deck · 5 carte/)).toBeInTheDocument();
     await act(async () => { resolveFirst(savedDeck); });
-    const breadcrumbs = screen.getByRole('navigation', { name: 'Percorso di navigazione' });
-    expect(within(breadcrumbs).getByRole('link', { name: 'Altro mazzo' })).toHaveAttribute('href', '/decks/d2');
+    expect(screen.getByRole('heading', { name: 'Altro mazzo' })).toBeInTheDocument();
     expect(screen.queryByText(/Solo Main Deck · 30 carte/)).not.toBeInTheDocument();
     expect(mock.subscribers.get('saved-decks')?.size).toBe(1);
   });

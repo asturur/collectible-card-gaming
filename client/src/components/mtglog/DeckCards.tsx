@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { getCard, isMissing, type ScryCard } from '../../services/scryfall';
 import { useDeckImages } from './useDeckImages';
-import { DeckStatsLink } from './DeckStats';
 import { groupCards, type GroupedColor, type GroupMode } from './cardGroups';
 import { ManaIcons } from './ManaIcon';
 import { cx, TEXT_MINI } from '../ui/styles';
@@ -376,22 +375,13 @@ function Section({
 export default function DeckCardsView({
   cards,
   editable,
-  statsTo,
-  title,
 }: {
   cards: DeckCardsItem[];
   editable?: DeckCardsEditable;
-  statsTo?: string;
-  /** Nome del mazzo, mostrato nella barra fissa dei totali (solo in visualizzazione). */
-  title?: string;
 }) {
   const [mode, setMode] = useState<ViewMode>(readMode);
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   const [groupMode, setGroupMode] = useState<GroupMode>(readGroupMode);
-  /** Quale sezione si sta guardando scorrendo: illumina Main Deck o Sideboard nella barra fissa. */
-  const [activeSection, setActiveSection] = useState<'main' | 'side'>('main');
-  const sideRef = useRef<HTMLDivElement>(null);
-
   const main = cards.filter((c) => c.section !== 'side');
   const side = cards.filter((c) => c.section === 'side');
   const mainGroups = groupCards(main, getCard, groupMode);
@@ -400,28 +390,6 @@ export default function DeckCardsView({
   const ordered = [...mainGroups, ...sideGroups].flatMap((g) => g.types.flatMap((t) => t.items));
 
   useDeckImages(cards);
-
-  useEffect(() => {
-    if (editable || !hasSide) {
-      setActiveSection('main');
-      return;
-    }
-    // La Sideboard si "accende" quando il suo titolo è salito sotto la barra
-    // fissa, o quando si è arrivati in fondo alla pagina.
-    function update() {
-      const el = sideRef.current;
-      if (!el) return;
-      const atBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2;
-      setActiveSection(el.getBoundingClientRect().top <= 150 || atBottom ? 'side' : 'main');
-    }
-    update();
-    window.addEventListener('scroll', update, { passive: true, capture: true });
-    window.addEventListener('resize', update);
-    return () => {
-      window.removeEventListener('scroll', update, { capture: true });
-      window.removeEventListener('resize', update);
-    };
-  }, [editable, hasSide, cards, mode, groupMode]);
 
   function chooseMode(m: ViewMode) {
     setMode(m);
@@ -474,36 +442,6 @@ export default function DeckCardsView({
 
   return (
     <>
-      {/* Nell'editor i totali stanno già nella barra fissa in cima. Qui la barra sta
-          sotto i tre tasti fissi Deck / Stats / Azioni della pagina del mazzo. */}
-      {!editable && (
-        <>
-        <div className="sticky top-[calc(3.25rem+env(safe-area-inset-top))] z-10 -mx-1 mb-3 rounded-lg border border-zaff-primary bg-zaff-surface px-3 py-2 text-sm font-semibold shadow-lg">
-          {title && (
-            <p className="mb-1 truncate text-base font-bold text-zaff-text" title={title}>
-              {title}
-            </p>
-          )}
-          <div className="flex items-center justify-between gap-2">
-            <span
-              aria-current={activeSection === 'main' ? 'true' : undefined}
-              className={activeSection === 'main' ? 'text-zaff-accent' : 'text-zaff-muted'}
-            >
-              Main Deck {mainTotal}
-            </span>
-            <span
-              aria-current={activeSection === 'side' ? 'true' : undefined}
-              className={activeSection === 'side' ? 'text-zaff-accent' : 'text-zaff-muted'}
-            >
-              Sideboard {sideTotal}
-            </span>
-            <span className="text-zaff-muted">Totale {mainTotal + sideTotal}</span>
-          </div>
-        </div>
-        {statsTo && <div className="mb-3"><DeckStatsLink to={statsTo} /></div>}
-        </>
-      )}
-
       <div className="mb-2.5 grid grid-cols-2 gap-2.5">
         {toggleBtn('grid', 'Griglia')}
         {toggleBtn('list', 'Lista')}
@@ -515,7 +453,7 @@ export default function DeckCardsView({
 
       <Section title="Main Deck" groups={mainGroups} total={mainTotal} mode={mode} onOpen={open} editable={editable} />
       {(side.length > 0 || editable) && (
-        <div ref={sideRef}>
+        <div id="deck-sideboard">
           <Section title="Sideboard" groups={sideGroups} total={sideTotal} mode={mode} onOpen={open} editable={editable} />
         </div>
       )}

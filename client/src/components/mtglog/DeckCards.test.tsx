@@ -11,7 +11,7 @@ const card = { name: 'Delver', scryfallId: 'pinned', oracleId: 'oracle', exactMa
 beforeEach(() => { localStorage.clear(); vi.clearAllMocks(); vi.mocked(getCard).mockImplementation(name => name === 'Delver' ? card as never : undefined); });
 describe('Registro card controls with pinned identities', () => {
   it('keeps grid/list and color/type controls, front/back viewing and statistics working', async () => {
-    const user = userEvent.setup(); render(<MemoryRouter><DeckCardsView cards={[{ name: 'Delver', qty: 2, scryfallId: 'pinned' }]} statsTo="/decks/deck/stats" /></MemoryRouter>);
+    const user = userEvent.setup(); render(<MemoryRouter><DeckCardsView cards={[{ name: 'Delver', qty: 2, scryfallId: 'pinned' }]} /></MemoryRouter>);
     expect(getCard).toHaveBeenCalledWith('Delver', 'pinned');
     await user.click(screen.getByRole('button', { name: /Lista/ }));
     await user.click(screen.getByRole('button', { name: /Tipo/ }));
@@ -20,7 +20,6 @@ describe('Registro card controls with pinned identities', () => {
     await user.click(within(viewer).getByRole('button', { name: /Gira la carta/ }));
     expect(within(viewer).getByRole('img', { name: 'Delver' })).toHaveAttribute('src', 'back.jpg');
     await user.keyboard('{Escape}');
-    expect(screen.getByRole('link', { name: 'Statistiche del mazzo' })).toHaveAttribute('href', '/decks/deck/stats');
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
   it('keeps correction and quantity actions available for unresolved groups', async () => {

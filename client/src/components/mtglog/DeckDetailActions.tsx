@@ -33,12 +33,12 @@ export function DeckTabs({ active, deckTo, statsTo, actionsOpen, onShowPage, onT
   const variantFor = (tab: 'deck' | 'stats') => (!actionsOpen && active === tab ? 'primary' : 'ghost');
   const tab = (id: 'deck' | 'stats', to: string, icon: ReactNode, label: string) =>
     active === id ? (
-      <Button variant={variantFor(id)} className={TAB_CLASS} aria-current="page" onClick={onShowPage}>
+      <Button variant={variantFor(id)} className={TAB_CLASS} aria-current={actionsOpen ? undefined : 'page'} onClick={onShowPage}>
         {icon}
         {label}
       </Button>
     ) : (
-      <ButtonRouteLink to={to} variant={variantFor(id)} className={TAB_CLASS}>
+      <ButtonRouteLink to={to} variant={variantFor(id)} className={TAB_CLASS} onClick={onShowPage}>
         {icon}
         {label}
       </ButtonRouteLink>
@@ -56,6 +56,32 @@ export function DeckTabs({ active, deckTo, statsTo, actionsOpen, onShowPage, onT
         <DotsIcon className={TAB_ICON} />
         Azioni
       </Button>
+    </div>
+  );
+}
+
+interface DeckSummaryBarProps {
+  title: string;
+  main: number;
+  side: number;
+  /** Sezione che si sta guardando scorrendo le carte (null: nessuna in evidenza). */
+  highlight: 'main' | 'side' | null;
+}
+
+/**
+ * Barra fissa sotto i tre tasti: nome del mazzo e totali. Resta uguale in Deck,
+ * Stats e Azioni, che sono tre contenuti della stessa pagina.
+ */
+export function DeckSummaryBar({ title, main, side, highlight }: DeckSummaryBarProps) {
+  const tone = (section: 'main' | 'side') => (highlight === section ? 'text-zaff-accent' : 'text-zaff-muted');
+  return (
+    <div className="sticky top-[calc(3.25rem+env(safe-area-inset-top))] z-10 -mx-1 mb-3 rounded-lg border border-zaff-primary bg-zaff-surface px-3 py-2 text-sm font-semibold shadow-lg">
+      <p className="mb-1 truncate text-base font-bold text-zaff-text" title={title}>{title}</p>
+      <div className="flex items-center justify-between gap-2">
+        <span aria-current={highlight === 'main' ? 'true' : undefined} className={tone('main')}>Main Deck {main}</span>
+        <span aria-current={highlight === 'side' ? 'true' : undefined} className={tone('side')}>Sideboard {side}</span>
+        <span className="text-zaff-muted">Totale {main + side}</span>
+      </div>
     </div>
   );
 }

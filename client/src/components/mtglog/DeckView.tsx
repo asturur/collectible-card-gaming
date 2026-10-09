@@ -36,15 +36,10 @@ export default function DeckViewContents({
   source,
   colors,
   cards,
-  statsTo,
-  title,
 }: {
-  title?: string;
   source: string;
   colors: string[];
   cards: DeckViewCard[];
-  /** Collegamento "Statistiche" sotto la barra dei totali (oggi lo offre il tasto Stats della pagina). */
-  statsTo?: string;
 }) {
   const label = source === 'precon' ? 'Precon' : source === 'brew' ? 'Homebrew' : null;
 
@@ -61,7 +56,7 @@ export default function DeckViewContents({
         </div>
       )}
 
-      <DeckCardsView cards={cards} statsTo={statsTo} title={title} />
+      <DeckCardsView cards={cards} />
     </>
   );
 }

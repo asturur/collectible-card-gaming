@@ -8,7 +8,7 @@ import DeckEditor from './DeckEditor';
 import DeckViewContents from './DeckView';
 import DeckStatsContents from './DeckStats';
 import { useSavedDeck } from './useSavedDeck';
-import { DeckActionsPanel, DeckExportDialog, DeckTabs, deckLink } from './DeckDetailActions';
+import { DeckActionsPanel, DeckExportDialog, DeckSummaryBar, DeckTabs, deckLink } from './DeckDetailActions';
 import GameForm from './GameForm';
 import GameList, { type Game } from './GameList';
 import GameStats from './GameStats';
@@ -128,9 +128,12 @@ function DecksPage() {
   );
 }
 
+/** Deck e Stats sono due indirizzi della stessa pagina: titolo, tasti e barra dei totali restano, cambia il contenuto. */
 function DeckDetailPage() {
   const { deckId } = useParams();
-  return <DeckDetailSession key={deckId} deckId={deckId!} />;
+  const { pathname } = useLocation();
+  const active = /\/stats\/?$/.test(pathname) ? 'stats' : 'deck';
+  return <DeckDetailSession key={deckId} deckId={deckId!} active={active} />;
 }
 
 /** Tasti fissi Deck / Stats / Azioni (con modifica, condividi, esporta, cancella) comuni alle pagine del mazzo. */
@@ -141,7 +144,30 @@ function DeckPageFrame({ deckId, deck, active, children }: { deckId: string; dec
   const [actionsOpen, setActionsOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [shareNotice, setShareNotice] = useState('');
+  const [section, setSection] = useState<'main' | 'side'>('main');
   const guard = useLeaveGuard();
+  const mainTotal = deck ? deck.cards.filter((c) => c.section !== 'side').reduce((sum, c) => sum + c.qty, 0) : 0;
+  const sideTotal = deck ? deck.cards.filter((c) => c.section === 'side').reduce((sum, c) => sum + c.qty, 0) : 0;
+  const showingCards = active === 'deck' && !actionsOpen;
+
+  // Scorrendo le carte, la barra illumina Main Deck o Sideboard: la Sideboard si
+  // "accende" quando il suo titolo sale sotto la barra, o in fondo alla pagina.
+  useEffect(() => {
+    if (!showingCards || !deck) return;
+    function update() {
+      const el = document.getElementById('deck-sideboard');
+      if (!el) { setSection('main'); return; }
+      const atBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2;
+      setSection(el.getBoundingClientRect().top <= 150 || atBottom ? 'side' : 'main');
+    }
+    update();
+    window.addEventListener('scroll', update, { passive: true, capture: true });
+    window.addEventListener('resize', update);
+    return () => {
+      window.removeEventListener('scroll', update, { capture: true });
+      window.removeEventListener('resize', update);
+    };
+  }, [showingCards, deck]);
 
   async function handleShare() {
     if (!deck) return;
@@ -192,6 +218,7 @@ function DeckPageFrame({ deckId, deck, active, children }: { deckId: string; dec
             onShowPage={() => setActionsOpen(false)}
             onToggleActions={() => setActionsOpen((open) => !open)}
           />
+          <DeckSummaryBar title={deck.name} main={mainTotal} side={sideTotal} highlight={showingCards ? section : null} />
           {actionsOpen && (
             <DeckActionsPanel
               editTo={canEdit(deck.createdBy, userId) ? paths.editDeck(deckId) : null}
@@ -204,38 +231,23 @@ function DeckPageFrame({ deckId, deck, active, children }: { deckId: string; dec
           )}
         </>
       )}
-      {children}
+      {/* Il contenuto di Deck o Stats resta in memoria (nascosto) mentre sono aperte le Azioni. */}
+      <div hidden={actionsOpen}>{children}</div>
       {deck && exportOpen && <DeckExportDialog deckName={deck.name} cards={deck.cards} onClose={() => setExportOpen(false)} />}
       {deleteError && <p className="mt-3 text-sm text-error" role="alert">{deleteError}</p>}
     </>
   );
 }
 
-function DeckDetailSession({ deckId }: { deckId: string }) {
+function DeckDetailSession({ deckId, active }: { deckId: string; active: 'deck' | 'stats' }) {
   const { deck, loading, error } = useSavedDeck(deckId);
   return (
     <SectionPage title={deck?.name ?? 'Dettaglio Mazzo'} ancestors={[DECKS_CRUMB]}>
-      <DeckPageFrame deckId={deckId} deck={deck} active="deck">
-        {loading ? <p className={TEXT_MUTED}>Caricamento…</p> : deck && (
-          <DeckViewContents title={deck.name} source={deck.source} colors={deck.colors} cards={deck.cards.map(c => ({ ...c, section: c.section ?? 'main' }))} />
-        )}
+      <DeckPageFrame deckId={deckId} deck={deck} active={active}>
+        {loading ? <p className={TEXT_MUTED}>Caricamento…</p> : deck && (active === 'stats'
+          ? <DeckStatsContents key={deckId} cards={deck.cards} />
+          : <DeckViewContents source={deck.source} colors={deck.colors} cards={deck.cards.map(c => ({ ...c, section: c.section ?? 'main' }))} />)}
         {error && <p className="mt-3 text-sm text-error" role="alert">{error}</p>}
-      </DeckPageFrame>
-    </SectionPage>
-  );
-}
-
-function SavedDeckStatsPage() {
-  const { deckId } = useParams();
-  const { deck, loading, error } = useSavedDeck(deckId!);
-  return (
-    <SectionPage title="Statistiche Mazzo" subtitle={deck?.name} ancestors={[
-      DECKS_CRUMB, { label: deck?.name ?? 'Dettaglio Mazzo', to: paths.deck(deckId!) },
-    ]}>
-      <DeckPageFrame deckId={deckId!} deck={deck} active="stats">
-        {loading ? <p className={TEXT_MUTED}>Caricamento…</p>
-          : deck && <DeckStatsContents key={deckId} cards={deck.cards} />}
-        {error && <p className="text-sm text-error" role="alert">{error}</p>}
       </DeckPageFrame>
     </SectionPage>
   );
@@ -369,7 +381,7 @@ export const registroRoutes: RouteObject[] = [
   { path: 'decks', element: <DecksPage /> },
   { path: 'decks/new', element: <DeckEditorPage /> },
   { path: 'decks/:deckId', element: <DeckDetailPage /> },
-  { path: 'decks/:deckId/stats', element: <SavedDeckStatsPage /> },
+  { path: 'decks/:deckId/stats', element: <DeckDetailPage /> },
   { path: 'decks/:deckId/edit', element: <DeckEditorPage /> },
   { path: 'stats', element: <StatsMenuPage /> },
   { path: 'stats/decks', element: <SectionPage title="Statistiche Mazzi" subtitle="Percentuale di vittoria di ogni mazzo, su tutte le partite." wide ancestors={[STATS_CRUMB]}><GameStats /></SectionPage> },
