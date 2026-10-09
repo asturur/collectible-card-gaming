@@ -4,7 +4,7 @@ import { useDeckImages } from './useDeckImages';
 import { DeckStatsLink } from './DeckStats';
 import { groupCards, type GroupedColor, type GroupMode } from './cardGroups';
 import { ManaIcons } from './ManaIcon';
-import { cx } from '../ui/styles';
+import { cx, TEXT_MINI } from '../ui/styles';
 import Badge from '../ui/Badge';
 import CloseButton from '../ui/CloseButton';
 
@@ -16,6 +16,13 @@ export interface DeckCardsItem {
   scryfallId?: string | null;
   qty: number;
   section?: 'main' | 'side' | string;
+  setCode?: string | null;
+  collectorNumber?: string | null;
+}
+
+/** "MH3 · 123": espansione e numero di collezione, se la stampa li conosce. */
+function printingLabel(card: DeckCardsItem): string {
+  return card.setCode && card.collectorNumber ? `${card.setCode.toUpperCase()} · ${card.collectorNumber}` : '';
 }
 
 /** Modifica dell'elenco (solo nell'editor mazzi): copie con −/+ (a 1 copia il
@@ -142,6 +149,7 @@ function CardViewer({
             {item.name}
             {item.qty > 1 ? ` · ×${item.qty}` : ''}
           </div>
+          {printingLabel(item) && <div className="text-xs text-white/70">{printingLabel(item)}</div>}
           <div className="text-xs text-white/70">
             {index + 1} / {items.length}
           </div>
@@ -289,8 +297,9 @@ function CardList({ cards, onOpen, editable }: ViewProps) {
                 ) : (
                   <span className="h-14 w-14 shrink-0 rounded border border-zaff-border bg-zaff-surface" />
                 )}
-                <span className="min-w-0 flex-1 truncate">
-                  {editable ? c.name : `${c.qty}× ${c.name}`}
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate">{editable ? c.name : `${c.qty}× ${c.name}`}</span>
+                  {printingLabel(c) && <span className={cx('block truncate', TEXT_MINI)}>{printingLabel(c)}</span>}
                 </span>
               </button>
             )}

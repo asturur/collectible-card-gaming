@@ -10,6 +10,8 @@ export interface DeckViewCard {
   scryfallId?: string | null;
   qty: number;
   section: 'main' | 'side';
+  setCode?: string | null;
+  collectorNumber?: string | null;
 }
 
 /** Dalle righe di `mazzi.cards` (formato libero) a carte ben formate. */
