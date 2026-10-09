@@ -483,8 +483,8 @@ describe('Registro routes', () => {
     await user.click(within(navigation()).getByRole('link', { name: 'Statistiche' }));
     expect(router.state.location.pathname).toBe('/games');
     const stats = screen.getByRole('group', { name: 'Statistiche' });
-    expect(within(stats).getByRole('link', { name: /Mazzi/ })).toHaveAttribute('href', '/collectible-card-gaming/stats/decks');
-    expect(within(stats).getByRole('link', { name: /Per Sfida/ })).toHaveAttribute('href', '/collectible-card-gaming/stats/matchups');
+    expect(within(stats).getByRole('link', { name: /Mazzi/ })).toHaveAttribute('href', '/stats/decks');
+    expect(within(stats).getByRole('link', { name: /Per Sfida/ })).toHaveAttribute('href', '/stats/matchups');
     await user.click(within(navigation()).getByRole('link', { name: 'Altro' }));
     expect(screen.queryByRole('group', { name: 'Statistiche' })).not.toBeInTheDocument();
     expect(within(screen.getByRole('group', { name: 'Altro' })).getByRole('button', { name: /Esci/ })).toBeInTheDocument();
