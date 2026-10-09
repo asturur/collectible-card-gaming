@@ -239,6 +239,9 @@ Older `?partita=ID` links redirect to `/games/:gameId`. Imported deck input is c
 in router history state. Unsaved form changes are not persisted across refresh.
 Game forms guard navigation/Back and refresh; editor persistence blocks leaving
 until the write completes. The bottom navigation uses real router links.
+Tapping Statistiche or Altro in the bottom bar opens a speed dial (`ui/SpeedDial.tsx`)
+of labelled router links instead of an intermediate menu page; the tab itself stays a
+real link to `/stats` or `/more`, which still open directly as pages.
 Deck list and deck statistics link to the same `/decks/:deckId` page. Saving or
 cancelling an existing deck edit returns to its detail; creating a deck opens its
 new detail page. Shared breadcrumbs show the page hierarchy (Home → section →

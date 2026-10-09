@@ -475,6 +475,27 @@ describe('Registro routes', () => {
     expect(router.state.location.pathname).toBe('/stats');
   });
 
+  it('opens Statistiche and Altro as a speed dial of router links without leaving the page', async () => {
+    const user = userEvent.setup();
+    const { router } = openApp('/games');
+    await screen.findByRole('heading', { name: 'Partite Salvate' });
+    const navigation = () => screen.getByRole('navigation', { name: 'Navigazione principale' });
+    await user.click(within(navigation()).getByRole('link', { name: 'Statistiche' }));
+    expect(router.state.location.pathname).toBe('/games');
+    const stats = screen.getByRole('group', { name: 'Statistiche' });
+    expect(within(stats).getByRole('link', { name: /Mazzi/ })).toHaveAttribute('href', '/collectible-card-gaming/stats/decks');
+    expect(within(stats).getByRole('link', { name: /Per Sfida/ })).toHaveAttribute('href', '/collectible-card-gaming/stats/matchups');
+    await user.click(within(navigation()).getByRole('link', { name: 'Altro' }));
+    expect(screen.queryByRole('group', { name: 'Statistiche' })).not.toBeInTheDocument();
+    expect(within(screen.getByRole('group', { name: 'Altro' })).getByRole('button', { name: /Esci/ })).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('group')).not.toBeInTheDocument();
+    await user.click(within(navigation()).getByRole('link', { name: 'Statistiche' }));
+    await user.click(within(screen.getByRole('group', { name: 'Statistiche' })).getByRole('link', { name: /Giocatori/ }));
+    expect(router.state.location.pathname).toBe('/stats/players');
+    expect(screen.queryByRole('group', { name: 'Statistiche' })).not.toBeInTheDocument();
+  });
+
   it('renders a shared game detail on a direct URL with its existing export controls', async () => {
     openApp('/games/g1');
     expect(await screen.findByRole('button', { name: /Esporta Risultati/ })).toBeInTheDocument();
