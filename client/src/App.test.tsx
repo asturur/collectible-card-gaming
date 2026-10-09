@@ -580,7 +580,7 @@ describe('Registro routes', () => {
     openApp('/collectible-card-gaming/games', '/collectible-card-gaming');
     const navigation = await screen.findByRole('navigation', { name: 'Navigazione principale' });
     expect(within(navigation).getByRole('link', { name: 'Mazzi' })).toHaveAttribute('href', '/collectible-card-gaming/decks');
-    expect(within(navigation).getByRole('link', { name: 'Home' })).toHaveAttribute('href', '/collectible-card-gaming/');
+    expect(within(navigation).getByRole('link', { name: 'Home' })).toHaveAttribute('href', '/collectible-card-gaming');
   });
 
   it('shows an unknown-route page with a link home', async () => {
