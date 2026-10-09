@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { useLocation, useNavigate, useParams, type RouteObject } from 'react-router';
+import { Navigate, useLocation, useNavigate, useParams, type RouteObject } from 'react-router';
 import { useRegistro } from '../MtgLog';
 import HomeOverview from './HomeOverview';
 import PlayersRoster from './PlayersRoster';
@@ -16,8 +16,6 @@ import Standings, { PlayerStatsDetail } from './Standings';
 import MatchupStats, { MatchupStatsDetail } from './MatchupStats';
 import { computeMatchups, computeTally, matchupKey, rowToGame } from './stats';
 import SectionPage from '../ui/SectionPage';
-import Button, { ButtonRouteLink } from '../ui/Button';
-import { CrossedSwordsIcon, GridTile, PodiumIcon, StatsRingIcon, TILE_GRID } from '../ui/Tile';
 import { HEADING_PAGE, TEXT_MUTED } from '../ui/styles';
 import { useLeaveGuard } from '../ui/useLeaveGuard';
 import { canEdit, supabase, TABLE_GAMES } from '../../services/supabase';
@@ -27,7 +25,6 @@ import { matchupNamesFromPath, paths, playerNameFromPath } from '../../router';
 
 const DECKS_CRUMB = { label: 'Mazzi', to: paths.decks };
 const GAMES_CRUMB = { label: 'Partite', to: paths.games };
-const STATS_CRUMB = { label: 'Statistiche', to: paths.stats };
 
 /** All game statistics use the already mounted Registro query and subscription. */
 function GameStatisticsData({ children }: { children: ReactNode }) {
@@ -284,22 +281,10 @@ function DeckEditorSession({ deckId }: { deckId?: string }) {
   );
 }
 
-function StatsMenuPage() {
-  return (
-    <SectionPage title="Statistiche">
-      <div className={TILE_GRID}>
-        <GridTile graphic={<StatsRingIcon />} label="Mazzi" to={paths.deckStats} />
-        <GridTile graphic={<PodiumIcon />} label="Giocatori" to={paths.playerStats} />
-        <GridTile graphic={<CrossedSwordsIcon />} label="Per Sfida" to={paths.matchups} />
-      </div>
-    </SectionPage>
-  );
-}
-
 function PlayerStatsPage() {
   const { games } = useRegistro();
   return (
-    <SectionPage title="Statistiche Giocatori" subtitle="Classifica generale: partite vinte da ciascuno e come si dividono tutte le vittorie." wide ancestors={[STATS_CRUMB]}>
+    <SectionPage title="Statistiche Giocatori" subtitle="Classifica generale: partite vinte da ciascuno e come si dividono tutte le vittorie." wide>
       <GameStatisticsData><Standings rows={computeTally(games)} showPie /></GameStatisticsData>
     </SectionPage>
   );
@@ -312,7 +297,7 @@ function PlayerDetailPage() {
   const row = computeTally(games).find(player => player.name === playerName);
   return (
     <SectionPage title={playerName ?? 'Statistiche Giocatore'} subtitle="Statistiche Giocatore" ancestors={[
-      STATS_CRUMB, { label: 'Giocatori', to: paths.playerStats },
+      { label: 'Giocatori', to: paths.playerStats },
     ]}>
       <GameStatisticsData>
         {row ? <PlayerStatsDetail key={row.name} row={row} games={games} />
@@ -324,7 +309,7 @@ function PlayerDetailPage() {
 
 function MatchupsPage() {
   const { games } = useRegistro();
-  return <SectionPage title="Statistiche per Sfida" wide ancestors={[STATS_CRUMB]}><GameStatisticsData><MatchupStats games={games} /></GameStatisticsData></SectionPage>;
+  return <SectionPage title="Statistiche per Sfida" wide><GameStatisticsData><MatchupStats games={games} /></GameStatisticsData></SectionPage>;
 }
 
 function MatchupDetailPage() {
@@ -334,7 +319,7 @@ function MatchupDetailPage() {
   const selected = names ? computeMatchups(games).find(matchup => matchup.key === matchupKey(names)) : undefined;
   return (
     <SectionPage title={selected?.label ?? names?.join(' vs ') ?? 'Dettaglio Sfida'} subtitle="Statistiche per Sfida" ancestors={[
-      STATS_CRUMB, { label: 'Sfide', to: paths.matchups },
+      { label: 'Sfide', to: paths.matchups },
     ]}>
       <GameStatisticsData>
         {selected ? <MatchupStatsDetail key={selected.key} selected={selected} />
@@ -344,24 +329,10 @@ function MatchupDetailPage() {
   );
 }
 
-function MorePage() {
-  const { email } = useRegistro();
-  return (
-    <SectionPage title="Altro">
-      <p className="mb-3 truncate text-sm text-zaff-muted">{email}</p>
-      <div className="flex flex-col gap-2.5">
-        <ButtonRouteLink to={paths.players} variant="ghost" size="lg" fullWidth>Gestisci Giocatori</ButtonRouteLink>
-        <ButtonRouteLink to={paths.zaff} variant="ghost" size="lg" fullWidth>Vai a ZAFF →</ButtonRouteLink>
-        <Button variant="ghost" size="lg" fullWidth onClick={() => supabase?.auth.signOut()}>Esci</Button>
-      </div>
-    </SectionPage>
-  );
-}
-
 function PlayersPage() {
   const { userId, games } = useRegistro();
   return (
-    <SectionPage title="Giocatori" subtitle="Tocca un nome per vedere le partite giocate e le statistiche, o per rinominarlo o cancellarlo. Le partite già salvate mantengono comunque il nome che avevano." ancestors={[{ label: 'Altro', to: paths.more }]}>
+    <SectionPage title="Giocatori" subtitle="Tocca un nome per vedere le partite giocate e le statistiche, o per rinominarlo o cancellarlo. Le partite già salvate mantengono comunque il nome che avevano.">
       <PlayersRoster userId={userId} games={games} />
     </SectionPage>
   );
@@ -383,13 +354,14 @@ export const registroRoutes: RouteObject[] = [
   { path: 'decks/:deckId', element: <DeckDetailPage /> },
   { path: 'decks/:deckId/stats', element: <DeckDetailPage /> },
   { path: 'decks/:deckId/edit', element: <DeckEditorPage /> },
-  { path: 'stats', element: <StatsMenuPage /> },
-  { path: 'stats/decks', element: <SectionPage title="Statistiche Mazzi" subtitle="Percentuale di vittoria di ogni mazzo, su tutte le partite." wide ancestors={[STATS_CRUMB]}><GameStats /></SectionPage> },
+  // Le vecchie pagine-menu non esistono più: i vecchi indirizzi portano alla destinazione utile.
+  { path: 'stats', element: <Navigate to={paths.deckStats} replace /> },
+  { path: 'stats/decks', element: <SectionPage title="Statistiche Mazzi" subtitle="Percentuale di vittoria di ogni mazzo, su tutte le partite." wide><GameStats /></SectionPage> },
   { path: 'stats/players', element: <PlayerStatsPage /> },
   { path: 'stats/players/:playerName', element: <PlayerDetailPage /> },
   { path: 'stats/matchups', element: <MatchupsPage /> },
   { path: 'stats/matchups/*', element: <MatchupDetailPage /> },
-  { path: 'more', element: <MorePage /> },
+  { path: 'more', element: <Navigate to={paths.players} replace /> },
   { path: 'players', element: <PlayersPage /> },
   { path: '*', element: <NotFoundPage /> },
 ];

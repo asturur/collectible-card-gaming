@@ -148,7 +148,7 @@ describe('Registro routes', () => {
     expect(screen.getAllByText('2 partite · 1 vinte · 50%')).toHaveLength(2);
     expect(screen.getByRole('button', { name: 'Esporta Immagine' })).toBeInTheDocument();
     const breadcrumbs = screen.getByRole('navigation', { name: 'Percorso di navigazione' });
-    expect(within(breadcrumbs).getAllByRole('listitem').map(item => item.textContent)).toEqual(['Home', 'Statistiche', 'Giocatori', 'Alice']);
+    expect(within(breadcrumbs).getAllByRole('listitem').map(item => item.textContent)).toEqual(['Home', 'Giocatori', 'Alice']);
     expect(document.querySelector('[aria-hidden="true"] h2')?.closest('[aria-hidden="true"]')?.querySelector('a')).toBeNull();
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     await act(async () => { await router.navigate(-1); });
@@ -190,7 +190,7 @@ describe('Registro routes', () => {
     expect(screen.getAllByText('1 vittorie · 1 sconfitte · 50%')).toHaveLength(4);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     const breadcrumbs = screen.getByRole('navigation', { name: 'Percorso di navigazione' });
-    expect(within(breadcrumbs).getAllByRole('listitem').map(item => item.textContent)).toEqual(['Home', 'Statistiche', 'Sfide', 'Alice vs Bob']);
+    expect(within(breadcrumbs).getAllByRole('listitem').map(item => item.textContent)).toEqual(['Home', 'Sfide', 'Alice vs Bob']);
     await user.click(within(breadcrumbs).getByRole('link', { name: 'Sfide' }));
     await user.click(await screen.findByRole('link', { name: 'Alice vs Bob vs Carol 1 partita' }));
     expect(await screen.findByRole('heading', { name: 'Alice vs Bob vs Carol', level: 1 })).toBeInTheDocument();
@@ -223,7 +223,8 @@ describe('Registro routes', () => {
   ])('handles an unavailable or invalid statistics URL at %s', async (path, message) => {
     openApp(path);
     expect(await screen.findByRole('alert')).toHaveTextContent(message);
-    expect(within(screen.getByRole('navigation', { name: 'Percorso di navigazione' })).getByRole('link', { name: 'Statistiche' })).toHaveAttribute('href', '/stats');
+    const parent = path.startsWith('/stats/players') ? ['Giocatori', '/stats/players'] : ['Sfide', '/stats/matchups'];
+    expect(within(screen.getByRole('navigation', { name: 'Percorso di navigazione' })).getByRole('link', { name: parent[0] })).toHaveAttribute('href', parent[1]);
     expect(screen.queryByRole('button', { name: 'Esporta Immagine' })).not.toBeInTheDocument();
   });
 
@@ -255,9 +256,8 @@ describe('Registro routes', () => {
   it('shows the full hierarchy with linked ancestors and a nonlinked current page', async () => {
     openApp('/stats/players');
     const breadcrumbs = await screen.findByRole('navigation', { name: 'Percorso di navigazione' });
-    expect(within(breadcrumbs).getAllByRole('listitem').map(item => item.textContent)).toEqual(['Home', 'Statistiche', 'Statistiche Giocatori']);
+    expect(within(breadcrumbs).getAllByRole('listitem').map(item => item.textContent)).toEqual(['Home', 'Statistiche Giocatori']);
     expect(within(breadcrumbs).getByRole('link', { name: 'Home' })).toHaveAttribute('href', '/');
-    expect(within(breadcrumbs).getByRole('link', { name: 'Statistiche' })).toHaveAttribute('href', '/stats');
     expect(within(breadcrumbs).getByText('Statistiche Giocatori').closest('[aria-current="page"]')).toBeInTheDocument();
     expect(within(breadcrumbs).queryByRole('link', { name: 'Statistiche Giocatori' })).not.toBeInTheDocument();
   });
@@ -444,15 +444,14 @@ describe('Registro routes', () => {
 
   it.each([
     ['/games', 'Partite Salvate', 'Partite'],
-    ['/games/new', 'Nuova Partita', 'Nuova partita'],
-    ['/games/new/', 'Nuova Partita', 'Nuova partita'],
+    ['/', 'Registro partite di Magic', 'Home'],
+    ['/games/new', 'Nuova Partita', 'Partite'],
+    ['/games/new/', 'Nuova Partita', 'Partite'],
     ['/decks', 'Mazzi Salvati', 'Mazzi'],
     ['/decks/new', 'Nuovo Mazzo', 'Mazzi'],
-    ['/stats', 'Statistiche', 'Statistiche'],
     ['/stats/decks', 'Statistiche Mazzi', 'Statistiche'],
     ['/stats/players', 'Statistiche Giocatori', 'Statistiche'],
     ['/stats/matchups', 'Statistiche per Sfida', 'Statistiche'],
-    ['/more', 'Altro', 'Altro'],
     ['/players', 'Giocatori', 'Altro'],
   ])('opens %s directly as a page', async (path, title, tab) => {
     openApp(path);
@@ -463,37 +462,13 @@ describe('Registro routes', () => {
     expect(document.body.style.overflow).toBe('');
   });
 
-  it('navigates to statistics and back with history, keeping repeated tab clicks on the page', async () => {
-    const user = userEvent.setup();
-    const { router } = openApp('/stats');
-    await screen.findByRole('heading', { name: 'Statistiche' });
-    await user.click(within(screen.getByRole('main')).getByRole('link', { name: 'Mazzi' }));
-    expect(await screen.findByRole('heading', { name: 'Statistiche Mazzi' })).toBeInTheDocument();
-    await act(async () => { await router.navigate(-1); });
-    expect(screen.getByRole('heading', { name: 'Statistiche' })).toBeInTheDocument();
-    await user.click(within(screen.getByRole('navigation', { name: 'Navigazione principale' })).getByRole('link', { name: 'Statistiche' }));
-    expect(router.state.location.pathname).toBe('/stats');
-  });
-
-  it('opens Statistiche and Altro as a speed dial of router links without leaving the page', async () => {
-    const user = userEvent.setup();
-    const { router } = openApp('/games');
-    await screen.findByRole('heading', { name: 'Partite Salvate' });
-    const navigation = () => screen.getByRole('navigation', { name: 'Navigazione principale' });
-    await user.click(within(navigation()).getByRole('link', { name: 'Statistiche' }));
-    expect(router.state.location.pathname).toBe('/games');
-    const stats = screen.getByRole('group', { name: 'Statistiche' });
-    expect(within(stats).getByRole('link', { name: /Mazzi/ })).toHaveAttribute('href', '/stats/decks');
-    expect(within(stats).getByRole('link', { name: /Per Sfida/ })).toHaveAttribute('href', '/stats/matchups');
-    await user.click(within(navigation()).getByRole('link', { name: 'Altro' }));
-    expect(screen.queryByRole('group', { name: 'Statistiche' })).not.toBeInTheDocument();
-    expect(within(screen.getByRole('group', { name: 'Altro' })).getByRole('button', { name: /Esci/ })).toBeInTheDocument();
-    await user.keyboard('{Escape}');
-    expect(screen.queryByRole('group')).not.toBeInTheDocument();
-    await user.click(within(navigation()).getByRole('link', { name: 'Statistiche' }));
-    await user.click(within(screen.getByRole('group', { name: 'Statistiche' })).getByRole('link', { name: /Giocatori/ }));
-    expect(router.state.location.pathname).toBe('/stats/players');
-    expect(screen.queryByRole('group', { name: 'Statistiche' })).not.toBeInTheDocument();
+  it.each([
+    ['/stats', '/stats/decks', 'Statistiche Mazzi'],
+    ['/more', '/players', 'Giocatori'],
+  ])('redirects the retired menu page %s to %s', async (from, to, title) => {
+    const { router } = openApp(from);
+    expect(await screen.findByRole('heading', { level: 1, name: title })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe(to);
   });
 
   it('renders a shared game detail on a direct URL with its existing export controls', async () => {
@@ -545,8 +520,8 @@ describe('Registro routes', () => {
 
   it('asks before leaving a game form with browser Back and allows a completed save', async () => {
     const user = userEvent.setup();
-    const { router } = openApp('/games');
-    await user.click(await screen.findByRole('link', { name: 'Nuova partita' }));
+    const { router } = openApp('/');
+    await user.click(await screen.findByRole('link', { name: /Nuova Partita/ }));
     await screen.findByText('Form partita: nuova');
     vi.mocked(window.confirm).mockReturnValue(false);
     await act(async () => { await router.navigate(-1); });
@@ -602,15 +577,16 @@ describe('Registro routes', () => {
   });
 
   it('generates internal links under the deployed basename', async () => {
-    openApp('/collectible-card-gaming/more', '/collectible-card-gaming');
-    expect(await screen.findByRole('link', { name: 'Gestisci Giocatori' })).toHaveAttribute('href', '/collectible-card-gaming/players');
-    expect(screen.getByRole('link', { name: /Vai a ZAFF/ })).toHaveAttribute('href', '/collectible-card-gaming/zaff');
+    openApp('/collectible-card-gaming/games', '/collectible-card-gaming');
+    const navigation = await screen.findByRole('navigation', { name: 'Navigazione principale' });
+    expect(within(navigation).getByRole('link', { name: 'Mazzi' })).toHaveAttribute('href', '/collectible-card-gaming/decks');
+    expect(within(navigation).getByRole('link', { name: 'Home' })).toHaveAttribute('href', '/collectible-card-gaming/');
   });
 
   it('shows an unknown-route page with a link home', async () => {
     openApp('/unknown');
     expect(await screen.findByRole('heading', { name: 'Pagina non trovata' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Home' })).toHaveAttribute('href', '/');
+    expect(within(screen.getByRole('main')).getByRole('link', { name: 'Home' })).toHaveAttribute('href', '/');
     expect(within(screen.getByRole('navigation', { name: 'Navigazione principale' })).queryByRole('link', { current: 'page' })).toBeNull();
   });
 

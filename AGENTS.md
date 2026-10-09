@@ -222,13 +222,13 @@ the Vite basename (`/collectible-card-gaming/`).
 /decks/:deckId             → saved deck detail / card view
 /decks/:deckId/stats       → saved deck composition / mana / token charts
 /decks/:deckId/edit        → edit the saved deck
-/stats                    → statistics menu
+/stats                    → redirects to /stats/decks (retired menu page)
 /stats/decks               → deck statistics
 /stats/players             → player standings
 /stats/players/:playerName → individual player statistics / image export
 /stats/matchups            → matchup statistics
 /stats/matchups/A/vs/B     → exact formation statistics / image export
-/more                     → account / other actions
+/more                     → redirects to /players (retired menu page)
 /players                  → player roster
 /zaff                     → JoinScreen → DeckPicker → DeckPreview → GameView
 ```
@@ -240,8 +240,10 @@ in router history state. Unsaved form changes are not persisted across refresh.
 Game forms guard navigation/Back and refresh; editor persistence blocks leaving
 until the write completes. The bottom navigation uses real router links.
 Tapping Statistiche or Altro in the bottom bar opens a speed dial (`ui/SpeedDial.tsx`)
-of labelled router links instead of an intermediate menu page; the tab itself stays a
-real link to `/stats` or `/more`, which still open directly as pages.
+of labelled router links instead of an intermediate menu page. The old `/stats` and
+`/more` pages are gone: those URLs redirect to `/stats/decks` and `/players`, and the
+breadcrumb trails omit them (Home → Statistiche Mazzi, Home → Giocatori). The centre
+button of the bottom bar is Home; "Nuova Partita" lives on the Home page.
 Deck list and deck statistics link to the same `/decks/:deckId` page. Saving or
 cancelling an existing deck edit returns to its detail; creating a deck opens its
 new detail page. Shared breadcrumbs show the page hierarchy (Home → section →

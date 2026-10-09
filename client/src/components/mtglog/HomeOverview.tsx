@@ -83,13 +83,13 @@ export default function HomeOverview({
     <>
       <Link
         to={paths.newGame}
-        className="flex w-full items-center gap-4 rounded-xl bg-gradient-to-r from-zaff-primary to-zaff-accent px-5 py-5 text-left text-zaff-bg shadow-lg transition active:scale-[0.98]"
+        className="flex w-full items-center gap-4 rounded-xl bg-gradient-to-r from-zaff-primary to-zaff-accent px-5 py-5 text-left text-zaff-bg shadow-lg transition active:scale-[0.98] md:w-fit md:gap-3 md:px-6 md:py-3"
       >
-        <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-black/20 text-4xl font-light leading-none">
+        <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-black/20 text-4xl font-light leading-none md:h-10 md:w-10 md:text-3xl">
           +
         </span>
         <span className="min-w-0">
-          <span className="block text-2xl font-bold leading-tight">Nuova Partita</span>
+          <span className="block text-2xl font-bold leading-tight md:text-xl">Nuova Partita</span>
           <span className="block text-sm font-medium opacity-80">Segna-punti e risultato</span>
         </span>
       </Link>

@@ -6,9 +6,9 @@ import SpeedDial, { type SpeedDialItem } from '../ui/SpeedDial';
 import { cx } from '../ui/styles';
 import { BarsIcon, CardsIcon, DotsIcon, ICON_PROPS } from '../ui/NavIcons';
 
-export type NavTab = 'games' | 'decks' | 'new' | 'stats' | 'more';
+export type NavTab = 'home' | 'games' | 'decks' | 'stats' | 'more';
 
-const TABS: { id: Exclude<NavTab, 'new'>; label: string; icon: ReactNode }[] = [
+const TABS: { id: Exclude<NavTab, 'home'>; label: string; icon: ReactNode }[] = [
   {
     id: 'games',
     label: 'Partite',
@@ -56,6 +56,17 @@ const DIALS: Record<'stats' | 'more', { label: string; items: SpeedDialItem[] }>
   },
 };
 
+/** Casa (Home), sul tasto centrale. */
+function HomeIcon() {
+  return (
+    <svg {...ICON_PROPS} className="size-7">
+      <path d="M4 11.5 12 5l8 6.5" />
+      <path d="M6 10.5V19h12v-8.5" />
+      <path d="M10 19v-5h4v5" />
+    </svg>
+  );
+}
+
 function CloseIcon() {
   return (
     <svg {...ICON_PROPS}>
@@ -66,14 +77,14 @@ function CloseIcon() {
 
 /**
  * Barra di navigazione fissa in fondo allo schermo (come le app sul telefono):
- * Partite, Mazzi, il "+" al centro per una nuova partita, Statistiche e Altro.
+ * Partite, Mazzi, la casa al centro per tornare alla Home, Statistiche e Altro.
  * Le sezioni sono pagine; solo i dialoghi di lavoro e il segna-punti la coprono.
  */
 export default function BottomNav() {
   const location = useLocation();
   const [dial, setDial] = useState<'stats' | 'more' | null>(null);
   const pathname = location.pathname.replace(/\/+$/, '') || paths.home;
-  const active: NavTab | null = pathname === paths.newGame || /^\/games\/[^/]+\/(edit|rematch)$/.test(pathname) ? 'new'
+  const active: NavTab | null = pathname === paths.home ? 'home'
     : pathname === paths.games || pathname.startsWith(`${paths.games}/`) ? 'games'
     : pathname === paths.decks || pathname.startsWith(`${paths.decks}/`) ? 'decks'
     : pathname === paths.stats || pathname.startsWith(`${paths.stats}/`) ? 'stats'
@@ -129,19 +140,19 @@ export default function BottomNav() {
         {tabButton(TABS[0])}
         {tabButton(TABS[1])}
         <Link
-          to={paths.newGame}
-          aria-label="Nuova partita"
-          aria-current={active === 'new' ? 'page' : undefined}
+          to={paths.home}
+          aria-label="Home"
+          aria-current={active === 'home' ? 'page' : undefined}
           onClick={() => setDial(null)}
           className="flex h-16 items-center justify-center"
         >
           <span
             className={cx(
               'flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-r from-zaff-primary to-zaff-accent text-3xl font-light leading-none text-zaff-bg shadow-lg transition active:scale-95',
-              active === 'new' && 'ring-2 ring-white/70'
+              active === 'home' && 'ring-2 ring-white/70'
             )}
           >
-            +
+            <HomeIcon />
           </span>
         </Link>
         {tabButton(TABS[2])}
