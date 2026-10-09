@@ -35,7 +35,7 @@ function GameStatisticsData({ children }: { children: ReactNode }) {
 }
 
 function RegistroHome() {
-  const { games, deckCount, gamesError } = useRegistro();
+  const { games, deckCount, decks, gamesError } = useRegistro();
   return (
     <main className="mx-auto w-full max-w-[1180px] px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-[calc(1.5rem+env(safe-area-inset-top))] sm:px-5 sm:pt-7">
       <header className="border-b-2 border-zaff-text pb-4 sm:pb-[18px]">
@@ -43,7 +43,7 @@ function RegistroHome() {
         <p className="text-sm text-zaff-muted">Chi gioca, con che mazzo, come è finita. Condiviso con tutto il gruppo.</p>
         <div className="mtg-sep" />
         {gamesError && <p role="alert">{gamesError}</p>}
-        <HomeOverview games={games} deckCount={deckCount} />
+        <HomeOverview games={games} deckCount={deckCount} decks={decks} />
       </header>
     </main>
   );
@@ -291,7 +291,7 @@ function PlayerStatsPage() {
 }
 
 function PlayerDetailPage() {
-  const { games } = useRegistro();
+  const { games, decks } = useRegistro();
   const { pathname } = useLocation();
   const playerName = playerNameFromPath(pathname);
   const row = computeTally(games).find(player => player.name === playerName);
@@ -300,7 +300,7 @@ function PlayerDetailPage() {
       { label: 'Giocatori', to: paths.playerStats },
     ]}>
       <GameStatisticsData>
-        {row ? <PlayerStatsDetail key={row.name} row={row} games={games} />
+        {row ? <PlayerStatsDetail key={row.name} row={row} games={games} decks={decks} />
           : <p role="alert">Nessuna partita registrata per questo giocatore.</p>}
       </GameStatisticsData>
     </SectionPage>

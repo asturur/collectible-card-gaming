@@ -34,6 +34,7 @@ interface GameFormProps {
 const FORMATS = ['Commander', 'Standard', 'Modern', 'Pauper', 'Draft', 'Two-Headed Giant', 'Amichevole'];
 
 interface DeckOption {
+  id: string;
   name: string;
   colors: string[];
 }
@@ -177,11 +178,11 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved, on
     if (!supabase) return [];
     const [playersRes, decksRes] = await Promise.all([
       supabase.from(TABLE_PLAYERS).select('name').order('name'),
-      supabase.from(TABLE_DECKS).select('name, colors').order('name'),
+      supabase.from(TABLE_DECKS).select('id, name, colors').order('name'),
     ]);
     loadedNames.current = (playersRes.data ?? []).map((r) => r.name);
     setPlayerNames(loadedNames.current);
-    const deckList = (decksRes.data ?? []).map((r) => ({ name: r.name, colors: r.colors ?? [] }));
+    const deckList = (decksRes.data ?? []).map((r) => ({ id: String(r.id), name: r.name, colors: r.colors ?? [] }));
     setDecks(deckList);
     return deckList;
   }
@@ -206,11 +207,13 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved, on
         setNotes(editingGame.notes);
         setPlayers(
           editingGame.players.map((p) => {
-            const manual = Boolean(p.deck) && !deckList.some((d) => d.name === p.deck);
+            // Per ID (resta valido se il mazzo è stato rinominato), poi per nome.
+            const saved = deckList.find((d) => d.id === p.deckId) ?? deckList.find((d) => d.name === p.deck);
+            const manual = Boolean(p.deck) && !saved;
             return {
               name: p.name,
               deckMode: manual ? 'manual' : 'select',
-              deckSelect: manual ? '' : p.deck || '',
+              deckSelect: saved ? saved.name : '',
               deckManual: manual ? p.deck || '' : '',
               desc: p.desc || '',
               life: p.life === null || p.life === undefined ? '' : String(p.life),
@@ -227,11 +230,12 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved, on
         if (previousStartLife) setStartLife(previousStartLife);
         setPlayers(
           rematchFrom.players.map((p) => {
-            const manual = Boolean(p.deck) && !deckList.some((d) => d.name === p.deck);
+            const saved = deckList.find((d) => d.id === p.deckId) ?? deckList.find((d) => d.name === p.deck);
+            const manual = Boolean(p.deck) && !saved;
             return {
               name: p.name,
               deckMode: manual ? 'manual' : 'select',
-              deckSelect: manual ? '' : p.deck || '',
+              deckSelect: saved ? saved.name : '',
               deckManual: manual ? p.deck || '' : '',
               desc: p.desc || '',
               life: '',
@@ -400,6 +404,8 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved, on
     const readPlayers = players
       .map((p, i) => {
         const deckVal = p.deckMode === 'manual' ? p.deckManual.trim() : p.deckSelect;
+        // Mazzo scelto dai salvati: ne ricordo l'ID, così la partita resta collegata anche se lo rinomini.
+        const deckId = p.deckMode === 'select' && p.deckSelect ? decks.find((d) => d.name === p.deckSelect)?.id : undefined;
         // .slice come rete di sicurezza: il campo ha già maxLength, ma un
         // nome scelto dal suggerimento o già in elenco potrebbe in teoria
         // arrivare da un'altra fonte (altro dispositivo, dato più vecchio).
@@ -411,6 +417,7 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved, on
         return {
           name,
           deck: deckVal,
+          ...(deckId ? { deckId } : {}),
           desc: p.desc.trim(),
           life: p.life === '' ? null : Number(p.life),
           winner: p.winner,

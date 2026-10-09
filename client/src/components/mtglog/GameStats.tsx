@@ -3,6 +3,7 @@ import { subscribeToTable, supabase, TABLE_GAMES } from '../../services/supabase
 import { listSavedDecks, subscribeSavedDecks, type SavedDeck } from '../../services/savedDecks';
 import type { Game } from './GameList';
 import { rowToGame } from './stats';
+import { makeDeckResolver } from './deckRefs';
 import Badge from '../ui/Badge';
 import { Link } from 'react-router';
 import { paths } from '../../router';
@@ -31,24 +32,27 @@ interface DeckStatRow {
 /** Percentuale di vittoria per mazzo, volutamente su TUTTE le partite di tutti
  *  i gruppi: le statistiche di un mazzo non dipendono da con chi l'hai giocato. */
 function computeDeckStats(games: Game[], decks: DeckSourceRow[]): DeckStatRow[] {
-  const savedByName = new Map(decks.map((d) => [d.name, d]));
-  const tally: Record<string, { g: number; w: number }> = {};
+  // Le partite si collegano al mazzo per ID (e per nome se vecchie): rinominare un mazzo non le perde.
+  const resolve = makeDeckResolver(decks);
+  const savedById = new Map(decks.map((d) => [d.id, d]));
+  const tally = new Map<string, { name: string; id?: string; g: number; w: number }>();
   games.forEach((g) =>
     g.players.forEach((p) => {
-      const deck = (p.deck || '').trim();
+      const deck = resolve(p);
       if (!deck) return;
-      tally[deck] = tally[deck] || { g: 0, w: 0 };
-      tally[deck].g++;
-      if (p.winner) tally[deck].w++;
+      const row = tally.get(deck.key) ?? { name: deck.name, id: deck.id, g: 0, w: 0 };
+      row.g++;
+      if (p.winner) row.w++;
+      tally.set(deck.key, row);
     })
   );
-  return Object.entries(tally).map(([deck, t]) => ({
-    deck,
+  return [...tally.values()].map((t) => ({
+    deck: t.name,
     g: t.g,
     w: t.w,
     pct: t.g ? Math.round((t.w / t.g) * 100) : 0,
-    source: savedByName.get(deck)?.source || '',
-    deckId: savedByName.get(deck)?.id,
+    source: (t.id && savedById.get(t.id)?.source) || '',
+    deckId: t.id,
   }));
 }
 
@@ -128,7 +132,7 @@ function DeckStatsList({ rows, interactive = false }: { rows: DeckStatRow[]; int
   return (
     <div>
       {rows.map((r) => (
-        <DeckRow key={r.deck} r={r} interactive={interactive} />
+        <DeckRow key={r.deckId ?? r.deck} r={r} interactive={interactive} />
       ))}
     </div>
   );

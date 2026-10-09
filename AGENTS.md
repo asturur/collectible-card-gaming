@@ -248,6 +248,10 @@ Deck list and deck statistics link to the same `/decks/:deckId` page. Saving or
 cancelling an existing deck edit returns to its detail; creating a deck opens its
 new detail page. Shared breadcrumbs show the page hierarchy (Home → section →
 record → editor), independent of browser history.
+A game's player entry keeps the saved deck's ID (`players[].deckId`) next to the typed
+name. Statistics, player details and Home resolve decks through `mtglog/deckRefs.ts`
+(ID first, then name for older games), so renaming a deck keeps its games attached and
+shows its current name. Decks typed by hand have no ID and keep the name only.
 Saved-deck charts use `/decks/:deckId/stats`, with a breadcrumb back to the deck.
 Detail and statistics pages share `mtglog/useSavedDeck.ts`; chart rendering stays
 in `DeckStatsContents`. The editor's local statistics preview uses its unsaved

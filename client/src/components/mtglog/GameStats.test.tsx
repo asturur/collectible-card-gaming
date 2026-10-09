@@ -10,12 +10,15 @@ vi.mock('../../services/supabase', () => ({
     { id: 'g1', date: '2026-10-07', players: [
       { name: 'Alice', deck: 'Elfi', winner: true }, { name: 'Bob', deck: 'Mazzo cancellato', winner: false },
     ] },
+    { id: 'g2', date: '2026-10-08', players: [
+      { name: 'Alice', deck: 'Elfi', winner: false }, { name: 'Bob', deck: 'Vecchio nome', deckId: 'd2', winner: true },
+    ] },
   ] }) }) },
 }));
 vi.mock('../../services/savedDecks', () => ({ listSavedDecks: vi.fn(), subscribeSavedDecks: () => () => {} }));
 
 beforeEach(() => {
-  vi.mocked(listSavedDecks).mockResolvedValue([{ id: 'd1', name: 'Elfi', source: 'brew' }] as never);
+  vi.mocked(listSavedDecks).mockResolvedValue([{ id: 'd1', name: 'Elfi', source: 'brew' }, { id: 'd2', name: 'Goblin Rinominati', source: 'brew' }] as never);
 });
 
 describe('Deck statistics navigation', () => {
@@ -34,5 +37,12 @@ describe('Deck statistics navigation', () => {
     expect(exportCard).toHaveTextContent('Mazzo cancellato');
     expect(exportCard?.querySelector('a')).toBeNull();
     expect(exportCard).not.toHaveTextContent('Lista carte non disponibile');
+  });
+
+  it('tiene unite le partite di un mazzo rinominato, mostrando il nome attuale', async () => {
+    render(<MemoryRouter><GameStats /></MemoryRouter>);
+    const renamed = await screen.findByRole('link', { name: /Goblin Rinominati/ });
+    expect(renamed).toHaveAttribute('href', '/decks/d2');
+    expect(screen.queryByText('Vecchio nome')).not.toBeInTheDocument();
   });
 });

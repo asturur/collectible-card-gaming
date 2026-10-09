@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { Link } from 'react-router';
 import { paths } from '../../router';
 import type { Game } from './GameList';
+import { makeDeckResolver, type DeckRef } from './deckRefs';
 import type { TallyRow } from './stats';
 import { PIE_COLORS, pieSlicePath } from './stats';
 import GlossyPie from './GlossyPie';
@@ -208,29 +209,35 @@ function PlayerDetail({
 export function PlayerStatsDetail({
   row,
   games,
+  decks = [],
 }: {
   row: TallyRow;
   games: Game[];
+  /** Mazzi salvati: il nome mostrato è quello attuale, anche se il mazzo è stato rinominato. */
+  decks?: DeckRef[];
 }) {
   /** Mazzi usati dal giocatore aperto, solo le SUE partite: stesso identico
    *  calcolo di `computeDeckStats` in GameStats.tsx ma filtrato su un solo
    *  giocatore, così un mazzo condiviso col gruppo mostra qui solo quanto è
    *  andato bene a lui, non il suo risultato complessivo. */
   const deckStats = useMemo(() => {
-    const tally: Record<string, { g: number; w: number }> = {};
+    const resolve = makeDeckResolver(decks);
+    const tally = new Map<string, { deck: string; g: number; w: number }>();
     games.forEach((g) => {
       g.players.forEach((p) => {
         if (p.name !== row.name) return;
-        const deck = (p.deck || '').trim() || 'Mazzo non indicato';
-        tally[deck] = tally[deck] || { g: 0, w: 0 };
-        tally[deck].g++;
-        if (p.winner) tally[deck].w++;
+        const found = resolve(p);
+        const key = found?.key ?? 'none';
+        const entry = tally.get(key) ?? { deck: found?.name ?? 'Mazzo non indicato', g: 0, w: 0 };
+        entry.g++;
+        if (p.winner) entry.w++;
+        tally.set(key, entry);
       });
     });
-    return Object.entries(tally)
-      .map(([deck, t]) => ({ deck, g: t.g, w: t.w, pct: t.g ? Math.round((t.w / t.g) * 100) : 0 }))
+    return [...tally.values()]
+      .map((t) => ({ deck: t.deck, g: t.g, w: t.w, pct: t.g ? Math.round((t.w / t.g) * 100) : 0 }))
       .sort((a, b) => b.g - a.g || b.pct - a.pct);
-  }, [row.name, games]);
+  }, [row.name, games, decks]);
   const exporter = useImageExport();
   return (
     <>

@@ -5,11 +5,14 @@ import { ManaIcons } from './ManaIcon';
 import { computeTally, dateLabel } from './stats';
 import type { Game } from './GameList';
 import { cx } from '../ui/styles';
+import { makeDeckResolver, type DeckRef } from './deckRefs';
 
 interface HomeOverviewProps {
   games: Game[];
   /** Mazzi salvati (da Supabase). */
   deckCount: number;
+  /** Mazzi salvati (ID e nome), per mostrare il nome attuale dei mazzi giocati. */
+  decks?: DeckRef[];
 }
 
 /** Quante voci mostrare nelle liste della pagina iniziale. */
@@ -45,6 +48,7 @@ function Empty({ children }: { children: ReactNode }) {
 export default function HomeOverview({
   games,
   deckCount,
+  decks = [],
 }: HomeOverviewProps) {
   // Dalla più recente: data, poi orario di inizio, poi id.
   const sorted = [...games].sort(
@@ -60,11 +64,12 @@ export default function HomeOverview({
   const thisMonth = games.filter((g) => g.date.startsWith(monthPrefix)).length;
 
   // Mazzi giocati di recente: nell'ordine delle partite, senza ripetizioni.
-  const recentDecks: { name: string; colors: string[] }[] = [];
+  const resolveDeck = makeDeckResolver(decks);
+  const recentDecks: { key: string; name: string; colors: string[] }[] = [];
   for (const g of sorted) {
     for (const p of g.players) {
-      const name = (p.deck ?? '').trim();
-      if (name && !recentDecks.some((d) => d.name === name)) recentDecks.push({ name, colors: p.colors ?? [] });
+      const deck = resolveDeck(p);
+      if (deck && !recentDecks.some((d) => d.key === deck.key)) recentDecks.push({ key: deck.key, name: deck.name, colors: p.colors ?? [] });
       if (recentDecks.length >= SHOWN) break;
     }
     if (recentDecks.length >= SHOWN) break;
@@ -135,7 +140,7 @@ export default function HomeOverview({
           <Empty>Qui compariranno i mazzi usati nelle ultime partite.</Empty>
         ) : (
           recentDecks.map((d) => (
-            <span key={d.name} className="flex items-center gap-2 text-sm text-zaff-text">
+            <span key={d.key} className="flex items-center gap-2 text-sm text-zaff-text">
               <span className="min-w-0 truncate">{d.name}</span>
               <ManaIcons colors={d.colors} className="shrink-0 text-[15px]" />
             </span>

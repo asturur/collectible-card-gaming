@@ -242,6 +242,8 @@ export type LossCause = 'kill' | 'mill';
 export interface GamePlayer {
   name: string;
   deck: string;
+  /** ID del mazzo salvato scelto dall'elenco: resta valido se il mazzo viene rinominato. */
+  deckId?: string;
   desc: string;
   life: number | null;
   winner: boolean;

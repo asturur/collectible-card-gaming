@@ -9,6 +9,7 @@ import BottomNav from './mtglog/BottomNav';
 import { ButtonLink } from './ui/Button';
 import { cx, PANEL, TEXT_MUTED } from './ui/styles';
 import { navLinkProps, paths } from '../router';
+import type { DeckRef } from './mtglog/deckRefs';
 
 export interface RegistroContext {
   userId: string;
@@ -17,6 +18,8 @@ export interface RegistroContext {
   gamesLoading: boolean;
   gamesError: string;
   deckCount: number;
+  /** Mazzi salvati (ID e nome attuale), per collegarli alle partite. */
+  decks: DeckRef[];
 }
 
 export const useRegistro = () => useOutletContext<RegistroContext>();
@@ -41,6 +44,7 @@ export default function MtgLog() {
   const [gamesLoading, setGamesLoading] = useState(true);
   const [gamesError, setGamesError] = useState('');
   const [deckCount, setDeckCount] = useState(0);
+  const [decks, setDecks] = useState<DeckRef[]>([]);
   const [recovering, setRecovering] = useState(OPENED_FROM_RECOVERY_LINK);
   const [linkExpired, setLinkExpired] = useState(LINK_ERROR_IN_URL);
   const onOpenZaff = () => { void navigate(paths.zaff); };
@@ -96,7 +100,8 @@ export default function MtgLog() {
     if (!loggedIn || !supabase) return;
     async function loadDeckCount() {
       if (!supabase) return;
-      const { count } = await supabase.from(TABLE_DECKS).select('id', { count: 'exact', head: true });
+      const { data, count } = await supabase.from(TABLE_DECKS).select('id, name', { count: 'exact' });
+      setDecks((data ?? []).map((d) => ({ id: String(d.id), name: String(d.name) })));
       setDeckCount(count ?? 0);
     }
     loadDeckCount();
@@ -150,7 +155,7 @@ export default function MtgLog() {
 
   return (
     <div className="min-h-screen bg-zaff-bg text-zaff-text">
-      <Outlet context={{ userId: session.user.id, email: session.user.email, games, gamesLoading, gamesError, deckCount } satisfies RegistroContext} />
+      <Outlet context={{ userId: session.user.id, email: session.user.email, games, gamesLoading, gamesError, deckCount, decks } satisfies RegistroContext} />
       <BottomNav />
     </div>
   );
