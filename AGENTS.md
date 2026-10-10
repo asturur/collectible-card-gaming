@@ -253,6 +253,15 @@ A game's player entry keeps the saved deck's ID (`players[].deckId`) next to the
 name. Statistics, player details and Home resolve decks through `mtglog/deckRefs.ts`
 (ID first, then name for older games), so renaming a deck keeps its games attached and
 shows its current name. Decks typed by hand have no ID and keep the name only.
+Name rules (Registro): player names are at most 20 characters
+(`MAX_PLAYER_NAME_LENGTH`) and deck names at most 30 (`MAX_DECK_NAME_LENGTH`), both
+in `services/supabase.ts`; fields show a `ui/CharCount`. Imported/precon deck names
+are shortened at whole words with `shortenName`. Longer names saved before the
+limit stay valid and are never cut silently: a game keeps them, while renaming the
+player or saving the deck requires shortening. Names are unique ignoring case and
+spaces (`sameName`): a player appears once per game, and no two saved decks share a
+name (`findDeckWithSameName` in `services/savedDecks.ts`), because Nuova Partita
+picks decks by name.
 Saved-deck charts use `/decks/:deckId/stats`, with a breadcrumb back to the deck.
 Detail and statistics pages share `mtglog/useSavedDeck.ts`; chart rendering stays
 in `DeckStatsContents`. The editor's local statistics preview uses its unsaved

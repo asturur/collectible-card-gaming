@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { canEdit, MAX_DECK_NAME_LENGTH } from '../../services/supabase';
+import { canEdit, MAX_DECK_NAME_LENGTH, shortenName } from '../../services/supabase';
+import CharCount from '../ui/CharCount';
 import { saveSavedDeck, getSavedDeck, findDeckWithSameName, DeckConflictError, UnresolvedCardsError } from '../../services/savedDecks';
 import { autocompleteCards } from '../../services/scryfall';
 import type { DeckEntry } from '../../services/deckCards';
@@ -219,7 +220,7 @@ export default function DeckEditor({ deckId, userId, initialDraft, onBack, onSav
     addAll(deck.cards);
     const newDraft = Object.values(merged);
     setDraft(newDraft);
-    setName(deck.name.slice(0, MAX_DECK_NAME_LENGTH));
+    setName(shortenName(deck.name, MAX_DECK_NAME_LENGTH));
     setSource('precon');
     setColors(new Set());
     autoDetectColors(newDraft.map((c) => c.name));
@@ -302,9 +303,13 @@ export default function DeckEditor({ deckId, userId, initialDraft, onBack, onSav
   }
 
   async function handleSave(allowUnresolved = false) {
-    const trimmedName = name.trim().slice(0, MAX_DECK_NAME_LENGTH);
+    const trimmedName = name.trim();
     setError(''); setUnresolved(false);
     if (!trimmedName) { setError('Dai un nome al mazzo prima di salvarlo.'); return; }
+    if (trimmedName.length > MAX_DECK_NAME_LENGTH) {
+      setError(`Il nome del mazzo ha ${trimmedName.length} caratteri: il massimo è ${MAX_DECK_NAME_LENGTH}. Accorcialo prima di salvare.`);
+      return;
+    }
     if (!draft.length) { setError('Aggiungi almeno una carta al mazzo.'); return; }
     if (deckId && openedRevision.current === null) { setError('Riapri il mazzo prima di salvarlo.'); return; }
     const controller = new AbortController();
@@ -391,6 +396,7 @@ export default function DeckEditor({ deckId, userId, initialDraft, onBack, onSav
         onChange={(e) => setName(e.target.value)}
         placeholder="es. Mono nero aggro by Ale"
         maxLength={MAX_DECK_NAME_LENGTH}
+        hint={<CharCount value={name} max={MAX_DECK_NAME_LENGTH} />}
       />
 
       <SelectField

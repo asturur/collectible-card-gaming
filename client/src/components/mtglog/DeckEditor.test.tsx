@@ -70,6 +70,15 @@ describe('Registro save controls', () => {
     expect(saveSavedDeck).toHaveBeenCalledWith(expect.objectContaining({ name: 'Commander Test', source: 'precon', cards: [{ name: 'Commander', qty: 1, section: 'main' }, { name: 'Island', qty: 3, section: 'main' }] }), expect.anything());
     vi.unstubAllGlobals();
   });
+  it('asks to shorten a saved name longer than the limit instead of cutting it', async () => {
+    vi.mocked(getSavedDeck).mockResolvedValueOnce({ ...deck, name: 'mono_black_devotion_pauper_meta_2026' } as never);
+    const user = userEvent.setup(); render(<DeckEditor deckId="deck" onBack={() => {}} onSaved={() => {}} />);
+    await screen.findByDisplayValue('mono_black_devotion_pauper_meta_2026');
+    expect(screen.getByText('36/30')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Salva Modifiche' }));
+    expect(screen.getByText('Il nome del mazzo ha 36 caratteri: il massimo è 30. Accorcialo prima di salvare.')).toBeInTheDocument();
+    expect(saveSavedDeck).not.toHaveBeenCalled();
+  });
   it('refuses a name already used by another deck, ignoring case and spaces', async () => {
     vi.mocked(findDeckWithSameName).mockResolvedValueOnce('Mono Black');
     const user = userEvent.setup(); render(<DeckEditor deckId={null} initialDraft={{ name: ' mono black ', cards: [{ name: 'Swamp', qty: 1 }] }} onBack={() => {}} onSaved={() => {}} />);

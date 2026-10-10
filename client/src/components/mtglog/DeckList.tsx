@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
-import { MAX_DECK_NAME_LENGTH } from '../../services/supabase';
+import { MAX_DECK_NAME_LENGTH, shortenName } from '../../services/supabase';
 import { listSavedDecks, subscribeSavedDecks, type SavedDeck } from '../../services/savedDecks';
 import { parseDeckText, type DeckEntry } from '../../services/deckCards';
 import { ManaIcons } from './ManaIcon';
@@ -43,9 +43,9 @@ export default function DeckList({ onCreate, onImportFile }: DeckListProps) {
         setError('Non sono riuscito a leggere nessuna carta da questo file: controlla il formato.');
         return;
       }
-      // Il nome del file può essere lungo quanto vuole: lo taglio subito,
-      // così non arriva mai un nome mazzo fuori dal limite deciso.
-      onImportFile(file.name.replace(/\.[^/.]+$/, '').slice(0, MAX_DECK_NAME_LENGTH), parsed);
+      // Il nome del file può essere lungo quanto vuole: lo accorcio a parole intere,
+      // così non arriva mai un nome mazzo fuori dal limite deciso (resta modificabile).
+      onImportFile(shortenName(file.name.replace(/\.[^/.]+$/, ''), MAX_DECK_NAME_LENGTH), parsed);
     };
     reader.readAsText(file, 'utf-8');
   }

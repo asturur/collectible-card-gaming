@@ -10,6 +10,7 @@ import {
 } from '../../services/supabase';
 import Button, { ButtonRouteLink } from '../ui/Button';
 import Modal from '../ui/Modal';
+import CharCount from '../ui/CharCount';
 import { cx, FIELD_CONTROL_SM, STICKY_BELOW_TITLE } from '../ui/styles';
 import { paths } from '../../router';
 import type { Game } from './GameList';
@@ -75,8 +76,12 @@ export default function PlayersRoster({ userId, games = [] }: PlayersRosterProps
    *  al posto del contenuto del campo: permette di aggiungere subito il
    *  nome proposto con un click, senza doverlo prima scrivere a mano. */
   async function handleAdd(forcedName?: string) {
-    const name = (forcedName ?? newName).trim().slice(0, MAX_PLAYER_NAME_LENGTH);
+    const name = (forcedName ?? newName).trim();
     if (!name || !supabase) return;
+    if (name.length > MAX_PLAYER_NAME_LENGTH) {
+      setError(`Il nome può avere al massimo ${MAX_PLAYER_NAME_LENGTH} caratteri.`);
+      return;
+    }
 
     if (roster.some((r) => r.name === name)) {
       setNewName('');
@@ -165,9 +170,14 @@ export default function PlayersRoster({ userId, games = [] }: PlayersRosterProps
   /** `forcedValue`, quando passato (dal bottone di un suggerimento), è usato
    *  al posto del contenuto del campo rinomina. */
   async function confirmRename(oldName: string, forcedValue?: string) {
-    const trimmed = (forcedValue ?? renameValue).trim().slice(0, MAX_PLAYER_NAME_LENGTH);
+    const trimmed = (forcedValue ?? renameValue).trim();
     if (!trimmed || trimmed === oldName) {
       setRenaming(null);
+      return;
+    }
+    // Un nome salvato prima del limite si può tenere, ma per cambiarlo va accorciato.
+    if (trimmed.length > MAX_PLAYER_NAME_LENGTH) {
+      setError(`Il nome può avere al massimo ${MAX_PLAYER_NAME_LENGTH} caratteri.`);
       return;
     }
     // Come per "Aggiungi": una somiglianza (non un'identità esatta, impossibile
@@ -252,19 +262,23 @@ export default function PlayersRoster({ userId, games = [] }: PlayersRosterProps
   return (
     <>
       <div className={cx(STICKY_BELOW_TITLE, 'sticky z-10 -mx-1 mb-2 flex gap-2 bg-zaff-surface px-1 py-1')}>
-        <input
-          type="text"
-          value={newName}
-          onChange={(e) => {
-            setNewName(e.target.value);
-            setAddConflict(null);
-          }}
-          onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
-          placeholder="Nome nuovo giocatore"
-          maxLength={MAX_PLAYER_NAME_LENGTH}
-          className={FIELD_CONTROL_SM}
-        />
-        <Button onClick={() => handleAdd()} className="shrink-0">
+        <div className="min-w-0 flex-1">
+          <input
+            type="text"
+            value={newName}
+            onChange={(e) => {
+              setNewName(e.target.value);
+              setAddConflict(null);
+            }}
+            onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
+            placeholder="Nome nuovo giocatore"
+            maxLength={MAX_PLAYER_NAME_LENGTH}
+            aria-describedby="new-player-name-count"
+            className={cx(FIELD_CONTROL_SM, 'w-full')}
+          />
+          <CharCount id="new-player-name-count" value={newName} max={MAX_PLAYER_NAME_LENGTH} />
+        </div>
+        <Button onClick={() => handleAdd()} className="shrink-0 self-start">
           Aggiungi
         </Button>
       </div>
@@ -356,9 +370,11 @@ export default function PlayersRoster({ userId, games = [] }: PlayersRosterProps
                 onKeyDown={(e) => e.key === 'Enter' && confirmRename(selectedEntry.name)}
                 maxLength={MAX_PLAYER_NAME_LENGTH}
                 aria-label="Nuovo nome del giocatore"
+                aria-describedby="rename-player-count"
                 autoFocus
                 className={FIELD_CONTROL_SM}
               />
+              <CharCount id="rename-player-count" value={renameValue} max={MAX_PLAYER_NAME_LENGTH} />
               <div className="mt-3 grid grid-cols-2 gap-2.5">
                 <Button fullWidth onClick={() => confirmRename(selectedEntry.name)}>
                   Salva

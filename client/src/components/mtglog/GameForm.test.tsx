@@ -8,7 +8,7 @@ const insert = vi.fn();
 vi.mock('../../services/supabase', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../services/supabase')>();
   const rows: Record<string, unknown[]> = {
-    giocatori: [{ name: 'Andrea' }, { name: 'Bea' }],
+    giocatori: [{ name: 'Andrea' }, { name: 'Bea' }, { name: 'Giovanni Battista Rossi' }],
     mazzi: [],
   };
   return {
@@ -47,6 +47,28 @@ describe('GameForm', () => {
     const picker = within(screen.getByRole('dialog'));
     expect(picker.getByRole('button', { name: 'Andrea' })).toBeDisabled();
     expect(picker.getByRole('button', { name: 'Bea' })).toBeEnabled();
+  });
+
+  it('keeps a long name saved before the limit exactly as it is', async () => {
+    const user = await renderForm();
+    await user.click(screen.getByRole('button', { name: /Scegli il giocatore 1/ }));
+    await user.click(screen.getByRole('button', { name: 'Giovanni Battista Rossi' }));
+    await user.click(screen.getByRole('button', { name: /Scegli il giocatore 2/ }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Bea' }));
+    await user.click(screen.getByRole('button', { name: 'Salva Partita' }));
+    expect(insert).toHaveBeenCalledWith(expect.objectContaining({
+      players: [expect.objectContaining({ name: 'Giovanni Battista Rossi' }), expect.objectContaining({ name: 'Bea' })],
+    }));
+  });
+
+  it('shows how many characters a new name has left', async () => {
+    const user = await renderForm();
+    await user.click(screen.getByRole('button', { name: /Scegli il giocatore 1/ }));
+    await user.click(screen.getByRole('button', { name: /Nuovo giocatore/ }));
+    const field = screen.getByPlaceholderText('Nome del giocatore 1');
+    await user.type(field, 'Un nome davvero troppo lungo');
+    expect(field).toHaveValue('Un nome davvero trop');
+    expect(screen.getByText('20/20')).toBeInTheDocument();
   });
 
   it('blocks the counter and saving when the same player is typed twice', async () => {

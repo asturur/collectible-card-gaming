@@ -22,6 +22,7 @@ import Modal from '../ui/Modal';
 import NumberStepper from '../ui/NumberStepper';
 import { TextAreaField } from '../ui/Field';
 import { cx, FIELD_CONTROL_SM, FIELD_LABEL, TEXT_MINI, TEXT_MUTED } from '../ui/styles';
+import CharCount from '../ui/CharCount';
 
 interface GameFormProps {
   editingGame?: Game | null;
@@ -346,6 +347,27 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved, on
 
   const DUPLICATE_PLAYER_ERROR = 'Lo stesso giocatore compare due volte: cambia uno dei due nomi.';
 
+  /** Un nome nuovo (non in elenco e non già in questa partita salvata) oltre il limite.
+   *  I nomi più lunghi salvati prima del limite restano utilizzabili così come sono. */
+  function tooLongNewName(): string | null {
+    for (const p of players) {
+      const name = p.name.trim();
+      if (name.length <= MAX_PLAYER_NAME_LENGTH || findCanonicalName(playerNames, name)) continue;
+      if (editingGame?.players.some((q) => q.name === name)) continue;
+      return name;
+    }
+    return null;
+  }
+
+  function checkNames(action: 'procedere' | 'salvare'): string | null {
+    // Prima i doppioni: finché un giocatore è ripetuto, la domanda sul nome non compare.
+    if (hasDuplicatePlayer()) return DUPLICATE_PLAYER_ERROR;
+    if (hasUnresolvedNameConflict()) return `Rispondi alla domanda sul nome del giocatore prima di ${action}.`;
+    const long = tooLongNewName();
+    if (long) return `Il nome "${long}" è troppo lungo: al massimo ${MAX_PLAYER_NAME_LENGTH} caratteri.`;
+    return null;
+  }
+
   function toggleWinner(index: number) {
     setPlayers((prev) => prev.map((p, i) => ({ ...p, winner: i === index ? !p.winner : false })));
   }
@@ -370,13 +392,9 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved, on
   function handleOpenLifeCounter(resume = false) {
     setResumeCounter(resume);
     setError('');
-    // Prima i doppioni: finché un giocatore è ripetuto, la domanda sul nome non compare.
-    if (hasDuplicatePlayer()) {
-      setError(DUPLICATE_PLAYER_ERROR);
-      return;
-    }
-    if (hasUnresolvedNameConflict()) {
-      setError('Rispondi alla domanda sul nome del giocatore prima di procedere.');
+    const nameProblem = checkNames('procedere');
+    if (nameProblem) {
+      setError(nameProblem);
       return;
     }
     const names = players.map((p) => p.name.trim()).filter(Boolean);
@@ -451,13 +469,9 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved, on
       setError('Supabase non configurato.');
       return;
     }
-    // Prima i doppioni: finché un giocatore è ripetuto, la domanda sul nome non compare.
-    if (hasDuplicatePlayer()) {
-      setError(DUPLICATE_PLAYER_ERROR);
-      return;
-    }
-    if (hasUnresolvedNameConflict()) {
-      setError('Rispondi alla domanda sul nome del giocatore prima di salvare.');
+    const nameProblem = checkNames('salvare');
+    if (nameProblem) {
+      setError(nameProblem);
       return;
     }
 
@@ -466,10 +480,10 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved, on
         const deckVal = p.deckMode === 'manual' ? p.deckManual.trim() : p.deckSelect;
         // Mazzo scelto dai salvati: ne ricordo l'ID, così la partita resta collegata anche se lo rinomini.
         const deckId = p.deckMode === 'select' && p.deckSelect ? decks.find((d) => d.name === p.deckSelect)?.id : undefined;
-        // .slice come rete di sicurezza: il campo ha già maxLength, ma un
-        // nome scelto dal suggerimento o già in elenco potrebbe in teoria
-        // arrivare da un'altra fonte (altro dispositivo, dato più vecchio).
-        const typedName = p.name.trim().slice(0, MAX_PLAYER_NAME_LENGTH);
+        // Niente taglio: i nomi nuovi oltre il limite sono già stati fermati da
+        // checkNames, e un nome lungo salvato prima del limite resta com'è
+        // (tagliarlo creerebbe un giocatore diverso nelle statistiche).
+        const typedName = p.name.trim();
         // A questo punto il nome non è più ambiguo (il salvataggio è
         // bloccato finché lo è): se coincide esattamente con uno già in
         // elenco uso quella grafia, altrimenti è un nome nuovo o già chiarito.
@@ -674,8 +688,10 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved, on
                       placeholder={`Nome del giocatore ${i + 1}`}
                       maxLength={MAX_PLAYER_NAME_LENGTH}
                       autoComplete="off"
+                      aria-describedby={`player-name-count-${i}`}
                       className={cx(FIELD_CONTROL_SM, 'w-full')}
                     />
+                    <CharCount id={`player-name-count-${i}`} value={p.name} max={MAX_PLAYER_NAME_LENGTH} />
                     {playerNames.length > 0 && (
                       <button
                         type="button"

@@ -46,18 +46,34 @@ export const TABLE_PLAYERS = 'giocatori';
 export const TABLE_DECKS = 'mazzi';
 export const TABLE_DECK_CARDS = 'mazzi-cards';
 
-/** Lunghezza massima di un nome giocatore: generosa per qualunque nome vero
- *  (nome e cognome, o un suffisso tipo "_B" per distinguere un omonimo). */
-export const MAX_PLAYER_NAME_LENGTH = 40;
+/** Lunghezza massima di un nome giocatore: deve stare per intero nel segna-punti,
+ *  negli elenchi e nelle statistiche. I nomi più lunghi salvati prima restano
+ *  validi, ma per cambiarli bisogna accorciarli. */
+export const MAX_PLAYER_NAME_LENGTH = 20;
 
 /**
- * Lunghezza massima del nome di un mazzo. Verificato sul catalogo pubblico
- * usato dall'app per importare i precon Commander (stesso filtro di
- * DeckEditor): il nome più lungo tra i 208 mazzi Commander disponibili è di
- * 59 caratteri ("Scions & Spellcraft Collector's Edition (FINAL FANTASY
- * XIV)"); 80 lascia margine anche per future uscite più verbose.
+ * Lunghezza massima del nome di un mazzo, perché si legga per intero negli
+ * elenchi. I precon Commander arrivano fino a 59 caratteri ("Scions & Spellcraft
+ * Collector's Edition (FINAL FANTASY XIV)"): all'importazione il nome si accorcia
+ * a parole intere con `shortenName` e resta modificabile. I nomi più lunghi
+ * salvati prima restano validi, ma per salvare il mazzo bisogna accorciarli.
  */
-export const MAX_DECK_NAME_LENGTH = 80;
+export const MAX_DECK_NAME_LENGTH = 30;
+
+/**
+ * Accorcia un nome proposto (file importato, precon) entro `max` caratteri
+ * senza tagliare una parola a metà: si ferma all'ultimo spazio, trattino o
+ * trattino basso. Solo se la prima parola è già troppo lunga taglia lì.
+ */
+export function shortenName(name: string, max: number): string {
+  const clean = name.trim().replace(/\s+/g, ' ');
+  if (clean.length <= max) return clean;
+  const cut = clean.slice(0, max + 1);
+  const boundary = Math.max(cut.lastIndexOf(' '), cut.lastIndexOf('_'), cut.lastIndexOf('-'));
+  const words = boundary > 0 ? cut.slice(0, boundary) : clean.slice(0, max);
+  // Niente separatori o parentesi aperte rimasti in fondo ("Edition (" → "Edition").
+  return words.replace(/[\s_\-(&,:;]+$/, '');
+}
 
 /** A row is editable by its owner; legacy rows without an owner are editable by anyone. */
 export function canEdit(createdBy: string | null | undefined, currentUserId: string | undefined): boolean {

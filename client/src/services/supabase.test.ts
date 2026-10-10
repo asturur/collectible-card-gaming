@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fetchWithClockSkewRetry } from './supabase';
+import { fetchWithClockSkewRetry, MAX_DECK_NAME_LENGTH, shortenName, suggestAlternativeNames } from './supabase';
 
 const futureJwt = () =>
   new Response(JSON.stringify({ code: 'PGRST303', message: 'JWT issued at future' }), { status: 401 });
@@ -29,5 +29,29 @@ describe('fetchWithClockSkewRetry', () => {
     const response = await fetchWithClockSkewRetry('https://x.test/rest/v1/partite', undefined, [0, 0]);
     expect(response.status).toBe(401);
     expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe('shortenName', () => {
+  it('lascia com\'è un nome che sta nel limite', () => {
+    expect(shortenName('  Elfi  ', 30)).toBe('Elfi');
+  });
+
+  it('accorcia a parole intere, senza separatori o parentesi in fondo', () => {
+    const precon = "Scions & Spellcraft Collector's Edition (FINAL FANTASY XIV)";
+    const short = shortenName(precon, MAX_DECK_NAME_LENGTH);
+    expect(short).toBe("Scions & Spellcraft");
+    expect(short.length).toBeLessThanOrEqual(MAX_DECK_NAME_LENGTH);
+    expect(shortenName('mono_black_devotion_pauper_meta_2026', 30)).toBe('mono_black_devotion_pauper');
+  });
+
+  it('taglia la prima parola solo se è già più lunga del limite', () => {
+    expect(shortenName('Supercalifragilistichespiralidoso', 10)).toBe('Supercalif');
+  });
+});
+
+describe('suggestAlternativeNames', () => {
+  it('propone nomi entro il limite anche partendo da un nome salvato più lungo', () => {
+    for (const name of suggestAlternativeNames('Giovanni Battista Rossi')) expect(name.length).toBeLessThanOrEqual(20);
   });
 });
