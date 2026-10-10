@@ -4,11 +4,19 @@ import { PIE_COLORS } from './stats';
 import { cx, HEADING_SECTION, NO_SCROLLBAR } from '../ui/styles';
 import type { LossCause } from './GameList';
 
+/** Tassa del comandante e danni da comandante subiti (per nome di chi li ha inflitti). */
+export interface CommanderCount {
+  tax: number;
+  damage: Record<string, number>;
+}
+
 /** Stato salvato di un giocatore, per riprendere una partita già registrata. */
 export interface LifeCounterResume {
   life: number;
   loss: LossCause[];
   poison: number;
+  /** Presente se il Comandante era acceso: non si salva con la partita, vive solo nell'editor. */
+  commander?: CommanderCount;
 }
 
 interface LifeCounterProps {
@@ -25,7 +33,9 @@ interface LifeCounterProps {
 type LifeCounterResult = (
   lives: Record<string, number>,
   causes: Record<string, LossCause[]>,
-  poisons: Record<string, number>
+  poisons: Record<string, number>,
+  /** Solo i giocatori con il Comandante acceso. */
+  commanders: Record<string, CommanderCount>
 ) => void;
 
 interface LcPlayer {
@@ -404,17 +414,20 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
     players.map((name) => {
       const saved = resume?.[name];
       if (!saved) return { name, life: startLife, kill: false, mill: false, poisonOn: false, poison: 0, cmdrOn: false, tax: 0, cmdr: {} };
-      // Il veleno letale è già contato come KILL nelle cause: non lo accendo due volte.
+      const cmdr = { ...saved.commander?.damage };
+      // Veleno o danno da comandante letali sono già contati come KILL nelle cause:
+      // non accendo anche il KILL manuale, altrimenti resterebbe acceso dopo un annullamento.
+      const lethalCmdr = Boolean(saved.commander) && Math.max(0, ...Object.values(cmdr)) >= CMDR_LIMIT;
       return {
         name,
         life: saved.life,
-        kill: saved.loss.includes('kill') && saved.poison < POISON_LIMIT,
+        kill: saved.loss.includes('kill') && saved.poison < POISON_LIMIT && !lethalCmdr,
         mill: saved.loss.includes('mill'),
         poisonOn: saved.poison > 0,
         poison: saved.poison,
-        cmdrOn: false,
-        tax: 0,
-        cmdr: {},
+        cmdrOn: Boolean(saved.commander),
+        tax: saved.commander?.tax ?? 0,
+        cmdr,
       };
     })
   );
@@ -493,12 +506,13 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
     setHighRollOpen(true);
   }
 
-  /** Punteggi, cause di sconfitta e veleno di ogni giocatore, per nome. */
+  /** Punteggi, cause di sconfitta, veleno e Comandante di ogni giocatore, per nome. */
   function snapshot(): Parameters<LifeCounterResult> {
     return [
       Object.fromEntries(lives.map((p) => [p.name, p.life])),
       Object.fromEntries(lives.map((p) => [p.name, lossCauses(p)])),
       Object.fromEntries(lives.map((p) => [p.name, p.poisonOn ? p.poison : 0])),
+      Object.fromEntries(lives.filter((p) => p.cmdrOn).map((p) => [p.name, { tax: p.tax, damage: { ...p.cmdr } }])),
     ];
   }
 

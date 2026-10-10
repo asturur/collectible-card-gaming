@@ -61,8 +61,57 @@ describe('LifeCounter', () => {
     expect(onFinish).toHaveBeenCalledWith(
       { Alice: 20, Bob: 20 },
       { Alice: ['kill'], Bob: [] },
-      { Alice: 0, Bob: 0 }
+      { Alice: 0, Bob: 0 },
+      { Alice: { tax: 0, damage: { Bob: 21 } } }
     );
+  });
+
+  it('hands commander tax and damage to "Modifica Partita" and restores them on resume', async () => {
+    const onEdit = vi.fn();
+    const user = userEvent.setup();
+    const { unmount } = render(<LifeCounter players={['Alice', 'Bob']} startLife={40} onEdit={onEdit} onFinish={vi.fn()} />);
+    await user.click(screen.getByRole('button', { name: 'Alice: opzioni' }));
+    await user.click(screen.getByRole('checkbox', { name: 'COMMANDER' }));
+    await user.click(screen.getByRole('button', { name: 'Alice: aggiungi 2 alla tassa del comandante' }));
+    const plus = screen.getByRole('button', { name: 'Alice: aggiungi 1 danno da comandante di Bob' });
+    for (let i = 0; i < 5; i++) await user.click(plus);
+    await user.click(screen.getByRole('button', { name: 'Chiudi' }));
+    await user.click(screen.getByRole('button', { name: 'Opzioni di gioco' }));
+    await user.click(screen.getByRole('button', { name: 'Modifica Partita' }));
+    expect(onEdit).toHaveBeenCalledWith(
+      { Alice: 40, Bob: 40 },
+      { Alice: [], Bob: [] },
+      { Alice: 0, Bob: 0 },
+      { Alice: { tax: 2, damage: { Bob: 5 } } }
+    );
+    unmount();
+
+    const [lives, causes, poisons, commanders] = onEdit.mock.calls[0];
+    const resume = Object.fromEntries(
+      Object.keys(lives).map((name) => [name, { life: lives[name], loss: causes[name], poison: poisons[name], commander: commanders[name] }])
+    );
+    render(<LifeCounter players={['Alice', 'Bob']} startLife={40} resume={resume} onEdit={vi.fn()} onFinish={vi.fn()} />);
+    expect(screen.getByText('CMD 5')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Alice: opzioni' }));
+    expect(screen.getByRole('checkbox', { name: 'COMMANDER' })).toBeChecked();
+    expect(screen.getByLabelText('Tassa del comandante')).toHaveTextContent('+2');
+    expect(screen.getByText('5/21')).toBeInTheDocument();
+  });
+
+  it('does not turn lethal commander damage into a manual KILL on resume', async () => {
+    const onFinish = vi.fn();
+    const user = userEvent.setup();
+    const resume = {
+      Alice: { life: 30, loss: ['kill' as const], poison: 0, commander: { tax: 0, damage: { Bob: 21 } } },
+      Bob: { life: 40, loss: [], poison: 0 },
+    };
+    render(<LifeCounter players={['Alice', 'Bob']} startLife={40} resume={resume} onEdit={vi.fn()} onFinish={onFinish} />);
+    await user.click(screen.getByRole('button', { name: 'Alice: opzioni' }));
+    await user.click(screen.getByRole('button', { name: 'Alice: togli 1 danno da comandante di Bob' }));
+    await user.click(screen.getByRole('button', { name: 'Chiudi' }));
+    await user.click(screen.getByRole('button', { name: 'Opzioni di gioco' }));
+    await user.click(screen.getByRole('button', { name: 'Fine Partita' }));
+    expect(onFinish.mock.calls[0][1]).toEqual({ Alice: [], Bob: [] });
   });
 
   it('flips a coin from the game menu', async () => {

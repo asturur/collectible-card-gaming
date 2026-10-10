@@ -12,7 +12,8 @@ import {
 } from '../../services/supabase';
 import type { Game } from './GameList';
 import { rowToGame } from './stats';
-import LifeCounter, { type LifeCounterResume } from './LifeCounter';
+import LifeCounter, { type CommanderCount, type LifeCounterResume } from './LifeCounter';
+import { rekeyCommander } from './commanderKeys';
 import type { LossCause } from './GameList';
 import { ManaPips } from './ManaIcon';
 import ColorFilter from './ColorFilter';
@@ -41,6 +42,8 @@ interface DeckOption {
 }
 
 interface PlayerRow {
+  /** Identità della riga, stabile anche se il nome cambia (non si salva). */
+  rowId: string;
   name: string;
   deckMode: 'select' | 'manual';
   deckSelect: string;
@@ -53,6 +56,9 @@ interface PlayerRow {
   loss: LossCause[];
   /** Contatori veleno a fine partita (0 se non usato). */
   poison: number;
+  /** Tassa e danni da comandante dal segna-punti (danni per `rowId` di chi li ha inflitti).
+   *  Servono solo a "Riprendi Partita": non si salvano con la partita. */
+  commander?: CommanderCount;
   /** True dopo aver cliccato "No, è un'altra persona": finché il nome resta
    *  identico (a parte maiuscole/spazi) a uno già in elenco, mostra l'avviso
    *  "scegli un nome diverso" invece della domanda "è la stessa persona?". */
@@ -131,8 +137,15 @@ function toLocalDateTimeValue(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+let lastRowId = 0;
+function newRowId(): string {
+  lastRowId += 1;
+  return 'r' + lastRowId;
+}
+
 function emptyPlayerRow(): PlayerRow {
   return {
+    rowId: newRowId(),
     name: '',
     deckMode: 'select',
     deckSelect: '',
@@ -214,6 +227,7 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved, on
             const saved = deckList.find((d) => d.id === p.deckId) ?? deckList.find((d) => d.name === p.deck);
             const manual = Boolean(p.deck) && !saved;
             return {
+              rowId: newRowId(),
               name: p.name,
               deckMode: manual ? 'manual' : 'select',
               deckSelect: saved ? saved.name : '',
@@ -236,6 +250,7 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved, on
             const saved = deckList.find((d) => d.id === p.deckId) ?? deckList.find((d) => d.name === p.deck);
             const manual = Boolean(p.deck) && !saved;
             return {
+              rowId: newRowId(),
               name: p.name,
               deckMode: manual ? 'manual' : 'select',
               deckSelect: saved ? saved.name : '',
@@ -353,10 +368,17 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved, on
     setLifeCounterOpen(true);
   }
 
+  /** Comandante dal segna-punti (danni per nome) alla riga dell'editor (danni per `rowId`). */
+  function commanderForRow(rows: PlayerRow[], commanders: Record<string, CommanderCount>, key: string) {
+    const count = commanders[key];
+    return count && rekeyCommander(count, new Map(rows.map((r) => [r.name.trim(), r.rowId])));
+  }
+
   function handleLifeCounterFinish(
     lives: Record<string, number>,
     causes: Record<string, LossCause[]>,
-    poisons: Record<string, number>
+    poisons: Record<string, number>,
+    commanders: Record<string, CommanderCount>
   ) {
     // Se un solo giocatore non ha KILL, MILL né veleno letale, è lui il
     // vincitore: lo preseleziono. Con più candidati non scelgo nessuno.
@@ -370,6 +392,7 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved, on
           life: String(lives[key]),
           loss: causes[key] ?? [],
           poison: poisons[key] ?? 0,
+          commander: commanderForRow(prev, commanders, key),
           winner: survivors.length === 1 ? survivors[0] === key : p.winner,
         };
       })
@@ -383,13 +406,20 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved, on
   function handleLifeCounterBackToEdit(
     lives: Record<string, number>,
     causes: Record<string, LossCause[]>,
-    poisons: Record<string, number>
+    poisons: Record<string, number>,
+    commanders: Record<string, CommanderCount>
   ) {
     setPlayers((prev) =>
       prev.map((p) => {
         const key = p.name.trim();
         if (!(key in lives)) return p;
-        return { ...p, life: String(lives[key]), loss: causes[key] ?? [], poison: poisons[key] ?? 0 };
+        return {
+          ...p,
+          life: String(lives[key]),
+          loss: causes[key] ?? [],
+          poison: poisons[key] ?? 0,
+          commander: commanderForRow(prev, commanders, key),
+        };
       })
     );
     setLifeCounterOpen(false);
@@ -514,10 +544,16 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved, on
 
   /** Punteggi già salvati di ogni giocatore (solo quelli con una vita registrata). */
   const resumeData: Record<string, LifeCounterResume> = {};
+  const nameByRow = new Map(players.filter((p) => p.name.trim()).map((p) => [p.rowId, p.name.trim()]));
   players.forEach((p) => {
     const key = p.name.trim();
     if (key && p.life !== '' && !Number.isNaN(Number(p.life))) {
-      resumeData[key] = { life: Number(p.life), loss: p.loss, poison: p.poison };
+      resumeData[key] = {
+        life: Number(p.life),
+        loss: p.loss,
+        poison: p.poison,
+        ...(p.commander ? { commander: rekeyCommander(p.commander, nameByRow) } : {}),
+      };
     }
   });
 
