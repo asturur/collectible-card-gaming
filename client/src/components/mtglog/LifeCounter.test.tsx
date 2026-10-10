@@ -146,4 +146,12 @@ describe('LifeCounter', () => {
     expect(items.map((li) => li.textContent)).toEqual(expect.arrayContaining([expect.stringContaining('Alice'), expect.stringContaining('Bob')]));
     vi.unstubAllGlobals();
   });
+
+  it('has a fixed layout with three players, so no layout button', async () => {
+    const user = userEvent.setup();
+    render(<LifeCounter players={['A', 'B', 'C']} startLife={20} onEdit={vi.fn()} onFinish={vi.fn()} />);
+    await user.click(screen.getByRole('button', { name: 'Opzioni di gioco' }));
+    expect(screen.queryByRole('button', { name: /Disposizione/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'A: aggiungi 1 punto vita' })).toBeInTheDocument();
+  });
 });

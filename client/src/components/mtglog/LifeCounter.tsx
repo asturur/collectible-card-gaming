@@ -201,12 +201,22 @@ function at(column: string | number, row: string | number, rotation: Rotation): 
  * Chi siede da un lato legge dritto: capovolto in alto, ruotato di 90° ai lati del telefono.
  */
 const LAYOUT_OPTIONS: Record<number, LayoutSpec[]> = {
+  3: [
+    {
+      // Due riquadri affiancati in alto (uno per lato lungo) e uno a tutta larghezza in basso.
+      label: 'Due in alto, uno in basso',
+      columns: '1fr 1fr',
+      rows: '1.35fr 1fr',
+      places: [at('1 / span 2', 2, 0), at(1, 1, 90), at(2, 1, -90)],
+    },
+  ],
   4: [
     {
+      // Due sul lato lungo sinistro e due su quello destro, in senso orario dal basso a sinistra.
       label: 'Due per lato',
       columns: '1fr 1fr',
       rows: '1fr 1fr',
-      places: [at(1, 1, 180), at(2, 1, 180), at(1, 2, 0), at(2, 2, 0)],
+      places: [at(1, 2, 90), at(1, 1, 90), at(2, 1, -90), at(2, 2, -90)],
     },
     {
       // In senso orario dal basso.
@@ -214,12 +224,6 @@ const LAYOUT_OPTIONS: Record<number, LayoutSpec[]> = {
       columns: '1fr 1fr',
       rows: '1fr 1.35fr 1fr',
       places: [at('1 / span 2', 3, 0), at(1, 2, 90), at('1 / span 2', 1, 180), at(2, 2, -90)],
-    },
-    {
-      label: 'Ai lati',
-      columns: '1fr 1fr',
-      rows: '1fr 1fr',
-      places: [at(1, 1, 90), at(2, 1, -90), at(1, 2, 90), at(2, 2, -90)],
     },
   ],
   5: [
@@ -791,7 +795,7 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
             <Button variant="ghost" className="flex h-16 text-base" disabled={history.length === 0} onClick={() => { undoLast(); setMenuOpen(false); }}>
               Annulla Ultimo
             </Button>
-            {options && (
+            {options && options.length > 1 && (
               <Button
                 variant="ghost"
                 className="flex h-16 flex-col gap-0 text-base"
@@ -807,7 +811,7 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
             <Button className="flex h-16 text-base" onClick={() => onFinish(...snapshot())}>
               Fine Partita
             </Button>
-            <Button variant="ghost" className={cx('flex h-16 text-base', !options && 'col-span-2')} onClick={() => setMenuOpen(false)}>
+            <Button variant="ghost" className={cx('flex h-16 text-base', !(options && options.length > 1) && 'col-span-2')} onClick={() => setMenuOpen(false)}>
               Torna al Gioco
             </Button>
           </div>
