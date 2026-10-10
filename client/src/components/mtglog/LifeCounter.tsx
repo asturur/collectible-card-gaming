@@ -633,26 +633,28 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
                     </span>
                   </label>
                   {p.poisonOn && (
-                    <div className="flex items-center justify-between gap-2">
-                      <button
-                        type="button"
-                        onClick={() => change(i, 'poison', -1)}
-                        aria-label={`${p.name}: togli 1 segnalino veleno`}
-                        className="h-10 w-10 rounded-lg border border-white/30 text-xl active:bg-white/20"
-                      >
-                        −
-                      </button>
-                      <span className="text-sm font-bold tabular-nums">
-                        {p.poison}/{POISON_LIMIT}
+                    <div className="flex items-center justify-end">
+                      <span className="flex shrink-0 items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => change(i, 'poison', -1)}
+                          aria-label={`${p.name}: togli 1 segnalino veleno`}
+                          className="h-10 w-10 rounded-lg border border-white/30 text-xl active:bg-white/20"
+                        >
+                          −
+                        </button>
+                        <span className="w-10 text-center text-sm font-bold tabular-nums">
+                          {p.poison}/{POISON_LIMIT}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => change(i, 'poison', 1)}
+                          aria-label={`${p.name}: aggiungi 1 segnalino veleno`}
+                          className="h-10 w-10 rounded-lg border border-white/30 text-xl active:bg-white/20"
+                        >
+                          +
+                        </button>
                       </span>
-                      <button
-                        type="button"
-                        onClick={() => change(i, 'poison', 1)}
-                        aria-label={`${p.name}: aggiungi 1 segnalino veleno`}
-                        className="h-10 w-10 rounded-lg border border-white/30 text-xl active:bg-white/20"
-                      >
-                        +
-                      </button>
                     </div>
                   )}
                   <label className="flex items-center justify-between gap-3 text-[13px] font-bold tracking-wider">
