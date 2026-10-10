@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import DeckEditor from './DeckEditor';
 import { getSavedDeck, saveSavedDeck, findDeckWithSameName, DeckConflictError, UnresolvedCardsError } from '../../services/savedDecks';
@@ -7,7 +7,7 @@ vi.mock('../../services/savedDecks', () => ({ getSavedDeck: vi.fn(), saveSavedDe
   DeckConflictError: class extends Error { constructor() { super('Changed'); } }, UnresolvedCardsError: class extends Error { constructor(names: string[]) { super(names.join(', ')); } } }));
 vi.mock('../../services/scryfall', () => ({ autocompleteCards: vi.fn(async () => []) }));
 vi.mock('./DeckStats', () => ({ DeckStatsButton: () => null }));
-vi.mock('./DeckCards', () => ({ useDeckImages: () => {}, default: ({ cards, editable }: { cards: { name: string; qty: number }[]; editable: { onChangeQty: (card: unknown, delta: number) => void } }) => <div>{cards.map(c => <button key={c.name} onClick={() => editable.onChangeQty(c, -1)}>Remove {c.name} ({c.qty})</button>)}</div> }));
+vi.mock('./DeckCards', () => ({ useDeckImages: () => {}, default: ({ cards, editable }: { cards: { name: string; qty: number }[]; editable: { onChangeQty: (card: unknown, delta: number) => void } }) => <div>{cards.map(c => <button key={c.name} onClick={() => editable.onChangeQty(c, -1)}>Remove {c.name} ({c.qty})</button>)}<div id="deck-sideboard" /></div> }));
 const deck = { id: 'deck', name: 'Saved', source: 'brew', format: 'Modern', colors: ['U'], revision: 4,
   cards: [{ name: 'Island', qty: 2, section: 'main', scryfallId: 'original-id', oracleId: 'original-oracle' }, { name: 'Forest', qty: 1, section: 'side' }] };
 beforeEach(() => { vi.clearAllMocks(); vi.mocked(getSavedDeck).mockResolvedValue(deck as never); vi.mocked(saveSavedDeck).mockResolvedValue(); vi.mocked(findDeckWithSameName).mockResolvedValue(null); });
@@ -78,6 +78,24 @@ describe('Registro save controls', () => {
     await user.click(screen.getByRole('button', { name: 'Salva Modifiche' }));
     expect(screen.getByText('Il nome del mazzo ha 36 caratteri: il massimo è 30. Accorcialo prima di salvare.')).toBeInTheDocument();
     expect(saveSavedDeck).not.toHaveBeenCalled();
+  });
+  it('lights up Main Deck or Sideboard in the totals bar while scrolling, as on the deck page', async () => {
+    // jsdom non impagina: una pagina lunga, con la Sideboard ancora in basso.
+    Object.defineProperty(document.documentElement, 'scrollHeight', { value: 5000, configurable: true });
+    const rect = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({ top: 1200 } as DOMRect);
+    try {
+      render(<DeckEditor deckId="deck" onBack={() => {}} onSaved={() => {}} />);
+      await screen.findByDisplayValue('Saved');
+      expect(screen.getByText('Main Deck 2')).toHaveAttribute('aria-current', 'true');
+      expect(screen.getByText('Sideboard 1')).not.toHaveAttribute('aria-current');
+      rect.mockReturnValue({ top: 100 } as DOMRect);
+      fireEvent.scroll(window);
+      expect(screen.getByText('Sideboard 1')).toHaveAttribute('aria-current', 'true');
+      expect(screen.getByText('Main Deck 2')).not.toHaveAttribute('aria-current');
+    } finally {
+      rect.mockRestore();
+      Object.defineProperty(document.documentElement, 'scrollHeight', { value: 0, configurable: true });
+    }
   });
   it('refuses a name already used by another deck, ignoring case and spaces', async () => {
     vi.mocked(findDeckWithSameName).mockResolvedValueOnce('Mono Black');

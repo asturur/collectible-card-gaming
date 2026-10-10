@@ -8,6 +8,8 @@ import { ManaPips } from './ManaIcon';
 import CardPicker from './CardPicker';
 import DeckCardsView, { useDeckImages } from './DeckCards';
 import { DeckStatsButton } from './DeckStats';
+import { sectionTone } from './DeckDetailActions';
+import { useSectionInView } from './useSectionInView';
 import Button from '../ui/Button';
 import { TextField, SelectField } from '../ui/Field';
 import { cx, FIELD_CONTROL_SM, FIELD_LABEL, TEXT_MINI, TEXT_MUTED } from '../ui/styles';
@@ -359,6 +361,9 @@ export default function DeckEditor({ deckId, userId, initialDraft, onBack, onSav
 
   const total = draft.reduce((sum, c) => sum + c.qty, 0);
 
+  // Come nella pagina del mazzo: scorrendo le carte si accende Main Deck o Sideboard.
+  const section = useSectionInView(!loading && !loadFailed, draft);
+
   if (loading) {
     return <p className={TEXT_MUTED}>Caricamento…</p>;
   }
@@ -376,8 +381,8 @@ export default function DeckEditor({ deckId, userId, initialDraft, onBack, onSav
           {name.trim() || 'Nuovo mazzo'}
         </p>
         <div className="flex items-center justify-between gap-2">
-          <span>Main Deck {mainTotal}</span>
-          <span>Sideboard {sideTotal}</span>
+          <span aria-current={section === 'main' ? 'true' : undefined} className={sectionTone(section, 'main')}>Main Deck {mainTotal}</span>
+          <span aria-current={section === 'side' ? 'true' : undefined} className={sectionTone(section, 'side')}>Sideboard {sideTotal}</span>
           <span className="bg-gradient-to-r from-zaff-primary to-zaff-accent bg-clip-text text-lg font-bold text-transparent">
             Totale {total}
           </span>

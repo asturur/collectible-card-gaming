@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
+import { useSectionInView } from './useSectionInView';
 import { Navigate, useLocation, useNavigate, useParams, type RouteObject } from 'react-router';
 import { useRegistro } from '../MtgLog';
 import HomeOverview from './HomeOverview';
@@ -145,30 +146,13 @@ function DeckPageFrame({ deckId, deck, active, children }: { deckId: string; dec
   const [actionsOpen, setActionsOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [shareNotice, setShareNotice] = useState('');
-  const [section, setSection] = useState<'main' | 'side'>('main');
   const guard = useLeaveGuard();
   const mainTotal = deck ? deck.cards.filter((c) => c.section !== 'side').reduce((sum, c) => sum + c.qty, 0) : 0;
   const sideTotal = deck ? deck.cards.filter((c) => c.section === 'side').reduce((sum, c) => sum + c.qty, 0) : 0;
   const showingCards = active === 'deck' && !actionsOpen;
 
-  // Scorrendo le carte, la barra illumina Main Deck o Sideboard: la Sideboard si
-  // "accende" quando il suo titolo sale sotto la barra, o in fondo alla pagina.
-  useEffect(() => {
-    if (!showingCards || !deck) return;
-    function update() {
-      const el = document.getElementById('deck-sideboard');
-      if (!el) { setSection('main'); return; }
-      const atBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2;
-      setSection(el.getBoundingClientRect().top <= 150 || atBottom ? 'side' : 'main');
-    }
-    update();
-    window.addEventListener('scroll', update, { passive: true, capture: true });
-    window.addEventListener('resize', update);
-    return () => {
-      window.removeEventListener('scroll', update, { capture: true });
-      window.removeEventListener('resize', update);
-    };
-  }, [showingCards, deck]);
+  // Scorrendo le carte, la barra illumina Main Deck o Sideboard.
+  const section = useSectionInView(showingCards && Boolean(deck), deck);
 
   async function handleShare() {
     if (!deck) return;

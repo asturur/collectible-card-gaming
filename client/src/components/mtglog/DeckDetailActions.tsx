@@ -71,8 +71,13 @@ interface DeckSummaryBarProps {
  * Barra sotto i tre tasti (nello stesso blocco fisso, vedi `DeckPageFrame`): totali (il nome è il titolo fisso della pagina). Resta uguale in Deck,
  * Stats e Azioni, che sono tre contenuti della stessa pagina.
  */
+/** Colore di "Main Deck"/"Sideboard" nelle barre dei totali: acceso sulla sezione in vista. */
+export function sectionTone(highlight: 'main' | 'side' | null, section: 'main' | 'side'): string {
+  return highlight === section ? 'text-zaff-accent' : 'text-zaff-muted';
+}
+
 export function DeckSummaryBar({ main, side, highlight }: DeckSummaryBarProps) {
-  const tone = (section: 'main' | 'side') => (highlight === section ? 'text-zaff-accent' : 'text-zaff-muted');
+  const tone = (section: 'main' | 'side') => sectionTone(highlight, section);
   return (
     <div className="mt-2 rounded-lg border border-zaff-primary bg-zaff-surface px-3 py-2 text-sm font-semibold shadow-lg">
       <div className="flex items-center justify-between gap-2">
