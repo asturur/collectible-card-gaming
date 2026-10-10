@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Navigate, Outlet, useNavigate, useOutletContext, useSearchParams } from 'react-router';
 import type { Session } from '@supabase/supabase-js';
 import { isSupabaseConfigured, subscribeToTable, supabase, TABLE_DECKS, TABLE_GAMES } from '../services/supabase';
@@ -17,6 +17,8 @@ export interface RegistroContext {
   games: Game[];
   gamesLoading: boolean;
   gamesError: string;
+  /** Rilegge subito le partite (es. dopo una cancellazione), senza aspettare l'avviso in tempo reale. */
+  reloadGames: () => Promise<void>;
   deckCount: number;
   /** Mazzi salvati (ID e nome attuale), per collegarli alle partite. */
   decks: DeckRef[];
@@ -43,6 +45,7 @@ export default function MtgLog() {
   const [games, setGames] = useState<Game[]>([]);
   const [gamesLoading, setGamesLoading] = useState(true);
   const [gamesError, setGamesError] = useState('');
+  const reloadGamesRef = useRef<() => Promise<void>>(async () => {});
   const [deckCount, setDeckCount] = useState(0);
   const [decks, setDecks] = useState<DeckRef[]>([]);
   const [recovering, setRecovering] = useState(OPENED_FROM_RECOVERY_LINK);
@@ -90,9 +93,14 @@ export default function MtgLog() {
       if (!error) setGames((data ?? []).map(rowToGame));
       setGamesLoading(false);
     }
+    reloadGamesRef.current = loadGames;
     void loadGames();
     const unsubscribe = subscribeToTable(TABLE_GAMES, loadGames);
-    return () => { cancelled = true; unsubscribe(); };
+    return () => {
+      cancelled = true;
+      reloadGamesRef.current = async () => {};
+      unsubscribe();
+    };
   }, [loggedIn]);
 
   // Numero di mazzi salvati, per la pagina iniziale.
@@ -155,7 +163,7 @@ export default function MtgLog() {
 
   return (
     <div className="min-h-screen bg-zaff-bg text-zaff-text">
-      <Outlet context={{ userId: session.user.id, email: session.user.email, games, gamesLoading, gamesError, deckCount, decks } satisfies RegistroContext} />
+      <Outlet context={{ userId: session.user.id, email: session.user.email, games, gamesLoading, gamesError, reloadGames: () => reloadGamesRef.current(), deckCount, decks } satisfies RegistroContext} />
       <BottomNav />
     </div>
   );

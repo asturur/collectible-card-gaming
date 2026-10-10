@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { toCanvas } from 'html-to-image';
-import { canEdit, subscribeToTable, supabase, TABLE_GAMES } from '../../services/supabase';
+import { canEdit, supabase, TABLE_GAMES } from '../../services/supabase';
 import { ManaIcons } from './ManaIcon';
-import { dateLabel, durationLabel, rowToGame, timeLabel } from './stats';
+import { dateLabel, durationLabel, timeLabel } from './stats';
 import { Link, useNavigate, useParams } from 'react-router';
 import { appHref, paths } from '../../router';
 import Button from '../ui/Button';
@@ -244,6 +244,12 @@ export interface Game {
 
 interface GameListProps {
   userId: string;
+  /** Partite condivise del Registro (`useRegistro()`), in qualsiasi ordine. */
+  games: Game[];
+  loading: boolean;
+  /** Errore di lettura delle partite condivise ('' se nessuno). */
+  loadError: string;
+  reloadGames: () => Promise<void>;
   onEdit: (game: Game) => void;
   /** Avvia una nuova partita con gli stessi giocatori e gli stessi mazzi. */
   onRematch: (game: Game) => void;
@@ -298,12 +304,17 @@ function idTimeSuffix(id: string): string {
 /** Storico partite: lista + dettaglio, appellativi scherzosi random per
  *  vincitore/perdenti nel dettaglio.
  *  Elenco e dettaglio hanno URL distinti; l'export conserva il suo rendering. */
-export default function GameList({ userId, onEdit, onRematch }: GameListProps) {
+export default function GameList({ userId, games: sharedGames, loading, loadError, reloadGames, onEdit, onRematch }: GameListProps) {
   const { gameId: selectedId } = useParams();
   const navigate = useNavigate();
-  const [games, setGames] = useState<Game[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  /** Dalla più recente: data, poi ID (che contiene l'istante di creazione). */
+  const games = useMemo(
+    () => [...sharedGames].sort((a, b) => (a.date === b.date ? (a.id < b.id ? 1 : a.id > b.id ? -1 : 0) : a.date < b.date ? 1 : -1)),
+    [sharedGames]
+  );
+  /** Errori delle azioni in questa pagina (cancellazione, esportazione). */
+  const [actionError, setActionError] = useState('');
+  const error = actionError || loadError;
   const [exporting, setExporting] = useState(false);
   /** URL dell'ultima immagine generata: la mostriamo sempre (da salvare
    *  tenendo premuto), perché su iPhone la condivisione nativa può fallire
@@ -314,31 +325,6 @@ export default function GameList({ userId, onEdit, onRematch }: GameListProps) {
   // Ricerca e filtri dell'elenco (non toccano i dati, solo cosa si vede).
   const [query, setQuery] = useState('');
   const [periodFilter, setPeriodFilter] = useState<'all' | '30' | 'year'>('all');
-
-  async function loadGames() {
-    if (!supabase) return;
-    const { data, error: loadError } = await supabase
-      .from(TABLE_GAMES)
-      .select('*')
-      .order('date', { ascending: false })
-      .order('id', { ascending: false });
-    if (loadError) {
-      setError('Non riesco a leggere il registro condiviso: ' + loadError.message);
-      return;
-    }
-    setGames((data ?? []).map(rowToGame));
-  }
-
-  useEffect(() => {
-    if (!supabase) {
-      setLoading(false);
-      return;
-    }
-    loadGames().finally(() => setLoading(false));
-    const unsubscribe = subscribeToTable(TABLE_GAMES, loadGames);
-    return unsubscribe;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const selectedGame = games.find((g) => g.id === selectedId) ?? null;
 
@@ -390,17 +376,17 @@ export default function GameList({ userId, onEdit, onRematch }: GameListProps) {
     if (!confirm('Cancellare questa partita dal registro? La vedranno cancellata anche gli altri.')) return;
     const { error: deleteError } = await supabase.from(TABLE_GAMES).delete().eq('id', id);
     if (deleteError) {
-      setError('Cancellazione non riuscita: ' + deleteError.message);
+      setActionError('Cancellazione non riuscita: ' + deleteError.message);
       return;
     }
-    await loadGames();
+    await reloadGames();
     void navigate(paths.games, { replace: true });
   }
 
   async function handleExport(g: Game) {
     if (!shareCardRef.current) return;
     setExporting(true);
-    setError('');
+    setActionError('');
     try {
       // html-to-image invece di html2canvas: non reinterpreta a modo suo gli
       // stili come faceva html2canvas (da cui venivano sia il taglio del nome
@@ -416,7 +402,7 @@ export default function GameList({ userId, onEdit, onRematch }: GameListProps) {
       canvas.toBlob(
         (blob) => {
           if (!blob) {
-            setError("Non sono riuscito a generare l'immagine: riprova.");
+            setActionError("Non sono riuscito a generare l'immagine: riprova.");
             return;
           }
           const time = idTimeSuffix(g.id);
@@ -447,7 +433,7 @@ export default function GameList({ userId, onEdit, onRematch }: GameListProps) {
     } catch {
       // Es. una classe colore non supportata da html2canvas: prima d'ora
       // falliva qui in silenzio e il tasto sembrava non fare nulla.
-      setError("Non sono riuscito a generare l'immagine: riprova.");
+      setActionError("Non sono riuscito a generare l'immagine: riprova.");
     } finally {
       setExporting(false);
     }

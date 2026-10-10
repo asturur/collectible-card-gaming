@@ -52,14 +52,14 @@ function RegistroHome() {
 }
 
 function GamesPage() {
-  const { userId, games, gamesLoading } = useRegistro();
+  const { userId, games, gamesLoading, gamesError, reloadGames } = useRegistro();
   // Aprire l'elenco Partite significa averle viste: sparisce il segno "nuove" della Home.
   useEffect(() => { if (!gamesLoading) markGamesSeen(games); }, [games, gamesLoading]);
   const { gameId } = useParams();
   const navigate = useNavigate();
   return (
     <SectionPage title={gameId ? 'Dettaglio Partita' : 'Partite Salvate'} stickyTitle wide xl={Boolean(gameId)} ancestors={gameId ? [GAMES_CRUMB] : []}>
-      <GameList userId={userId} onEdit={(game) => { void navigate(paths.editGame(game.id)); }} onRematch={(game) => { void navigate(paths.rematch(game.id)); }} />
+      <GameList userId={userId} games={games} loading={gamesLoading} loadError={gamesError} reloadGames={reloadGames} onEdit={(game) => { void navigate(paths.editGame(game.id)); }} onRematch={(game) => { void navigate(paths.rematch(game.id)); }} />
     </SectionPage>
   );
 }
