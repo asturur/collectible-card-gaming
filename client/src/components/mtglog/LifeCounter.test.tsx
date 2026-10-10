@@ -79,7 +79,7 @@ describe('LifeCounter', () => {
   });
 
   it('offers the table layout only with four players and remembers the choice', async () => {
-    localStorage.removeItem('mtglog:counterLayout');
+    localStorage.removeItem('mtglog:counterLayout:4');
     const user = userEvent.setup();
     const { unmount } = render(<LifeCounter players={['A', 'B', 'C', 'D']} startLife={40} onEdit={vi.fn()} onFinish={vi.fn()} />);
     await user.click(screen.getByRole('button', { name: 'Opzioni di gioco' }));
@@ -92,12 +92,28 @@ describe('LifeCounter', () => {
     render(<LifeCounter players={['A', 'B', 'C', 'D']} startLife={40} onEdit={vi.fn()} onFinish={vi.fn()} />);
     await user.click(screen.getByRole('button', { name: 'Opzioni di gioco' }));
     expect(screen.getByRole('button', { name: /Disposizione/ })).toHaveTextContent('A croce');
-    localStorage.removeItem('mtglog:counterLayout');
+    localStorage.removeItem('mtglog:counterLayout:4');
   });
 
   it('hides the layout choice with fewer than four players', async () => {
     const { user } = setup();
     await user.click(screen.getByRole('button', { name: 'Opzioni di gioco' }));
     expect(screen.queryByRole('button', { name: /Disposizione/ })).not.toBeInTheDocument();
+  });
+
+  it.each([
+    [5, 'Uno a lato', 'Due sopra, tre sotto'],
+    [6, 'Tre per riga', 'Uno per lato'],
+  ])('offers two layouts with %i players', async (n, first, second) => {
+    localStorage.removeItem(`mtglog:counterLayout:${n}`);
+    const user = userEvent.setup();
+    const names = ['A', 'B', 'C', 'D', 'E', 'F'].slice(0, n);
+    render(<LifeCounter players={names} startLife={20} onEdit={vi.fn()} onFinish={vi.fn()} />);
+    await user.click(screen.getByRole('button', { name: 'Opzioni di gioco' }));
+    expect(screen.getByRole('button', { name: /Disposizione/ })).toHaveTextContent(first);
+    await user.click(screen.getByRole('button', { name: /Disposizione/ }));
+    await user.click(screen.getByRole('button', { name: 'Opzioni di gioco' }));
+    expect(screen.getByRole('button', { name: /Disposizione/ })).toHaveTextContent(second);
+    localStorage.removeItem(`mtglog:counterLayout:${n}`);
   });
 });

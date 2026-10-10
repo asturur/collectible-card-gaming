@@ -174,57 +174,120 @@ function shouldRotate(index: number, cols: number, rows: number): boolean {
   return rowIndex < Math.floor(rows / 2);
 }
 
-/** Disposizione dei segna-punti con 4 giocatori. */
-type CounterLayout = 'rows' | 'cross' | 'sides';
+type Rotation = 0 | 90 | 180 | -90;
 
-const LAYOUTS: CounterLayout[] = ['rows', 'cross', 'sides'];
-const LAYOUT_LABELS: Record<CounterLayout, string> = {
-  rows: 'Due per lato',
-  cross: 'A croce',
-  sides: 'Ai lati',
+interface Placement {
+  /** Posizione nella griglia (vuota: segue l'ordine di lettura). */
+  cell: CSSProperties;
+  /** Gradi di rotazione: chi siede da quel lato legge dritto. */
+  rotation: Rotation;
+}
+
+/** Una disposizione possibile: griglia e posto di ogni giocatore. */
+interface LayoutSpec {
+  label: string;
+  columns: string;
+  rows: string;
+  places: Placement[];
+}
+
+/** Posto in griglia: colonna e riga (con eventuali estensioni) e rotazione. */
+function at(column: string | number, row: string | number, rotation: Rotation): Placement {
+  return { cell: { gridColumn: column, gridRow: row }, rotation };
+}
+
+/**
+ * Disposizioni scelte dal tasto "Disposizione", per numero di giocatori (4, 5, 6).
+ * Chi siede da un lato legge dritto: capovolto in alto, ruotato di 90° ai lati del telefono.
+ */
+const LAYOUT_OPTIONS: Record<number, LayoutSpec[]> = {
+  4: [
+    {
+      label: 'Due per lato',
+      columns: '1fr 1fr',
+      rows: '1fr 1fr',
+      places: [at(1, 1, 180), at(2, 1, 180), at(1, 2, 0), at(2, 2, 0)],
+    },
+    {
+      // In senso orario dal basso.
+      label: 'A croce',
+      columns: '1fr 1fr',
+      rows: '1fr 1.35fr 1fr',
+      places: [at('1 / span 2', 3, 0), at(1, 2, 90), at('1 / span 2', 1, 180), at(2, 2, -90)],
+    },
+    {
+      label: 'Ai lati',
+      columns: '1fr 1fr',
+      rows: '1fr 1fr',
+      places: [at(1, 1, 90), at(2, 1, -90), at(1, 2, 90), at(2, 2, -90)],
+    },
+  ],
+  5: [
+    {
+      label: 'Uno a lato',
+      columns: '1fr 1fr 0.7fr',
+      rows: '1fr 1fr',
+      places: [at(1, 1, 180), at(2, 1, 180), at(1, 2, 0), at(2, 2, 0), at(3, '1 / span 2', -90)],
+    },
+    {
+      label: 'Due sopra, tre sotto',
+      columns: 'repeat(6, 1fr)',
+      rows: '1fr 1fr',
+      places: [at('1 / span 3', 1, 180), at('4 / span 3', 1, 180), at('1 / span 2', 2, 0), at('3 / span 2', 2, 0), at('5 / span 2', 2, 0)],
+    },
+  ],
+  6: [
+    {
+      label: 'Tre per riga',
+      columns: 'repeat(3, 1fr)',
+      rows: '1fr 1fr',
+      places: [at(1, 1, 180), at(2, 1, 180), at(3, 1, 180), at(1, 2, 0), at(2, 2, 0), at(3, 2, 0)],
+    },
+    {
+      label: 'Uno per lato',
+      columns: '0.7fr 1fr 1fr 0.7fr',
+      rows: '1fr 1fr',
+      places: [at(1, '1 / span 2', 90), at(2, 1, 180), at(3, 1, 180), at(4, '1 / span 2', -90), at(2, 2, 0), at(3, 2, 0)],
+    },
+  ],
 };
-const LAYOUT_KEY = 'mtglog:counterLayout';
 
-function readLayout(): CounterLayout {
+/** Disposizione di riserva (1, 2, 3 o più di 6 giocatori): griglia quadrata, metà alta capovolta. */
+function defaultLayout(n: number): LayoutSpec {
+  const cols = gridColumns(n);
+  const rows = Math.ceil(n / cols);
+  return {
+    label: '',
+    columns: `repeat(${cols}, 1fr)`,
+    rows: `repeat(${rows}, 1fr)`,
+    places: Array.from({ length: n }, (_, i) => ({ cell: {}, rotation: shouldRotate(i, cols, rows) ? 180 : 0 })),
+  };
+}
+
+function layoutKey(n: number) {
+  return `mtglog:counterLayout:${n}`;
+}
+
+function readLayoutIndex(n: number): number {
+  const count = LAYOUT_OPTIONS[n]?.length ?? 1;
   try {
-    const value = localStorage.getItem(LAYOUT_KEY);
-    return LAYOUTS.find((l) => l === value) ?? 'rows';
+    const value = Number(localStorage.getItem(layoutKey(n)));
+    return Number.isInteger(value) && value >= 0 && value < count ? value : 0;
   } catch {
-    return 'rows';
+    return 0;
   }
 }
 
-function rememberLayout(value: CounterLayout) {
+function rememberLayoutIndex(n: number, index: number) {
   try {
-    localStorage.setItem(LAYOUT_KEY, value);
+    localStorage.setItem(layoutKey(n), String(index));
   } catch {
     /* storage non disponibile: pazienza */
   }
 }
 
-interface Placement {
-  /** Posizione nella griglia (solo per la disposizione a croce). */
-  cell: CSSProperties;
-  /** Gradi di rotazione: chi siede da quel lato legge dritto. */
-  rotation: 0 | 90 | 180 | -90;
-}
-
-/** Dove va la scheda `i` e di quanto è ruotata. Giocatori in senso orario dal basso. */
-function placementFor(layout: CounterLayout, i: number, cols: number, rows: number): Placement {
-  if (layout === 'cross') {
-    return [
-      { cell: { gridColumn: '1 / span 2', gridRow: 3 }, rotation: 0 as const },
-      { cell: { gridColumn: 1, gridRow: 2 }, rotation: 90 as const },
-      { cell: { gridColumn: '1 / span 2', gridRow: 1 }, rotation: 180 as const },
-      { cell: { gridColumn: 2, gridRow: 2 }, rotation: -90 as const },
-    ][i];
-  }
-  if (layout === 'sides') return { cell: {}, rotation: i % 2 === 0 ? 90 : -90 };
-  return { cell: {}, rotation: shouldRotate(i, cols, rows) ? 180 : 0 };
-}
-
 /** Il contenuto della scheda ruota dentro la scheda: di 90° scambia larghezza e altezza (unità del contenitore). */
-function innerStyle(rotation: Placement['rotation']): CSSProperties {
+function innerStyle(rotation: Rotation): CSSProperties {
   if (rotation === 0) return { left: 0, top: 0, width: '100%', height: '100%' };
   if (rotation === 180) return { left: 0, top: 0, width: '100%', height: '100%', transform: 'rotate(180deg)' };
   return { left: '50%', top: '50%', width: '100cqh', height: '100cqw', transform: `translate(-50%, -50%) rotate(${rotation}deg)` };
@@ -293,16 +356,16 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
   const [historyOpen, setHistoryOpen] = useState(false);
   const nextEntryId = useRef(1);
 
-  const four = lives.length === 4;
-  const [layoutChoice, setLayoutChoice] = useState<CounterLayout>(readLayout);
-  const layout: CounterLayout = four ? layoutChoice : 'rows';
-  const cols = layout === 'rows' ? gridColumns(lives.length) : 2;
-  const rows = layout === 'cross' ? 3 : Math.ceil(lives.length / cols);
+  const count = lives.length;
+  const options = LAYOUT_OPTIONS[count];
+  const [layoutIndex, setLayoutIndex] = useState(() => readLayoutIndex(count));
+  const layout = options ? options[layoutIndex] : defaultLayout(count);
 
   function nextLayout() {
-    const next = LAYOUTS[(LAYOUTS.indexOf(layoutChoice) + 1) % LAYOUTS.length];
-    setLayoutChoice(next);
-    rememberLayout(next);
+    if (!options) return;
+    const next = (layoutIndex + 1) % options.length;
+    setLayoutIndex(next);
+    rememberLayoutIndex(count, next);
   }
 
   /** Cambia un contatore e lo scrive nella cronologia (unendo i tocchi ravvicinati). */
@@ -376,11 +439,11 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
       <div className="relative flex min-h-0 flex-1 flex-col">
       <div
         className="grid flex-1 gap-2.5"
-        style={{ gridTemplateColumns: `repeat(${cols}, 1fr)`, gridTemplateRows: layout === 'cross' ? '1fr 1.35fr 1fr' : `repeat(${rows}, 1fr)` }}
+        style={{ gridTemplateColumns: layout.columns, gridTemplateRows: layout.rows }}
       >
         {lives.map((p, i) => {
           const color = PIE_COLORS[i % PIE_COLORS.length];
-          const place = placementFor(layout, i, cols, rows);
+          const place = layout.places[i];
           return (
             <div
               key={p.name + i}
@@ -654,14 +717,14 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
             <Button variant="ghost" className="flex h-16 text-base" disabled={history.length === 0} onClick={() => { undoLast(); setMenuOpen(false); }}>
               Annulla Ultimo
             </Button>
-            {four && (
+            {options && (
               <Button
                 variant="ghost"
                 className="flex h-16 flex-col gap-0 text-base"
                 onClick={() => { nextLayout(); setMenuOpen(false); }}
               >
                 Disposizione
-                <span className="text-xs font-normal opacity-70">{LAYOUT_LABELS[layoutChoice]}</span>
+                <span className="text-xs font-normal opacity-70">{layout.label}</span>
               </Button>
             )}
             <Button variant="ghost" className="flex h-16 text-base" onClick={() => onEdit(...snapshot())}>
@@ -670,7 +733,7 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
             <Button className="flex h-16 text-base" onClick={() => onFinish(...snapshot())}>
               Fine Partita
             </Button>
-            <Button variant="ghost" className={cx('flex h-16 text-base', !four && 'col-span-2')} onClick={() => setMenuOpen(false)}>
+            <Button variant="ghost" className={cx('flex h-16 text-base', !options && 'col-span-2')} onClick={() => setMenuOpen(false)}>
               Torna al Gioco
             </Button>
           </div>
