@@ -61,7 +61,6 @@ export function DeckTabs({ active, deckTo, statsTo, actionsOpen, onShowPage, onT
 }
 
 interface DeckSummaryBarProps {
-  title: string;
   main: number;
   side: number;
   /** Sezione che si sta guardando scorrendo le carte (null: nessuna in evidenza). */
@@ -69,14 +68,13 @@ interface DeckSummaryBarProps {
 }
 
 /**
- * Barra sotto i tre tasti (nello stesso blocco fisso, vedi `DeckPageFrame`): nome del mazzo e totali. Resta uguale in Deck,
+ * Barra sotto i tre tasti (nello stesso blocco fisso, vedi `DeckPageFrame`): totali (il nome è il titolo fisso della pagina). Resta uguale in Deck,
  * Stats e Azioni, che sono tre contenuti della stessa pagina.
  */
-export function DeckSummaryBar({ title, main, side, highlight }: DeckSummaryBarProps) {
+export function DeckSummaryBar({ main, side, highlight }: DeckSummaryBarProps) {
   const tone = (section: 'main' | 'side') => (highlight === section ? 'text-zaff-accent' : 'text-zaff-muted');
   return (
     <div className="mt-2 rounded-lg border border-zaff-primary bg-zaff-surface px-3 py-2 text-sm font-semibold shadow-lg">
-      <p className="mb-1 truncate text-base font-bold text-zaff-text" title={title}>{title}</p>
       <div className="flex items-center justify-between gap-2">
         <span aria-current={highlight === 'main' ? 'true' : undefined} className={tone('main')}>Main Deck {main}</span>
         <span aria-current={highlight === 'side' ? 'true' : undefined} className={tone('side')}>Sideboard {side}</span>

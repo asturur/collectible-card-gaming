@@ -22,6 +22,9 @@ export const SURFACE = 'rounded-lg border border-zaff-border bg-zaff-bg';
 
 export const HEADING_PAGE = 'font-serif text-2xl tracking-wide text-zaff-text sm:text-[26px]';
 export const HEADING_PANEL = 'font-serif text-2xl text-zaff-text';
+/** Distanza dal bordo alto per un blocco fisso che sta sotto il titolo fisso di `SectionPage` (una riga). */
+export const STICKY_BELOW_TITLE = 'top-[calc(env(safe-area-inset-top)+2.7rem)]';
+
 export const HEADING_SECTION = 'font-serif text-lg text-zaff-text sm:text-xl';
 
 export const FIELD_LABEL = 'mb-2 block text-sm font-medium text-zaff-text';

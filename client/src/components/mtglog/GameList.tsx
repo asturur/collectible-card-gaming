@@ -8,7 +8,7 @@ import { appHref, paths } from '../../router';
 import Button from '../ui/Button';
 import FilterTabs from '../ui/FilterTabs';
 import { JpgBadge } from './ImageExport';
-import { cx, FIELD_CONTROL, HEADING_SECTION, TEXT_MINI, TEXT_MUTED } from '../ui/styles';
+import { cx, FIELD_CONTROL, HEADING_SECTION, STICKY_BELOW_TITLE, TEXT_MINI, TEXT_MUTED } from '../ui/styles';
 
 interface IconButtonProps {
   label: string;
@@ -515,7 +515,7 @@ export default function GameList({ userId, onEdit, onRematch }: GameListProps) {
       ) : (
         <>
           {/* Ricerca e periodo restano in cima mentre si scorre l'elenco. */}
-          <div className="sticky top-[env(safe-area-inset-top)] z-10 -mx-1 mb-2 bg-zaff-surface px-1 pb-1 pt-1">
+          <div className={cx(STICKY_BELOW_TITLE, 'sticky z-10 -mx-1 mb-2 bg-zaff-surface px-1 pb-1 pt-1')}>
           <input
             type="search"
             value={query}

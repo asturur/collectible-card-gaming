@@ -5,7 +5,7 @@ import { parseDeckText, type DeckEntry } from '../../services/deckCards';
 import { ManaIcons, ManaPips } from './ManaIcon';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
-import { cx, TEXT_MINI, TEXT_MUTED } from '../ui/styles';
+import { cx, STICKY_BELOW_TITLE, TEXT_MINI, TEXT_MUTED } from '../ui/styles';
 import { Link } from 'react-router';
 import { paths } from '../../router';
 
@@ -101,7 +101,7 @@ export default function DeckList({ onCreate, onImportFile }: DeckListProps) {
         ) : (
           <>
             {/* Il filtro colore resta in cima mentre si scorre la lista. */}
-            <div className="sticky top-[env(safe-area-inset-top)] z-10 -mx-1 mb-2 rounded-lg border border-zaff-border bg-zaff-surface p-2.5 shadow-lg">
+            <div className={cx(STICKY_BELOW_TITLE, 'sticky z-10 -mx-1 mb-2 rounded-lg border border-zaff-border bg-zaff-surface p-2.5 shadow-lg')}>
               <span className={cx('mb-1.5 block', TEXT_MINI)}>Colore</span>
               <div className="flex flex-wrap items-center gap-2">
                 <ManaPips colors={colorFilter} onToggle={toggleColorFilter} />

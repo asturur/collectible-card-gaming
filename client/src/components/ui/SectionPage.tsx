@@ -27,7 +27,7 @@ export default function SectionPage({ title, subtitle, ancestors = [], wide, xl,
           <h1 ref={heading} tabIndex={-1} className={cx(
               HEADING_SECTION,
               'mb-3 border-b border-zaff-border pb-1.5 outline-none [overflow-wrap:anywhere]',
-              stickyTitle && 'sticky top-[env(safe-area-inset-top)] z-10 -mx-4 bg-zaff-surface px-4 pt-2 sm:-mx-6 sm:px-6'
+              stickyTitle && 'sticky truncate top-[env(safe-area-inset-top)] z-10 -mx-4 bg-zaff-surface px-4 pt-2 sm:-mx-6 sm:px-6'
             )}>
             {title}
           </h1>

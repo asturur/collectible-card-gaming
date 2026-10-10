@@ -16,7 +16,7 @@ import Standings, { PlayerStatsDetail } from './Standings';
 import MatchupStats, { MatchupStatsDetail } from './MatchupStats';
 import { computeMatchups, computeTally, matchupKey, rowToGame } from './stats';
 import SectionPage from '../ui/SectionPage';
-import { HEADING_PAGE, TEXT_MUTED } from '../ui/styles';
+import { cx, HEADING_PAGE, STICKY_BELOW_TITLE, TEXT_MUTED } from '../ui/styles';
 import { useLeaveGuard } from '../ui/useLeaveGuard';
 import { canEdit, supabase, TABLE_GAMES } from '../../services/supabase';
 import { deleteSavedDeck, type SavedDeck } from '../../services/savedDecks';
@@ -54,7 +54,7 @@ function GamesPage() {
   const { gameId } = useParams();
   const navigate = useNavigate();
   return (
-    <SectionPage title={gameId ? 'Dettaglio Partita' : 'Partite Salvate'} wide xl={Boolean(gameId)} ancestors={gameId ? [GAMES_CRUMB] : []}>
+    <SectionPage title={gameId ? 'Dettaglio Partita' : 'Partite Salvate'} stickyTitle wide xl={Boolean(gameId)} ancestors={gameId ? [GAMES_CRUMB] : []}>
       <GameList userId={userId} onEdit={(game) => { void navigate(paths.editGame(game.id)); }} onRematch={(game) => { void navigate(paths.rematch(game.id)); }} />
     </SectionPage>
   );
@@ -116,7 +116,7 @@ function GameEditorSession({ gameId, rematch }: { gameId?: string; rematch: bool
 function DecksPage() {
   const navigate = useNavigate();
   return (
-    <SectionPage title="Mazzi Salvati">
+    <SectionPage title="Mazzi Salvati" stickyTitle>
       <DeckList
         onCreate={() => { void navigate(paths.newDeck); }}
         onImportFile={(name, cards) => { void navigate(paths.newDeck, { state: { draft: { name, cards } } }); }}
@@ -208,7 +208,7 @@ function DeckPageFrame({ deckId, deck, active, children }: { deckId: string; dec
       {deck && (
         <>
           {/* Un solo blocco fisso in cima (tasti + barra dei totali): sopra le carte che scorrono, sempre tappabile. */}
-          <div className="sticky top-[env(safe-area-inset-top)] z-20 -mx-1 mb-3 bg-zaff-surface px-1 pb-2 pt-1">
+          <div className={cx(STICKY_BELOW_TITLE, 'sticky z-20 -mx-1 mb-3 bg-zaff-surface px-1 pb-2 pt-1')}>
           <DeckTabs
             active={active}
             deckTo={paths.deck(deckId)}
@@ -217,7 +217,7 @@ function DeckPageFrame({ deckId, deck, active, children }: { deckId: string; dec
             onShowPage={() => setActionsOpen(false)}
             onToggleActions={() => setActionsOpen((open) => !open)}
           />
-          <DeckSummaryBar title={deck.name} main={mainTotal} side={sideTotal} highlight={showingCards ? section : null} />
+          <DeckSummaryBar main={mainTotal} side={sideTotal} highlight={showingCards ? section : null} />
           </div>
           {actionsOpen && (
             <DeckActionsPanel
@@ -242,7 +242,7 @@ function DeckPageFrame({ deckId, deck, active, children }: { deckId: string; dec
 function DeckDetailSession({ deckId, active }: { deckId: string; active: 'deck' | 'stats' }) {
   const { deck, loading, error } = useSavedDeck(deckId);
   return (
-    <SectionPage title={deck?.name ?? 'Dettaglio Mazzo'} ancestors={[DECKS_CRUMB]}>
+    <SectionPage title={deck?.name ?? 'Dettaglio Mazzo'} stickyTitle ancestors={[DECKS_CRUMB]}>
       <DeckPageFrame deckId={deckId} deck={deck} active={active}>
         {loading ? <p className={TEXT_MUTED}>Caricamento…</p> : deck && (active === 'stats'
           ? <DeckStatsContents key={deckId} cards={deck.cards} />
