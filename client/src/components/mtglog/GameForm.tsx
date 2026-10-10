@@ -332,6 +332,20 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved, on
     return players.some((p) => matchingExistingName(p) !== null);
   }
 
+  /** Posizione di un'altra riga con lo stesso giocatore (a parte maiuscole/spazi), o -1:
+   *  in una partita ogni giocatore compare una volta sola. */
+  function duplicateRowOf(index: number): number {
+    const name = players[index].name.trim();
+    if (!name) return -1;
+    return players.findIndex((q, qi) => qi !== index && sameName(q.name, name));
+  }
+
+  function hasDuplicatePlayer(): boolean {
+    return players.some((_, i) => duplicateRowOf(i) !== -1);
+  }
+
+  const DUPLICATE_PLAYER_ERROR = 'Lo stesso giocatore compare due volte: cambia uno dei due nomi.';
+
   function toggleWinner(index: number) {
     setPlayers((prev) => prev.map((p, i) => ({ ...p, winner: i === index ? !p.winner : false })));
   }
@@ -356,6 +370,11 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved, on
   function handleOpenLifeCounter(resume = false) {
     setResumeCounter(resume);
     setError('');
+    // Prima i doppioni: finché un giocatore è ripetuto, la domanda sul nome non compare.
+    if (hasDuplicatePlayer()) {
+      setError(DUPLICATE_PLAYER_ERROR);
+      return;
+    }
     if (hasUnresolvedNameConflict()) {
       setError('Rispondi alla domanda sul nome del giocatore prima di procedere.');
       return;
@@ -430,6 +449,11 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved, on
     setError('');
     if (!supabase) {
       setError('Supabase non configurato.');
+      return;
+    }
+    // Prima i doppioni: finché un giocatore è ripetuto, la domanda sul nome non compare.
+    if (hasDuplicatePlayer()) {
+      setError(DUPLICATE_PLAYER_ERROR);
       return;
     }
     if (hasUnresolvedNameConflict()) {
@@ -690,6 +714,15 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved, on
             </div>
 
             {(() => {
+              const duplicate = duplicateRowOf(i);
+              if (duplicate !== -1) {
+                return (
+                  <p role="alert" className="mb-2 rounded-lg border border-red-400/40 bg-red-400/10 p-2.5 text-sm text-red-400">
+                    "{p.name.trim()}" è già in questa partita (giocatore {duplicate + 1}): scegli un altro giocatore.
+                  </p>
+                );
+              }
+
               const match = matchingExistingName(p);
               if (!match) return null;
 
@@ -807,7 +840,7 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved, on
         <Modal level={2} title={`Giocatore ${playerPickerFor + 1}`} onClose={() => setPlayerPickerFor(null)}>
           <div className="grid grid-cols-2 gap-2.5">
             {playerNames.map((n) => {
-              const usedElsewhere = players.some((q, qi) => qi !== playerPickerFor && q.name.trim() === n);
+              const usedElsewhere = players.some((q, qi) => qi !== playerPickerFor && sameName(q.name, n));
               return (
                 <Button
                   key={n}
