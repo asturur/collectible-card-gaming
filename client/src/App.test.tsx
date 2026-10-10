@@ -146,7 +146,7 @@ describe('Registro routes', () => {
     expect(router.state.location.pathname).toBe('/stats/players/Alice');
     expect(screen.getAllByText('2 partite giocate · 1 vinte')).toHaveLength(2);
     expect(screen.getAllByText('2 partite · 1 vinte · 50%')).toHaveLength(2);
-    expect(screen.getByRole('button', { name: 'Esporta Immagine' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Esporta' })).toBeInTheDocument();
     const breadcrumbs = screen.getByRole('navigation', { name: 'Percorso di navigazione' });
     expect(within(breadcrumbs).getAllByRole('listitem').map(item => item.textContent)).toEqual(['Home', 'Giocatori', 'Alice']);
     expect(document.querySelector('[aria-hidden="true"] h2')?.closest('[aria-hidden="true"]')?.querySelector('a')).toBeNull();
@@ -159,10 +159,10 @@ describe('Registro routes', () => {
 
   it.each(['/stats/players/Alice', '/stats/matchups/Bob/vs/Alice/'])('restores %s after a fresh mount', async path => {
     const first = openApp(path);
-    expect(await screen.findByRole('button', { name: 'Esporta Immagine' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Esporta' })).toBeInTheDocument();
     first.unmount();
     openApp(path);
-    expect(await screen.findByRole('button', { name: 'Esporta Immagine' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Esporta' })).toBeInTheDocument();
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(document.body.style.overflow).toBe('');
   });
@@ -171,7 +171,7 @@ describe('Registro routes', () => {
     (mock.rows[0].players as { name: string }[])[0].name = name;
     openApp(paths.player(name));
     expect(await screen.findByRole('heading', { name, level: 1 })).toBeInTheDocument();
-    expect(await screen.findByRole('button', { name: 'Esporta Immagine' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Esporta' })).toBeInTheDocument();
   });
 
   it('keeps two-player statistics separate from multiplayer formations and ignores URL order', async () => {
@@ -210,7 +210,7 @@ describe('Registro routes', () => {
     const names = [first, second].sort((a, b) => a.localeCompare(b));
     openApp(paths.matchup(names));
     expect(await screen.findByRole('heading', { name: names.join(' vs '), level: 1 })).toBeInTheDocument();
-    expect(await screen.findByRole('button', { name: 'Esporta Immagine' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Esporta' })).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
@@ -225,7 +225,7 @@ describe('Registro routes', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(message);
     const parent = path.startsWith('/stats/players') ? ['Giocatori', '/stats/players'] : ['Sfide', '/stats/matchups'];
     expect(within(screen.getByRole('navigation', { name: 'Percorso di navigazione' })).getByRole('link', { name: parent[0] })).toHaveAttribute('href', parent[1]);
-    expect(screen.queryByRole('button', { name: 'Esporta Immagine' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Esporta' })).not.toBeInTheDocument();
   });
 
   it.each(['/stats/players/Alice', '/stats/matchups/Alice/vs/Bob'])('keeps %s through login and updates when games disappear', async path => {
@@ -233,7 +233,7 @@ describe('Registro routes', () => {
     const { router } = openApp(path);
     expect(await screen.findByRole('heading', { name: 'Accedi al registro' })).toBeInTheDocument();
     await act(async () => { mock.authListener('SIGNED_IN', { user: { id: 'u1' } }); });
-    expect(await screen.findByRole('button', { name: 'Esporta Immagine' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Esporta' })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe(path);
     mock.rows = [];
     await act(async () => { mock.subscribers.get('partite')?.forEach(onChange => onChange()); });

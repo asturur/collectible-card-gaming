@@ -1,10 +1,10 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { paths } from '../../router';
 import type { Game } from './GameList';
 import GlossyPie from './GlossyPie';
 import {
-  ExportButton,
+  ShareBar,
   ExportCardHost,
   ExportedImage,
   ExportHeader,
@@ -14,7 +14,7 @@ import {
   useImageExport,
 } from './ImageExport';
 import { computeMatchups, PIE_COLORS, pieSlicePath, type MatchupRow } from './stats';
-import { cx, TEXT_MINI, TEXT_MUTED } from '../ui/styles';
+import { cx, FIELD_CONTROL, STICKY_BELOW_TITLE, TEXT_MINI, TEXT_MUTED } from '../ui/styles';
 
 interface MatchupStatsProps {
   games: Game[];
@@ -92,6 +92,11 @@ function MatchupDetail({ selected, idSuffix }: { selected: MatchupRow; idSuffix:
 /** Exact formations link to their refreshable statistics page. */
 export default function MatchupStats({ games }: MatchupStatsProps) {
   const matchups = useMemo(() => computeMatchups(games), [games]);
+  const [query, setQuery] = useState('');
+  const shown = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return q ? matchups.filter((m) => m.label.toLowerCase().includes(q)) : matchups;
+  }, [matchups, query]);
 
   if (matchups.length === 0) {
     return (
@@ -103,9 +108,22 @@ export default function MatchupStats({ games }: MatchupStatsProps) {
 
   return (
     <>
-      <p className={cx('mb-2', TEXT_MINI)}>Tocca una sfida per vederne le statistiche.</p>
+      {/* La ricerca resta in cima, sotto il titolo, mentre si scorre l'elenco. */}
+      <div className={cx(STICKY_BELOW_TITLE, 'sticky z-10 -mx-1 mb-2 bg-zaff-surface px-1 pb-1 pt-1')}>
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Cerca giocatore…"
+          aria-label="Cerca nelle sfide"
+          autoComplete="off"
+          enterKeyHint="search"
+          className={cx(FIELD_CONTROL, 'w-full')}
+        />
+      </div>
+      {shown.length === 0 && <p className={TEXT_MUTED}>Nessuna sfida corrisponde alla ricerca.</p>}
       <ul>
-        {matchups.map((m) => (
+        {shown.map((m) => (
           <li key={m.key}>
             <Link
               to={paths.matchup(m.players.map(player => player.name))}
@@ -137,19 +155,18 @@ export function MatchupStatsDetail({ selected }: { selected: MatchupRow }) {
     <>
       <MatchupDetail selected={selected} idSuffix="matchup" />
 
-      <div className="mt-4">
-        <ExportButton
-          exporting={exporter.exporting}
-          onClick={() =>
-            exporter.exportImage({
-              fileName: `sfida_${safeFileName(selected.label) || 'magic'}_${todayIso()}.jpg`,
-              shareTitle: selected.label,
-              shareText: 'Statistiche della sfida ' + selected.label,
-            })
-          }
-        />
-      </div>
       <ExportedImage image={exporter.image} error={exporter.error} alt={`Statistiche della sfida ${selected.label}`} />
+      <ShareBar
+        exporting={exporter.exporting}
+        shareTitle={selected.label}
+        onExport={() =>
+          exporter.exportImage({
+            fileName: `sfida_${safeFileName(selected.label) || 'magic'}_${todayIso()}.jpg`,
+            shareTitle: selected.label,
+            shareText: 'Statistiche della sfida ' + selected.label,
+          })
+        }
+      />
 
       <ExportCardHost cardRef={exporter.cardRef}>
         <ExportHeader title={selected.label} subtitle={`Statistiche per Sfida · aggiornato al ${todayLabel()}`} />

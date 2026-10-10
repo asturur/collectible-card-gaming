@@ -373,6 +373,12 @@ implementation sequence are in [plans/PLAN_DAISYUI_MIGRATION.md](plans/PLAN_DAIS
 - Compose Registro sections with `SectionPage`. Keep their narrow mobile widths,
   normal document scrolling, safe-area padding, and bottom navigation. A page
   has an `h1` and the shared breadcrumb trail; it does not lock background scrolling.
+- On list and statistics pages, `SectionPage stickyTitle` keeps the title fixed at the top
+  (iOS fades the very top edge of the installed app, so the title absorbs it). Any other
+  fixed block (search, filters, sort buttons) sits below it with `STICKY_BELOW_TITLE`
+  from `components/ui/styles.ts`; the title stays on one line. Statistics pages that
+  export or share end with `ShareBar` (`mtglog/ImageExport.tsx`): "Esporta" (JPG) and
+  "Link" side by side, equal size, fixed above the bottom navigation.
 - Breadcrumbs describe hierarchy, not the previous visited page. Supply linked
   ancestors through `SectionPage`; it adds Home and the nonlinked current page
   with `aria-current="page"`. Use saved record names when available, and keep

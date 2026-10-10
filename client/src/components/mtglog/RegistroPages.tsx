@@ -40,7 +40,6 @@ function RegistroHome() {
     <main className="mx-auto w-full max-w-[1180px] px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-[calc(1.5rem+env(safe-area-inset-top))] sm:px-5 sm:pt-7">
       <header className="border-b-2 border-zaff-text pb-4 sm:pb-[18px]">
         <h1 className={HEADING_PAGE}>Registro partite di Magic</h1>
-        <p className="text-sm text-zaff-muted">Chi gioca, con che mazzo, come è finita. Condiviso con tutto il gruppo.</p>
         <div className="mtg-sep" />
         {gamesError && <p role="alert">{gamesError}</p>}
         <HomeOverview games={games} deckCount={deckCount} decks={decks} />
@@ -287,7 +286,7 @@ function DeckEditorSession({ deckId }: { deckId?: string }) {
 function PlayerStatsPage() {
   const { games } = useRegistro();
   return (
-    <SectionPage title="Statistiche Giocatori" subtitle="Classifica generale: partite vinte da ciascuno e come si dividono tutte le vittorie." wide>
+    <SectionPage title="Statistiche Giocatori" stickyTitle wide>
       <GameStatisticsData><Standings rows={computeTally(games)} showPie /></GameStatisticsData>
     </SectionPage>
   );
@@ -312,7 +311,7 @@ function PlayerDetailPage() {
 
 function MatchupsPage() {
   const { games } = useRegistro();
-  return <SectionPage title="Statistiche per Sfida" wide><GameStatisticsData><MatchupStats games={games} /></GameStatisticsData></SectionPage>;
+  return <SectionPage title="Statistiche per Sfida" stickyTitle wide><GameStatisticsData><MatchupStats games={games} /></GameStatisticsData></SectionPage>;
 }
 
 function MatchupDetailPage() {
@@ -335,7 +334,7 @@ function MatchupDetailPage() {
 function PlayersPage() {
   const { userId, games } = useRegistro();
   return (
-    <SectionPage title="Giocatori" subtitle="Tocca un nome per vedere le partite giocate e le statistiche, o per rinominarlo o cancellarlo. Le partite già salvate mantengono comunque il nome che avevano.">
+    <SectionPage title="Giocatori" stickyTitle subtitle="Tocca un nome per vedere le partite giocate e le statistiche, o per rinominarlo o cancellarlo. Le partite già salvate mantengono comunque il nome che avevano.">
       <PlayersRoster userId={userId} games={games} />
     </SectionPage>
   );
@@ -359,7 +358,7 @@ export const registroRoutes: RouteObject[] = [
   { path: 'decks/:deckId/edit', element: <DeckEditorPage /> },
   // Le vecchie pagine-menu non esistono più: i vecchi indirizzi portano alla destinazione utile.
   { path: 'stats', element: <Navigate to={paths.deckStats} replace /> },
-  { path: 'stats/decks', element: <SectionPage title="Statistiche Mazzi" subtitle="Percentuale di vittoria di ogni mazzo, su tutte le partite." wide><GameStats /></SectionPage> },
+  { path: 'stats/decks', element: <SectionPage title="Statistiche Mazzi" stickyTitle wide><GameStats /></SectionPage> },
   { path: 'stats/players', element: <PlayerStatsPage /> },
   { path: 'stats/players/:playerName', element: <PlayerDetailPage /> },
   { path: 'stats/matchups', element: <MatchupsPage /> },

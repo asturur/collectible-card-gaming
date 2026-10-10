@@ -20,7 +20,7 @@ const SHOWN = 3;
 
 function Section({ title, to, children }: { title: string; to: string; children: ReactNode }) {
   return (
-    <section className="mt-6">
+    <section className="mt-4">
       <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-zaff-muted">{title}</h2>
       {/* Tutta l'area è un unico tasto: porta alla sezione completa. */}
       <Link
@@ -88,13 +88,13 @@ export default function HomeOverview({
     <>
       <Link
         to={paths.newGame}
-        className="flex w-full items-center gap-4 rounded-xl bg-gradient-to-r from-zaff-primary to-zaff-accent px-5 py-5 text-left text-zaff-bg shadow-lg transition active:scale-[0.98] md:w-fit md:gap-3 md:px-6 md:py-3"
+        className="flex w-full items-center gap-3 rounded-xl bg-gradient-to-r from-zaff-primary to-zaff-accent px-4 py-3 text-left text-zaff-bg shadow-lg transition active:scale-[0.98] md:w-fit md:px-6"
       >
-        <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-black/20 text-4xl font-light leading-none md:h-10 md:w-10 md:text-3xl">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-black/20 text-3xl font-light leading-none md:h-10 md:w-10">
           +
         </span>
         <span className="min-w-0">
-          <span className="block text-2xl font-bold leading-tight md:text-xl">Nuova Partita</span>
+          <span className="block text-xl font-bold leading-tight">Nuova Partita</span>
           <span className="block text-sm font-medium opacity-80">Segna-punti e risultato</span>
         </span>
       </Link>

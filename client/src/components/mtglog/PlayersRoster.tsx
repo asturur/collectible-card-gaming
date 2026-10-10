@@ -10,7 +10,7 @@ import {
 } from '../../services/supabase';
 import Button, { ButtonRouteLink } from '../ui/Button';
 import Modal from '../ui/Modal';
-import { FIELD_CONTROL_SM } from '../ui/styles';
+import { cx, FIELD_CONTROL_SM, STICKY_BELOW_TITLE } from '../ui/styles';
 import { paths } from '../../router';
 import type { Game } from './GameList';
 
@@ -251,7 +251,7 @@ export default function PlayersRoster({ userId, games = [] }: PlayersRosterProps
 
   return (
     <>
-      <div className="sticky top-[env(safe-area-inset-top)] z-10 -mx-1 mb-2 flex gap-2 bg-zaff-surface px-1 py-1">
+      <div className={cx(STICKY_BELOW_TITLE, 'sticky z-10 -mx-1 mb-2 flex gap-2 bg-zaff-surface px-1 py-1')}>
         <input
           type="text"
           value={newName}

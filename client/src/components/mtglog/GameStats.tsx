@@ -8,7 +8,7 @@ import Badge from '../ui/Badge';
 import { Link } from 'react-router';
 import { paths } from '../../router';
 import {
-  ExportButton,
+  ShareBar,
   ExportCardHost,
   ExportedImage,
   ExportHeader,
@@ -16,7 +16,7 @@ import {
   todayLabel,
   useImageExport,
 } from './ImageExport';
-import { cx, FIELD_LABEL, TEXT_MINI, TEXT_MUTED } from '../ui/styles';
+import { cx, STICKY_BELOW_TITLE, TEXT_MINI, TEXT_MUTED } from '../ui/styles';
 
 type DeckSourceRow = Pick<SavedDeck, 'id' | 'name' | 'source'>;
 
@@ -194,8 +194,7 @@ export default function GameStats() {
 
   return (
     <>
-      <span className={cx(FIELD_LABEL, 'mt-3.5')}>Ordina per</span>
-      <div className="mb-3.5 grid grid-cols-2 gap-2.5">
+      <div className={cx(STICKY_BELOW_TITLE, 'sticky z-10 -mx-1 mb-3 grid grid-cols-2 gap-2.5 bg-zaff-surface px-1 pb-1 pt-1')}>
         {SORT_OPTIONS.map((o) => (
           <button
             key={o.value}
@@ -214,22 +213,20 @@ export default function GameStats() {
         ))}
       </div>
 
-      <p className={cx('mb-2', TEXT_MINI)}>Tocca un mazzo per vederne la lista carte.</p>
       <DeckStatsList rows={rows} interactive />
 
-      <div className="mt-4">
-        <ExportButton
-          exporting={exporter.exporting}
-          onClick={() =>
-            exporter.exportImage({
-              fileName: `statistiche_mazzi_${todayIso()}.jpg`,
-              shareTitle: 'Statistiche Mazzi',
-              shareText: 'Statistiche mazzi del registro partite di Magic',
-            })
-          }
-        />
-      </div>
       <ExportedImage image={exporter.image} error={exporter.error} alt="Statistiche mazzi, da salvare" />
+      <ShareBar
+        exporting={exporter.exporting}
+        shareTitle={'Statistiche Mazzi'}
+        onExport={() =>
+          exporter.exportImage({
+            fileName: `statistiche_mazzi_${todayIso()}.jpg`,
+            shareTitle: 'Statistiche Mazzi',
+            shareText: 'Statistiche mazzi del registro partite di Magic',
+          })
+        }
+      />
 
       <ExportCardHost cardRef={exporter.cardRef}>
         <ExportHeader

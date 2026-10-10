@@ -7,7 +7,7 @@ import type { TallyRow } from './stats';
 import { PIE_COLORS, pieSlicePath } from './stats';
 import GlossyPie from './GlossyPie';
 import {
-  ExportButton,
+  ShareBar,
   ExportCardHost,
   ExportedImage,
   ExportHeader,
@@ -243,19 +243,18 @@ export function PlayerStatsDetail({
     <>
       <PlayerDetail row={row} deckStats={deckStats} idSuffix="player" />
 
-      <div className="mt-4">
-        <ExportButton
-          exporting={exporter.exporting}
-          onClick={() =>
-            exporter.exportImage({
-              fileName: `giocatore_${safeFileName(row.name) || 'magic'}_${todayIso()}.jpg`,
-              shareTitle: row.name,
-              shareText: 'Statistiche di ' + row.name,
-            })
-          }
-        />
-      </div>
       <ExportedImage image={exporter.image} error={exporter.error} alt={`Statistiche di ${row.name}, da salvare`} />
+      <ShareBar
+        exporting={exporter.exporting}
+        shareTitle={row.name}
+        onExport={() =>
+          exporter.exportImage({
+            fileName: `giocatore_${safeFileName(row.name) || 'magic'}_${todayIso()}.jpg`,
+            shareTitle: row.name,
+            shareText: 'Statistiche di ' + row.name,
+          })
+        }
+      />
 
       <ExportCardHost cardRef={exporter.cardRef}>
         <ExportHeader title={row.name} subtitle={`Statistiche Giocatore · aggiornato al ${todayLabel()}`} />
@@ -284,22 +283,21 @@ export default function Standings({ rows, showPie }: StandingsProps) {
     <>
       {showPie && <GroupPieSection rows={rows} idSuffix="group" />}
 
-      <p className={cx('mb-2 mt-4', TEXT_MINI)}>Tocca un giocatore per vedere le sue statistiche.</p>
+      <div className="mt-4" />
       <PlayerRows rows={rows} interactive tight />
 
-      <div className="mt-4">
-        <ExportButton
-          exporting={exporter.exporting}
-          onClick={() =>
-            exporter.exportImage({
-              fileName: `statistiche_giocatori_${todayIso()}.jpg`,
-              shareTitle: 'Statistiche Giocatori',
-              shareText: 'Statistiche giocatori del registro partite di Magic',
-            })
-          }
-        />
-      </div>
       <ExportedImage image={exporter.image} error={exporter.error} alt="Statistiche giocatori, da salvare" />
+      <ShareBar
+        exporting={exporter.exporting}
+        shareTitle="Statistiche Giocatori"
+        onExport={() =>
+          exporter.exportImage({
+            fileName: `statistiche_giocatori_${todayIso()}.jpg`,
+            shareTitle: 'Statistiche Giocatori',
+            shareText: 'Statistiche giocatori del registro partite di Magic',
+          })
+        }
+      />
       <ExportCardHost cardRef={exporter.cardRef}>
         <PlayersStatsCard rows={rows} showPie={showPie} />
       </ExportCardHost>

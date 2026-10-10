@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { toCanvas } from 'html-to-image';
+import { useLocation } from 'react-router';
+import { appHref } from '../../router';
 import Button from '../ui/Button';
 import Badge from '../ui/Badge';
 import { cx, HEADING_SECTION, TEXT_MINI } from '../ui/styles';
@@ -100,22 +102,65 @@ export function useImageExport() {
   return { cardRef, image, exporting, error, exportImage, reset };
 }
 
-export function ExportButton({ exporting, onClick }: { exporting: boolean; onClick: () => void }) {
+/**
+ * Barra fissa in fondo, sopra la barra di navigazione: "Esporta" (JPG) e "Link" affiancati, stessa larghezza e altezza.
+ * Resta sempre visibile mentre si scorre; il distanziatore in fondo alla pagina evita che copra l'ultima riga.
+ * Il link è quello della pagina in cui ci si trova (serve il login, come per tutto il registro).
+ */
+export function ShareBar({ exporting, onExport, shareTitle }: { exporting: boolean; onExport: () => void; shareTitle: string }) {
+  const { pathname } = useLocation();
+  const [notice, setNotice] = useState('');
+
+  async function handleLink() {
+    const url = `${window.location.origin}${appHref(pathname)}`;
+    setNotice('');
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: shareTitle, url });
+        return;
+      } catch {
+        // Annullato o non disponibile: si prova a copiarlo.
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setNotice('Link copiato negli appunti.');
+    } catch {
+      setNotice(url);
+    }
+  }
+
   return (
-    <Button onClick={onClick} disabled={exporting}>
-      {exporting ? (
-        'Genero immagine…'
-      ) : (
-        <>
-          <JpgBadge />
-          Esporta Immagine
-        </>
-      )}
-    </Button>
+    <>
+      <div className="h-16" aria-hidden="true" />
+      <div className="fixed inset-x-0 bottom-[calc(4rem+1px+env(safe-area-inset-bottom))] z-[24] border-t border-zaff-border bg-zaff-surface">
+        <div className="mx-auto max-w-[680px] px-3 py-2">
+          {notice && <p className={cx('mb-1.5 break-all', TEXT_MINI)} role="status">{notice}</p>}
+          <div className="grid grid-cols-2 gap-2">
+            <Button fullWidth onClick={onExport} disabled={exporting}>
+              {exporting ? (
+                'Genero…'
+              ) : (
+                <>
+                  <JpgBadge />
+                  Esporta
+                </>
+              )}
+            </Button>
+            <Button variant="ghost" fullWidth onClick={() => { void handleLink(); }}>
+              🔗 Link
+            </Button>
+          </div>
+        </div>
+      </div>
+    </>
   );
 }
 
 export function ExportedImage({ image, error, alt }: { image: string | null; error: string; alt: string }) {
+  const box = useRef<HTMLDivElement>(null);
+  // Con i tasti fissi in basso l'anteprima comparirebbe fuori vista: ci si porta lo schermo.
+  useEffect(() => { if (image) box.current?.scrollIntoView?.({ behavior: 'smooth', block: 'center' }); }, [image]);
   return (
     <>
       {error && (
@@ -124,7 +169,7 @@ export function ExportedImage({ image, error, alt }: { image: string | null; err
         </p>
       )}
       {image && (
-        <div className="mt-3.5 rounded-lg border border-zaff-border bg-zaff-bg p-3">
+        <div ref={box} className="mt-3.5 rounded-lg border border-zaff-border bg-zaff-bg p-3">
           <p className={cx('mb-2', TEXT_MINI)}>
             Tieni premuto sull&apos;immagine qui sotto e scegli &quot;Salva immagine&quot; (o condividila da lì) — più
             affidabile del tasto, che su alcuni iPhone non riesce ad aprire da solo il foglio di condivisione.
