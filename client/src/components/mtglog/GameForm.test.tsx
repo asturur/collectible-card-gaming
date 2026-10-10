@@ -49,16 +49,31 @@ describe('GameForm', () => {
     expect(picker.getByRole('button', { name: 'Bea' })).toBeEnabled();
   });
 
-  it('keeps a long name saved before the limit exactly as it is', async () => {
+  it('does not let a long name saved before the limit into a game', async () => {
     const user = await renderForm();
     await user.click(screen.getByRole('button', { name: /Scegli il giocatore 1/ }));
-    await user.click(screen.getByRole('button', { name: 'Giovanni Battista Rossi' }));
-    await user.click(screen.getByRole('button', { name: /Scegli il giocatore 2/ }));
-    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Bea' }));
+    const picker = within(screen.getByRole('dialog'));
+    expect(picker.getByRole('button', { name: 'Giovanni Battista Rossi' })).toBeDisabled();
+    expect(picker.getByText(/accorciali in Gestisci Giocatori/)).toBeInTheDocument();
+  });
+
+  it('blocks a game that already carries a long name (rematch of an old game)', async () => {
+    const user = userEvent.setup();
+    const old = {
+      id: 'g1', date: '2026-01-01', format: '', notes: '', group: '', createdBy: null, startedAt: null, endedAt: null,
+      players: [
+        { name: 'Giovanni Battista Rossi', deck: '', desc: '', life: 0, winner: false, colors: [] },
+        { name: 'Bea', deck: '', desc: '', life: 20, winner: true, colors: [] },
+      ],
+    };
+    render(<GameForm rematchFrom={old} onBack={vi.fn()} />);
+    // Con un nome troppo lungo la rivincita non apre il segna-punti: resta sul modulo con l'avviso.
+    expect(await screen.findByText(/supera i 20 caratteri: accorcialo in Gestisci Giocatori/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Opzioni di gioco' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /Avvia Partita/ }));
+    expect(screen.queryByRole('button', { name: 'Opzioni di gioco' })).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Salva Partita' }));
-    expect(insert).toHaveBeenCalledWith(expect.objectContaining({
-      players: [expect.objectContaining({ name: 'Giovanni Battista Rossi' }), expect.objectContaining({ name: 'Bea' })],
-    }));
+    expect(insert).not.toHaveBeenCalled();
   });
 
   it('shows how many characters a new name has left', async () => {

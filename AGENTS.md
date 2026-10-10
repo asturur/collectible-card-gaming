@@ -257,8 +257,9 @@ Name rules (Registro): player names are at most 20 characters
 (`MAX_PLAYER_NAME_LENGTH`) and deck names at most 30 (`MAX_DECK_NAME_LENGTH`), both
 in `services/supabase.ts`; fields show a `ui/CharCount`. Imported/precon deck names
 are shortened at whole words with `shortenName`. Longer names saved before the
-limit stay valid and are never cut silently: a game keeps them, while renaming the
-player or saving the deck requires shortening. Names are unique ignoring case and
+limit are never cut silently (a cut name would become another player in the
+statistics): they cannot join a game, rematch or deck save until shortened. A player
+is shortened once in Gestisci Giocatori, whose rename also updates saved games. Names are unique ignoring case and
 spaces (`sameName`): a player appears once per game, and no two saved decks share a
 name (`findDeckWithSameName` in `services/savedDecks.ts`), because Nuova Partita
 picks decks by name.

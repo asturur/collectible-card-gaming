@@ -266,8 +266,9 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved, on
           })
         );
         // Un solo tap: il segna-punti parte subito. Se lo si chiude resta il
-        // modulo già compilato.
-        setLifeCounterOpen(true);
+        // modulo già compilato. Con un nome oltre il limite resta sul modulo,
+        // che spiega dove accorciarlo.
+        if (rematchFrom.players.every((p) => p.name.trim().length <= MAX_PLAYER_NAME_LENGTH)) setLifeCounterOpen(true);
       } else {
         // Partita nuova: riparto da formato, punti vita e giocatori dell'ultima
         // partita salvata (solo i giocatori ancora presenti in elenco).
@@ -275,7 +276,8 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved, on
         if (last) {
           setFormat(last.format);
           setStartLife(last.startLife);
-          const known = last.names.filter((n) => loadedNames.current.some((x) => sameName(x, n)));
+          // Solo i giocatori ancora in elenco e con un nome entro il limite.
+          const known = last.names.filter((n) => n.length <= MAX_PLAYER_NAME_LENGTH && loadedNames.current.some((x) => sameName(x, n)));
           if (known.length >= 2) {
             setPlayers(known.map((n) => ({ ...emptyPlayerRow(), name: loadedNames.current.find((x) => sameName(x, n)) ?? n })));
           }
@@ -347,24 +349,25 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved, on
 
   const DUPLICATE_PLAYER_ERROR = 'Lo stesso giocatore compare due volte: cambia uno dei due nomi.';
 
-  /** Un nome nuovo (non in elenco e non già in questa partita salvata) oltre il limite.
-   *  I nomi più lunghi salvati prima del limite restano utilizzabili così come sono. */
-  function tooLongNewName(): string | null {
-    for (const p of players) {
-      const name = p.name.trim();
-      if (name.length <= MAX_PLAYER_NAME_LENGTH || findCanonicalName(playerNames, name)) continue;
-      if (editingGame?.players.some((q) => q.name === name)) continue;
-      return name;
-    }
-    return null;
+  /** Spiegazione per un nome oltre il limite, o null. Un nome lungo salvato prima del limite
+   *  non si taglia qui (diventerebbe un altro giocatore nelle statistiche): si accorcia una
+   *  volta in Gestisci Giocatori, che lo cambia anche nelle partite già salvate. */
+  function tooLongNameMessage(name: string): string | null {
+    const trimmed = name.trim();
+    if (trimmed.length <= MAX_PLAYER_NAME_LENGTH) return null;
+    return findCanonicalName(playerNames, trimmed)
+      ? `"${trimmed}" supera i ${MAX_PLAYER_NAME_LENGTH} caratteri: accorcialo in Gestisci Giocatori (vale anche per le partite già salvate).`
+      : `Il nome "${trimmed}" è troppo lungo: al massimo ${MAX_PLAYER_NAME_LENGTH} caratteri.`;
   }
 
   function checkNames(action: 'procedere' | 'salvare'): string | null {
     // Prima i doppioni: finché un giocatore è ripetuto, la domanda sul nome non compare.
     if (hasDuplicatePlayer()) return DUPLICATE_PLAYER_ERROR;
     if (hasUnresolvedNameConflict()) return `Rispondi alla domanda sul nome del giocatore prima di ${action}.`;
-    const long = tooLongNewName();
-    if (long) return `Il nome "${long}" è troppo lungo: al massimo ${MAX_PLAYER_NAME_LENGTH} caratteri.`;
+    for (const p of players) {
+      const message = tooLongNameMessage(p.name);
+      if (message) return message;
+    }
     return null;
   }
 
@@ -480,9 +483,7 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved, on
         const deckVal = p.deckMode === 'manual' ? p.deckManual.trim() : p.deckSelect;
         // Mazzo scelto dai salvati: ne ricordo l'ID, così la partita resta collegata anche se lo rinomini.
         const deckId = p.deckMode === 'select' && p.deckSelect ? decks.find((d) => d.name === p.deckSelect)?.id : undefined;
-        // Niente taglio: i nomi nuovi oltre il limite sono già stati fermati da
-        // checkNames, e un nome lungo salvato prima del limite resta com'è
-        // (tagliarlo creerebbe un giocatore diverso nelle statistiche).
+        // Niente taglio: i nomi oltre il limite sono già stati fermati da checkNames.
         const typedName = p.name.trim();
         // A questo punto il nome non è più ambiguo (il salvataggio è
         // bloccato finché lo è): se coincide esattamente con uno già in
@@ -739,6 +740,15 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved, on
                 );
               }
 
+              const tooLong = tooLongNameMessage(p.name);
+              if (tooLong) {
+                return (
+                  <p role="alert" className="mb-2 rounded-lg border border-red-400/40 bg-red-400/10 p-2.5 text-sm text-red-400">
+                    {tooLong}
+                  </p>
+                );
+              }
+
               const match = matchingExistingName(p);
               if (!match) return null;
 
@@ -857,13 +867,15 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved, on
           <div className="grid grid-cols-2 gap-2.5">
             {playerNames.map((n) => {
               const usedElsewhere = players.some((q, qi) => qi !== playerPickerFor && sameName(q.name, n));
+              const tooLong = n.length > MAX_PLAYER_NAME_LENGTH;
               return (
                 <Button
                   key={n}
                   variant={players[playerPickerFor]?.name === n ? 'primary' : 'ghost'}
                   size="lg"
                   fullWidth
-                  disabled={usedElsewhere}
+                  disabled={usedElsewhere || tooLong}
+                  title={tooLong ? `Oltre ${MAX_PLAYER_NAME_LENGTH} caratteri: accorcialo in Gestisci Giocatori` : undefined}
                   className="min-h-[64px] py-4 text-lg"
                   onClick={() => {
                     selectPlayerName(playerPickerFor, n);
@@ -875,6 +887,11 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved, on
               );
             })}
           </div>
+          {playerNames.some((n) => n.length > MAX_PLAYER_NAME_LENGTH) && (
+            <p className={cx(TEXT_MINI, 'mt-2')}>
+              I nomi oltre {MAX_PLAYER_NAME_LENGTH} caratteri non si possono scegliere: accorciali in Gestisci Giocatori.
+            </p>
+          )}
           <Button
             variant="link"
             size="lg"
