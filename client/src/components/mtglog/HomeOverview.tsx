@@ -4,6 +4,7 @@ import { paths } from '../../router';
 import { ManaIcons } from './ManaIcon';
 import { computeTally, dateLabel } from './stats';
 import type { Game } from './GameList';
+import Badge from '../ui/Badge';
 import { cx } from '../ui/styles';
 import { makeDeckResolver, type DeckRef } from './deckRefs';
 
@@ -13,15 +14,20 @@ interface HomeOverviewProps {
   deckCount: number;
   /** Mazzi salvati (ID e nome), per mostrare il nome attuale dei mazzi giocati. */
   decks?: DeckRef[];
+  /** Partite di altri non ancora viste nell'elenco Partite. */
+  newGames?: number;
 }
 
 /** Quante voci mostrare nelle liste della pagina iniziale. */
 const SHOWN = 3;
 
-function Section({ title, to, children }: { title: string; to: string; children: ReactNode }) {
+function Section({ title, to, badge, children }: { title: string; to: string; badge?: ReactNode; children: ReactNode }) {
   return (
     <section className="mt-4">
-      <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-zaff-muted">{title}</h2>
+      <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-zaff-muted">
+        {title}
+        {badge}
+      </h2>
       {/* Tutta l'area è un unico tasto: porta alla sezione completa. */}
       <Link
         to={to}
@@ -49,6 +55,7 @@ export default function HomeOverview({
   games,
   deckCount,
   decks = [],
+  newGames = 0,
 }: HomeOverviewProps) {
   // Dalla più recente: data, poi orario di inizio, poi id.
   const sorted = [...games].sort(
@@ -110,7 +117,11 @@ export default function HomeOverview({
         ))}
       </div>
 
-      <Section title="Ultime partite" to={paths.games}>
+      <Section
+        title="Ultime partite"
+        to={paths.games}
+        badge={newGames > 0 ? <Badge tone="warning">{newGames === 1 ? '1 nuova' : `${newGames} nuove`}</Badge> : undefined}
+      >
         {latest.length === 0 ? (
           <Empty>Ancora nessuna partita: tocca &quot;Nuova Partita&quot; per iniziare.</Empty>
         ) : (

@@ -452,6 +452,7 @@ describe('Registro routes', () => {
     ['/stats/decks', 'Statistiche Mazzi', 'Statistiche'],
     ['/stats/players', 'Statistiche Giocatori', 'Statistiche'],
     ['/stats/matchups', 'Statistiche per Sfida', 'Statistiche'],
+    ['/stats/trends', 'Andamento', 'Statistiche'],
     ['/players', 'Giocatori', 'Altro'],
   ])('opens %s directly as a page', async (path, title, tab) => {
     openApp(path);

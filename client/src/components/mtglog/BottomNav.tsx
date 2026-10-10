@@ -44,6 +44,7 @@ const DIALS: Record<'stats' | 'more', { label: string; items: SpeedDialItem[] }>
       { id: 'decks', label: 'Mazzi', icon: '📊', to: paths.deckStats },
       { id: 'players', label: 'Giocatori', icon: '🏆', to: paths.playerStats },
       { id: 'matchups', label: 'Per Sfida', icon: '⚔️', to: paths.matchups },
+      { id: 'trends', label: 'Andamento', icon: '📈', to: paths.trends },
     ],
   },
   more: {

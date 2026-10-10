@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Button from '../ui/Button';
 import { PIE_COLORS } from './stats';
 import { HEADING_SECTION } from '../ui/styles';
@@ -36,6 +36,63 @@ interface LcPlayer {
   /** Il contatore veleno compare solo se acceso dalle opzioni del giocatore. */
   poisonOn: boolean;
   poison: number;
+  /** Il Comandante (tassa e danno da comandante) compare solo se acceso dalle opzioni del giocatore. */
+  cmdrOn: boolean;
+  /** Mana extra pagato per rilanciare il comandante (+2 a ogni rilancio). */
+  tax: number;
+  /** Danno da comandante subito, per giocatore che lo ha inflitto. */
+  cmdr: Record<string, number>;
+}
+
+/** Cosa si può contare: ogni cambio finisce nella cronologia e si può annullare. */
+type CounterField = 'life' | 'poison' | 'tax' | 'cmdr';
+
+interface HistoryEntry {
+  id: number;
+  /** Istante dell'ultimo tocco unito a questa voce. */
+  t: number;
+  index: number;
+  name: string;
+  field: CounterField;
+  /** Per il danno da comandante: chi lo ha inflitto. */
+  source?: string;
+  delta: number;
+  from: number;
+  to: number;
+}
+
+/** Tocchi ravvicinati sullo stesso contatore diventano una sola voce (altrimenti 40 righe di +1). */
+const MERGE_WINDOW_MS = 4000;
+const MAX_HISTORY = 500;
+/** Con 21 danni da un solo comandante si perde. */
+const CMDR_LIMIT = 21;
+/** Ogni rilancio del comandante costa 2 mana in più. */
+const TAX_STEP = 2;
+
+function readField(p: LcPlayer, field: CounterField, source?: string): number {
+  if (field === 'life') return p.life;
+  if (field === 'poison') return p.poison;
+  if (field === 'tax') return p.tax;
+  return p.cmdr[source ?? ''] ?? 0;
+}
+
+function writeField(p: LcPlayer, field: CounterField, source: string | undefined, value: number): LcPlayer {
+  if (field === 'life') return { ...p, life: value };
+  if (field === 'poison') return { ...p, poison: value };
+  if (field === 'tax') return { ...p, tax: value };
+  return { ...p, cmdr: { ...p.cmdr, [source ?? '']: value } };
+}
+
+function maxCommanderDamage(p: LcPlayer): number {
+  return Math.max(0, ...Object.values(p.cmdr));
+}
+
+function historyLabel(e: HistoryEntry): string {
+  const range = `${e.from} → ${e.to}`;
+  if (e.field === 'life') return `Vita ${range}`;
+  if (e.field === 'poison') return `Veleno ${range}`;
+  if (e.field === 'tax') return `Tassa comandante ${range}`;
+  return `Danno da comandante di ${e.source}: ${range}`;
 }
 
 /**
@@ -93,7 +150,7 @@ const POISON_LIMIT = 10;
 /** Come ha perso, da salvare con la partita: il veleno conta come KILL. */
 function lossCauses(p: LcPlayer): LossCause[] {
   const causes: LossCause[] = [];
-  if (p.kill || (p.poisonOn && p.poison >= POISON_LIMIT)) causes.push('kill');
+  if (p.kill || (p.poisonOn && p.poison >= POISON_LIMIT) || (p.cmdrOn && maxCommanderDamage(p) >= CMDR_LIMIT)) causes.push('kill');
   if (p.mill) causes.push('mill');
   return causes;
 }
@@ -152,7 +209,7 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
   const [lives, setLives] = useState<LcPlayer[]>(
     players.map((name) => {
       const saved = resume?.[name];
-      if (!saved) return { name, life: startLife, kill: false, mill: false, poisonOn: false, poison: 0 };
+      if (!saved) return { name, life: startLife, kill: false, mill: false, poisonOn: false, poison: 0, cmdrOn: false, tax: 0, cmdr: {} };
       // Il veleno letale è già contato come KILL nelle cause: non lo accendo due volte.
       return {
         name,
@@ -161,6 +218,9 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
         mill: saved.loss.includes('mill'),
         poisonOn: saved.poison > 0,
         poison: saved.poison,
+        cmdrOn: false,
+        tax: 0,
+        cmdr: {},
       };
     })
   );
@@ -170,12 +230,46 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
   const [menuOpen, setMenuOpen] = useState(false);
   const [highRollOpen, setHighRollOpen] = useState(false);
   const [rolls, setRolls] = useState<RollResult[]>([]);
+  /** Cronologia dei cambi: vive solo durante la partita, non si salva. */
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const nextEntryId = useRef(1);
 
   const cols = gridColumns(lives.length);
   const rows = Math.ceil(lives.length / cols);
 
+  /** Cambia un contatore e lo scrive nella cronologia (unendo i tocchi ravvicinati). */
+  function change(index: number, field: CounterField, delta: number, source?: string) {
+    const player = lives[index];
+    const from = readField(player, field, source);
+    const to = field === 'life' ? from + delta : Math.max(0, from + delta);
+    const real = to - from;
+    if (real === 0) return;
+    setLives((prev) => prev.map((p, i) => (i === index ? writeField(p, field, source, to) : p)));
+    const now = Date.now();
+    setHistory((prev) => {
+      const last = prev[prev.length - 1];
+      if (last && last.index === index && last.field === field && last.source === source && now - last.t < MERGE_WINDOW_MS) {
+        const total = last.delta + real;
+        return total === 0 ? prev.slice(0, -1) : [...prev.slice(0, -1), { ...last, t: now, delta: total, to }];
+      }
+      const entry: HistoryEntry = { id: nextEntryId.current++, t: now, index, name: player.name, field, source, delta: real, from, to };
+      return [...prev.slice(-(MAX_HISTORY - 1)), entry];
+    });
+  }
+
   function adjust(index: number, delta: number) {
-    setLives((prev) => prev.map((p, i) => (i === index ? { ...p, life: p.life + delta } : p)));
+    change(index, 'life', delta);
+  }
+
+  /** Annulla l'ultima voce della cronologia, riportando il contatore com'era. */
+  function undoLast() {
+    const last = history[history.length - 1];
+    if (!last) return;
+    setLives((prev) =>
+      prev.map((p, i) => (i === last.index ? writeField(p, last.field, last.source, last.from) : p))
+    );
+    setHistory((prev) => prev.slice(0, -1));
   }
 
   function patchPlayer(index: number, patch: Partial<LcPlayer>) {
@@ -265,7 +359,7 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
                 >
                   {p.name}
                 </p>
-                {(p.kill || p.mill || p.poisonOn) && (
+                {(p.kill || p.mill || p.poisonOn || (p.cmdrOn && (p.tax > 0 || maxCommanderDamage(p) > 0))) && (
                   <p
                     className="mb-1 flex flex-wrap justify-center gap-x-2.5 text-[clamp(12px,2.6vw,17px)] font-bold uppercase tracking-wider text-white"
                     style={{ textShadow: '0 1px 4px rgba(0,0,0,.5)' }}
@@ -273,6 +367,8 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
                     {p.kill && <span>KILL</span>}
                     {p.mill && <span>MILL</span>}
                     {p.poisonOn && <span>POISON {p.poison}</span>}
+                    {p.cmdrOn && p.tax > 0 && <span>TAX {p.tax}</span>}
+                    {p.cmdrOn && maxCommanderDamage(p) > 0 && <span>CMD {maxCommanderDamage(p)}</span>}
                   </p>
                 )}
                 <p
@@ -285,7 +381,8 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
 
               {optionsFor === i && (
                 <div className="absolute inset-0 z-20 flex flex-col bg-black/85 px-4 pb-3 pt-3 text-white">
-                  <div className="flex flex-1 flex-col justify-center gap-3.5">
+                  <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+                  <div className="my-auto flex flex-col gap-3">
                   <label className="flex items-center justify-between gap-3 text-[18px] font-bold tracking-wider">
                     <span>KILL</span>
                     <span className="relative origin-right scale-[1.2]">
@@ -326,7 +423,7 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
                     <div className="flex items-center justify-between gap-2">
                       <button
                         type="button"
-                        onClick={() => patchPlayer(i, { poison: Math.max(0, p.poison - 1) })}
+                        onClick={() => change(i, 'poison', -1)}
                         aria-label={`${p.name}: togli 1 segnalino veleno`}
                         className="h-10 w-10 rounded-lg border border-white/30 text-xl active:bg-white/20"
                       >
@@ -337,7 +434,7 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
                       </span>
                       <button
                         type="button"
-                        onClick={() => patchPlayer(i, { poison: p.poison + 1 })}
+                        onClick={() => change(i, 'poison', 1)}
                         aria-label={`${p.name}: aggiungi 1 segnalino veleno`}
                         className="h-10 w-10 rounded-lg border border-white/30 text-xl active:bg-white/20"
                       >
@@ -345,6 +442,72 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
                       </button>
                     </div>
                   )}
+                  <label className="flex items-center justify-between gap-3 text-[18px] font-bold tracking-wider">
+                    <span>COMMANDER</span>
+                    <span className="relative origin-right scale-[1.2]">
+                      <input
+                        type="checkbox"
+                        checked={p.cmdrOn}
+                        onChange={(e) => patchPlayer(i, { cmdrOn: e.target.checked })}
+                        className="mtg-switch-input absolute h-0 w-0 opacity-0"
+                      />
+                      <span className="mtg-switch" />
+                    </span>
+                  </label>
+                  {p.cmdrOn && (
+                    <>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm font-bold uppercase tracking-wider">Tassa +{p.tax}</span>
+                        <span className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => change(i, 'tax', -TAX_STEP)}
+                            aria-label={`${p.name}: togli 2 alla tassa del comandante`}
+                            className="h-10 w-10 rounded-lg border border-white/30 text-xl active:bg-white/20"
+                          >
+                            −
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => change(i, 'tax', TAX_STEP)}
+                            aria-label={`${p.name}: aggiungi 2 alla tassa del comandante`}
+                            className="h-10 w-10 rounded-lg border border-white/30 text-xl active:bg-white/20"
+                          >
+                            +
+                          </button>
+                        </span>
+                      </div>
+                      {lives.map((src, si) =>
+                        si === i ? null : (
+                          <div key={src.name + si} className="flex items-center justify-between gap-2">
+                            <span className="min-w-0 truncate text-sm">Danno da {src.name}</span>
+                            <span className="flex shrink-0 items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => change(i, 'cmdr', -1, src.name)}
+                                aria-label={`${p.name}: togli 1 danno da comandante di ${src.name}`}
+                                className="h-10 w-10 rounded-lg border border-white/30 text-xl active:bg-white/20"
+                              >
+                                −
+                              </button>
+                              <span className="w-10 text-center text-lg font-bold tabular-nums">
+                                {p.cmdr[src.name] ?? 0}/{CMDR_LIMIT}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => change(i, 'cmdr', 1, src.name)}
+                                aria-label={`${p.name}: aggiungi 1 danno da comandante di ${src.name}`}
+                                className="h-10 w-10 rounded-lg border border-white/30 text-xl active:bg-white/20"
+                              >
+                                +
+                              </button>
+                            </span>
+                          </div>
+                        )
+                      )}
+                    </>
+                  )}
+                  </div>
                   </div>
                   <Button
                     variant="ghost"
@@ -389,10 +552,10 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
             className="grid w-full max-w-sm grid-cols-2 gap-3 rounded-2xl border border-zaff-border bg-zaff-surface p-4 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Quattro tasti in griglia 2x2: grandi e uguali, facili da toccare. */}
+            {/* Sei tasti in griglia 2x3: grandi e uguali, facili da toccare. */}
             <Button
               variant="ghost"
-              className="flex h-24 flex-col gap-1 text-base"
+              className="flex h-20 flex-col gap-1 text-base"
               onClick={() => {
                 setMenuOpen(false);
                 openHighRoll();
@@ -402,17 +565,54 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
               High Roll
             </Button>
             <Button
-              className="flex h-24 text-base"
+              className="flex h-20 text-base"
               onClick={() => onFinish(...snapshot())}
             >
               Fine Partita
             </Button>
-            <Button variant="ghost" className="flex h-24 text-base" onClick={() => onEdit(...snapshot())}>
+            <Button variant="ghost" className="flex h-20 text-base" onClick={() => onEdit(...snapshot())}>
               Modifica Partita
             </Button>
-            <Button variant="ghost" className="flex h-24 text-base" onClick={() => setMenuOpen(false)}>
+            <Button variant="ghost" className="flex h-20 text-base" onClick={() => { setMenuOpen(false); setHistoryOpen(true); }}>
+              Cronologia
+            </Button>
+            <Button variant="ghost" className="flex h-20 text-base" disabled={history.length === 0} onClick={() => { undoLast(); setMenuOpen(false); }}>
+              Annulla Ultimo
+            </Button>
+            <Button variant="ghost" className="flex h-20 text-base" onClick={() => setMenuOpen(false)}>
               Torna al Gioco
             </Button>
+          </div>
+        </div>
+      )}
+
+      {historyOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
+          <div className="flex max-h-[85vh] w-full max-w-sm flex-col rounded-2xl border border-zaff-border bg-zaff-surface p-5 shadow-xl">
+            <h2 className={HEADING_SECTION}>Cronologia</h2>
+            <p className="mb-3 text-xs text-zaff-muted">Solo durante questa partita: non viene salvata.</p>
+            {history.length === 0 ? (
+              <p className="mb-4 text-sm text-zaff-muted">Ancora nessun cambio.</p>
+            ) : (
+              <ul className="mb-4 min-h-0 flex-1 space-y-1.5 overflow-y-auto">
+                {[...history].reverse().map((e) => (
+                  <li key={e.id} className="text-sm text-zaff-text">
+                    <span className="text-zaff-muted">
+                      {new Date(e.t).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                    </span>{' '}
+                    <b>{e.name}</b> · {historyLabel(e)}
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="flex gap-2">
+              <Button variant="ghost" className="flex-1" disabled={history.length === 0} onClick={undoLast}>
+                Annulla Ultimo
+              </Button>
+              <Button className="flex-1" onClick={() => setHistoryOpen(false)}>
+                Chiudi
+              </Button>
+            </div>
           </div>
         </div>
       )}

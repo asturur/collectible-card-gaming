@@ -226,6 +226,7 @@ the Vite basename (`/collectible-card-gaming/`).
 /stats/decks               → deck statistics
 /stats/players             → player standings
 /stats/players/:playerName → individual player statistics / image export
+/stats/trends              → statistics over time (games and wins per month, streaks, favourite deck) / image export
 /stats/matchups            → matchup statistics
 /stats/matchups/A/vs/B     → exact formation statistics / image export
 /more                     → redirects to /players (retired menu page)

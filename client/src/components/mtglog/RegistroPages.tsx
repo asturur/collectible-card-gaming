@@ -16,6 +16,8 @@ import Standings, { PlayerStatsDetail } from './Standings';
 import MatchupStats, { MatchupStatsDetail } from './MatchupStats';
 import { computeMatchups, computeTally, matchupKey, rowToGame } from './stats';
 import SectionPage from '../ui/SectionPage';
+import TrendsStats from './TrendsStats';
+import { countNewGames, markGamesSeen } from './newGames';
 import { cx, HEADING_PAGE, STICKY_BELOW_TITLE, TEXT_MUTED } from '../ui/styles';
 import { useLeaveGuard } from '../ui/useLeaveGuard';
 import { canEdit, supabase, TABLE_GAMES } from '../../services/supabase';
@@ -35,21 +37,24 @@ function GameStatisticsData({ children }: { children: ReactNode }) {
 }
 
 function RegistroHome() {
-  const { games, deckCount, decks, gamesError } = useRegistro();
+  const { userId, games, gamesLoading, deckCount, decks, gamesError } = useRegistro();
+  const newGames = gamesLoading ? 0 : countNewGames(games, userId);
   return (
     <main className="mx-auto w-full max-w-[1180px] px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-[calc(1.5rem+env(safe-area-inset-top))] sm:px-5 sm:pt-7">
       <header className="border-b-2 border-zaff-text pb-4 sm:pb-[18px]">
         <h1 className={HEADING_PAGE}>Registro partite di Magic</h1>
         <div className="mtg-sep" />
         {gamesError && <p role="alert">{gamesError}</p>}
-        <HomeOverview games={games} deckCount={deckCount} decks={decks} />
+        <HomeOverview games={games} deckCount={deckCount} decks={decks} newGames={newGames} />
       </header>
     </main>
   );
 }
 
 function GamesPage() {
-  const { userId } = useRegistro();
+  const { userId, games, gamesLoading } = useRegistro();
+  // Aprire l'elenco Partite significa averle viste: sparisce il segno "nuove" della Home.
+  useEffect(() => { if (!gamesLoading) markGamesSeen(games); }, [games, gamesLoading]);
   const { gameId } = useParams();
   const navigate = useNavigate();
   return (
@@ -309,6 +314,11 @@ function PlayerDetailPage() {
   );
 }
 
+function TrendsPage() {
+  const { games, decks } = useRegistro();
+  return <SectionPage title="Andamento" stickyTitle wide><GameStatisticsData><TrendsStats games={games} decks={decks} /></GameStatisticsData></SectionPage>;
+}
+
 function MatchupsPage() {
   const { games } = useRegistro();
   return <SectionPage title="Statistiche per Sfida" stickyTitle wide><GameStatisticsData><MatchupStats games={games} /></GameStatisticsData></SectionPage>;
@@ -361,6 +371,7 @@ export const registroRoutes: RouteObject[] = [
   { path: 'stats/decks', element: <SectionPage title="Statistiche Mazzi" stickyTitle wide><GameStats /></SectionPage> },
   { path: 'stats/players', element: <PlayerStatsPage /> },
   { path: 'stats/players/:playerName', element: <PlayerDetailPage /> },
+  { path: 'stats/trends', element: <TrendsPage /> },
   { path: 'stats/matchups', element: <MatchupsPage /> },
   { path: 'stats/matchups/*', element: <MatchupDetailPage /> },
   { path: 'more', element: <Navigate to={paths.players} replace /> },

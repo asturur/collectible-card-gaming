@@ -20,6 +20,7 @@ export const paths = {
   playerStats: '/stats/players',
   player: (name: string) => `/stats/players/${encodeURIComponent(name)}`,
   matchups: '/stats/matchups',
+  trends: '/stats/trends',
   matchup: (names: readonly string[]) => `/stats/matchups/${names.map(encodeURIComponent).join('/vs/')}`,
   more: '/more',
   players: '/players',
