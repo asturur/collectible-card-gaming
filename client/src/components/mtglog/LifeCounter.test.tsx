@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import LifeCounter from './LifeCounter';
@@ -66,6 +66,7 @@ describe('LifeCounter', () => {
   });
 
   it('flips a coin from the game menu', async () => {
+    vi.stubGlobal('matchMedia', () => ({ matches: true }));
     const { user } = setup();
     const random = vi.spyOn(Math, 'random').mockReturnValueOnce(0.1).mockReturnValueOnce(0.9);
     await user.click(screen.getByRole('button', { name: 'Opzioni di gioco' }));
@@ -76,6 +77,7 @@ describe('LifeCounter', () => {
     await user.click(screen.getByRole('button', { name: 'Chiudi' }));
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
     random.mockRestore();
+    vi.unstubAllGlobals();
   });
 
   it('offers the table layout only with four players and remembers the choice', async () => {
@@ -115,5 +117,22 @@ describe('LifeCounter', () => {
     await user.click(screen.getByRole('button', { name: 'Opzioni di gioco' }));
     expect(screen.getByRole('button', { name: /Disposizione/ })).toHaveTextContent(second);
     localStorage.removeItem(`mtglog:counterLayout:${n}`);
+  });
+
+  it('composes the coin word letter by letter when motion is allowed', async () => {
+    vi.useFakeTimers();
+    try {
+      vi.spyOn(Math, 'random').mockReturnValue(0.1);
+      render(<LifeCounter players={['Alice', 'Bob']} startLife={20} onEdit={vi.fn()} onFinish={vi.fn()} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Opzioni di gioco' }));
+      fireEvent.click(screen.getByRole('button', { name: /Moneta/ }));
+      const word = () => screen.getByRole('status').querySelector('[aria-hidden="true"]')!.textContent;
+      expect(word()).not.toBe('TESTA');
+      act(() => { vi.advanceTimersByTime(3000); });
+      expect(word()).toBe('TESTA');
+    } finally {
+      vi.useRealTimers();
+      vi.restoreAllMocks();
+    }
   });
 });

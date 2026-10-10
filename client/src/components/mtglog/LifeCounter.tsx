@@ -293,6 +293,69 @@ function innerStyle(rotation: Rotation): CSSProperties {
   return { left: '50%', top: '50%', width: '100cqh', height: '100cqw', transform: `translate(-50%, -50%) rotate(${rotation}deg)` };
 }
 
+/** Caratteri che "piovono" prima che la parola si componga, in stile Matrix. */
+const MATRIX_CHARS = 'ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿ0123456789';
+/** Le lettere si fissano da sinistra a destra: la prima dopo RESOLVE_START, poi una ogni RESOLVE_STEP. */
+const RESOLVE_START_MS = 500;
+const RESOLVE_STEP_MS = 220;
+const FRAME_MS = 60;
+
+interface MatrixLetter {
+  ch: string;
+  done: boolean;
+}
+
+/** Carattere "a caso" ma deterministico (niente Math.random: serve solo a variare l'aspetto). */
+function matrixChar(position: number, frame: number): string {
+  const hash = (Math.imul(position + 1, 2654435761) ^ Math.imul(frame + 1, 40503)) >>> 0;
+  return MATRIX_CHARS[hash % MATRIX_CHARS.length];
+}
+
+function prefersReducedMotion(): boolean {
+  return typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+/**
+ * La parola dell'esito (TESTA / CROCE) si compone lettera per lettera da caratteri
+ * che cambiano, come nella pioggia di Matrix. Con "riduci animazioni" attivo compare subito.
+ * L'esito è già deciso: l'animazione è solo scena (il testo per gli screen reader è a parte).
+ */
+function CoinWord({ word }: { word: string }) {
+  const upper = word.toUpperCase();
+  const [letters, setLetters] = useState<MatrixLetter[]>(() =>
+    [...upper].map((ch, i) => (prefersReducedMotion() ? { ch, done: true } : { ch: matrixChar(i, 0), done: false }))
+  );
+
+  useEffect(() => {
+    if (prefersReducedMotion()) return;
+    const start = Date.now();
+    let frame = 0;
+    const timer = window.setInterval(() => {
+      frame++;
+      const elapsed = Date.now() - start;
+      const next = [...upper].map((ch, i): MatrixLetter =>
+        elapsed >= RESOLVE_START_MS + i * RESOLVE_STEP_MS ? { ch, done: true } : { ch: matrixChar(i, frame), done: false }
+      );
+      setLetters(next);
+      if (next.every((l) => l.done)) window.clearInterval(timer);
+    }, FRAME_MS);
+    return () => window.clearInterval(timer);
+  }, [upper]);
+
+  return (
+    <span aria-hidden="true" className="flex justify-center gap-1.5 font-mono text-5xl font-bold">
+      {letters.map((l, i) => (
+        <span
+          key={i}
+          className={cx('inline-block w-[1.1ch] text-center transition-colors', l.done ? 'text-zaff-text' : 'text-emerald-400/80')}
+        >
+          {l.ch}
+        </span>
+      ))}
+    </span>
+  );
+}
+
 function rollHighRoll(names: string[]): RollResult[] {
   const n = names.length;
   const maxVal = Math.max(20, n);
@@ -350,7 +413,7 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
   const [highRollOpen, setHighRollOpen] = useState(false);
   const [rolls, setRolls] = useState<RollResult[]>([]);
   /** Esito dell'ultimo lancio della moneta (null: popup chiuso). */
-  const [coin, setCoin] = useState<'Testa' | 'Croce' | null>(null);
+  const [coin, setCoin] = useState<{ id: number; result: 'Testa' | 'Croce' } | null>(null);
   /** Cronologia dei cambi: vive solo durante la partita, non si salva. */
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -407,7 +470,7 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
   }
 
   function flipCoin() {
-    setCoin(Math.random() < 0.5 ? 'Testa' : 'Croce');
+    setCoin((prev) => ({ id: (prev?.id ?? 0) + 1, result: Math.random() < 0.5 ? 'Testa' : 'Croce' }));
   }
 
   function openHighRoll() {
@@ -517,8 +580,8 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
               {optionsFor === i && (
                 <div className="absolute inset-0 z-20 flex flex-col bg-black/85 px-4 pb-3 pt-3 text-white">
                   <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-                  <div className="my-auto flex flex-col gap-3">
-                  <label className="flex items-center justify-between gap-3 text-[18px] font-bold tracking-wider">
+                  <div className="my-auto flex flex-col gap-2.5">
+                  <label className="flex items-center justify-between gap-3 text-[13px] font-bold tracking-wider">
                     <span>KILL</span>
                     <span className="relative origin-right scale-[1.2]">
                       <input
@@ -530,7 +593,7 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
                       <span className="mtg-switch" />
                     </span>
                   </label>
-                  <label className="flex items-center justify-between gap-3 text-[18px] font-bold tracking-wider">
+                  <label className="flex items-center justify-between gap-3 text-[13px] font-bold tracking-wider">
                     <span>MILL</span>
                     <span className="relative origin-right scale-[1.2]">
                       <input
@@ -542,7 +605,7 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
                       <span className="mtg-switch" />
                     </span>
                   </label>
-                  <label className="flex items-center justify-between gap-3 text-[18px] font-bold tracking-wider">
+                  <label className="flex items-center justify-between gap-3 text-[13px] font-bold tracking-wider">
                     <span>POISON</span>
                     <span className="relative origin-right scale-[1.2]">
                       <input
@@ -564,7 +627,7 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
                       >
                         −
                       </button>
-                      <span className="text-lg font-bold tabular-nums">
+                      <span className="text-sm font-bold tabular-nums">
                         {p.poison}/{POISON_LIMIT}
                       </span>
                       <button
@@ -577,7 +640,7 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
                       </button>
                     </div>
                   )}
-                  <label className="flex items-center justify-between gap-3 text-[18px] font-bold tracking-wider">
+                  <label className="flex items-center justify-between gap-3 text-[13px] font-bold tracking-wider">
                     <span>COMMANDER</span>
                     <span className="relative origin-right scale-[1.2]">
                       <input
@@ -592,7 +655,7 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
                   {p.cmdrOn && (
                     <>
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-sm font-bold uppercase tracking-wider">Tassa +{p.tax}</span>
+                        <span className="text-xs font-bold uppercase tracking-wider">Tassa +{p.tax}</span>
                         <span className="flex items-center gap-2">
                           <button
                             type="button"
@@ -615,7 +678,7 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
                       {lives.map((src, si) =>
                         si === i ? null : (
                           <div key={src.name + si} className="flex items-center justify-between gap-2">
-                            <span className="min-w-0 truncate text-sm">Danno da {src.name}</span>
+                            <span className="min-w-0 truncate text-xs">Danno da {src.name}</span>
                             <span className="flex shrink-0 items-center gap-2">
                               <button
                                 type="button"
@@ -625,7 +688,7 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
                               >
                                 −
                               </button>
-                              <span className="w-10 text-center text-lg font-bold tabular-nums">
+                              <span className="w-10 text-center text-sm font-bold tabular-nums">
                                 {p.cmdr[src.name] ?? 0}/{CMDR_LIMIT}
                               </span>
                               <button
@@ -775,7 +838,10 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
           <div className="w-full max-w-xs rounded-2xl border border-zaff-border bg-zaff-surface p-6 text-center shadow-xl">
             <h2 className={HEADING_SECTION}>🪙 Moneta</h2>
-            <p className="my-5 text-5xl font-bold text-zaff-text" role="status">{coin}</p>
+            <p className="my-5" role="status">
+              <span className="sr-only">{coin.result}</span>
+              <CoinWord key={coin.id} word={coin.result} />
+            </p>
             <div className="flex gap-2">
               <Button variant="ghost" className="flex-1" onClick={flipCoin}>
                 Lancia di Nuovo
