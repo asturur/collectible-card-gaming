@@ -238,10 +238,12 @@ const LAYOUT_OPTIONS: Record<number, LayoutSpec[]> = {
   ],
   6: [
     {
-      label: 'Tre per riga',
-      columns: 'repeat(3, 1fr)',
-      rows: '1fr 1fr',
-      places: [at(1, 1, 180), at(2, 1, 180), at(3, 1, 180), at(1, 2, 0), at(2, 2, 0), at(3, 2, 0)],
+      // Tre sul lato lungo sinistro e tre su quello destro: ogni riquadro è largo quasi metà schermo.
+      // In senso orario dal basso a sinistra.
+      label: 'Tre per lato',
+      columns: '1fr 1fr',
+      rows: 'repeat(3, 1fr)',
+      places: [at(1, 3, 90), at(1, 2, 90), at(1, 1, 90), at(2, 1, -90), at(2, 2, -90), at(2, 3, -90)],
     },
     {
       label: 'Uno per lato',
