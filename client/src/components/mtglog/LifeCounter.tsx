@@ -228,16 +228,20 @@ const LAYOUT_OPTIONS: Record<number, LayoutSpec[]> = {
   ],
   5: [
     {
-      label: 'Uno a lato',
-      columns: '1fr 1fr 0.7fr',
-      rows: '1fr 1fr',
-      places: [at(1, 1, 180), at(2, 1, 180), at(1, 2, 0), at(2, 2, 0), at(3, '1 / span 2', -90)],
+      // Tre sul lato lungo sinistro e due su quello destro (ogni riquadro a destra occupa tre sesti dell'altezza).
+      // In senso orario dal basso a sinistra.
+      label: 'Tre e due per lato',
+      columns: '1fr 1fr',
+      rows: 'repeat(6, 1fr)',
+      places: [at(1, '5 / span 2', 90), at(1, '3 / span 2', 90), at(1, '1 / span 2', 90), at(2, '1 / span 3', -90), at(2, '4 / span 3', -90)],
     },
     {
-      label: 'Due sopra, tre sotto',
-      columns: 'repeat(6, 1fr)',
-      rows: '1fr 1fr',
-      places: [at('1 / span 3', 1, 180), at('4 / span 3', 1, 180), at('1 / span 2', 2, 0), at('3 / span 2', 2, 0), at('5 / span 2', 2, 0)],
+      // Due per lato lungo e uno a capotavola, in basso a tutta larghezza.
+      // In senso orario dal capotavola.
+      label: 'Due per lato, uno a capotavola',
+      columns: '1fr 1fr',
+      rows: '1fr 1fr 0.8fr',
+      places: [at('1 / span 2', 3, 0), at(1, 2, 90), at(1, 1, 90), at(2, 1, -90), at(2, 2, -90)],
     },
   ],
   6: [

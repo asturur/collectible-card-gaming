@@ -104,7 +104,7 @@ describe('LifeCounter', () => {
   });
 
   it.each([
-    [5, 'Uno a lato', 'Due sopra, tre sotto'],
+    [5, 'Tre e due per lato', 'Due per lato, uno a capotavola'],
     [6, 'Tre per lato', 'Uno per lato'],
   ])('offers two layouts with %i players', async (n, first, second) => {
     localStorage.removeItem(`mtglog:counterLayout:${n}`);
