@@ -207,6 +207,8 @@ function DeckPageFrame({ deckId, deck, active, children }: { deckId: string; dec
     <>
       {deck && (
         <>
+          {/* Un solo blocco fisso in cima (tasti + barra dei totali): sopra le carte che scorrono, sempre tappabile. */}
+          <div className="sticky top-[env(safe-area-inset-top)] z-20 -mx-1 mb-3 bg-zaff-surface px-1 pb-2 pt-1">
           <DeckTabs
             active={active}
             deckTo={paths.deck(deckId)}
@@ -216,6 +218,7 @@ function DeckPageFrame({ deckId, deck, active, children }: { deckId: string; dec
             onToggleActions={() => setActionsOpen((open) => !open)}
           />
           <DeckSummaryBar title={deck.name} main={mainTotal} side={sideTotal} highlight={showingCards ? section : null} />
+          </div>
           {actionsOpen && (
             <DeckActionsPanel
               editTo={canEdit(deck.createdBy, userId) ? paths.editDeck(deckId) : null}

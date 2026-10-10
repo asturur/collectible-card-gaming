@@ -44,7 +44,7 @@ export function DeckTabs({ active, deckTo, statsTo, actionsOpen, onShowPage, onT
       </ButtonRouteLink>
     );
   return (
-    <div className="sticky top-[env(safe-area-inset-top)] z-10 -mx-1 mb-2 grid grid-cols-3 gap-2 bg-zaff-surface px-1 pb-2 pt-1">
+    <div className="grid grid-cols-3 gap-2">
       {tab('deck', deckTo, <CardsIcon className={TAB_ICON} />, 'Deck')}
       {tab('stats', statsTo, <BarsIcon className={TAB_ICON} />, 'Stats')}
       <Button
@@ -69,13 +69,13 @@ interface DeckSummaryBarProps {
 }
 
 /**
- * Barra fissa sotto i tre tasti: nome del mazzo e totali. Resta uguale in Deck,
+ * Barra sotto i tre tasti (nello stesso blocco fisso, vedi `DeckPageFrame`): nome del mazzo e totali. Resta uguale in Deck,
  * Stats e Azioni, che sono tre contenuti della stessa pagina.
  */
 export function DeckSummaryBar({ title, main, side, highlight }: DeckSummaryBarProps) {
   const tone = (section: 'main' | 'side') => (highlight === section ? 'text-zaff-accent' : 'text-zaff-muted');
   return (
-    <div className="sticky top-[calc(3.25rem+env(safe-area-inset-top))] z-10 -mx-1 mb-3 rounded-lg border border-zaff-primary bg-zaff-surface px-3 py-2 text-sm font-semibold shadow-lg">
+    <div className="mt-2 rounded-lg border border-zaff-primary bg-zaff-surface px-3 py-2 text-sm font-semibold shadow-lg">
       <p className="mb-1 truncate text-base font-bold text-zaff-text" title={title}>{title}</p>
       <div className="flex items-center justify-between gap-2">
         <span aria-current={highlight === 'main' ? 'true' : undefined} className={tone('main')}>Main Deck {main}</span>
