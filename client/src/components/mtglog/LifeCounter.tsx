@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import Button from '../ui/Button';
 import { PIE_COLORS } from './stats';
-import { HEADING_SECTION } from '../ui/styles';
+import { cx, HEADING_SECTION } from '../ui/styles';
 import type { LossCause } from './GameList';
 
 /** Stato salvato di un giocatore, per riprendere una partita già registrata. */
@@ -174,6 +174,62 @@ function shouldRotate(index: number, cols: number, rows: number): boolean {
   return rowIndex < Math.floor(rows / 2);
 }
 
+/** Disposizione dei segna-punti con 4 giocatori. */
+type CounterLayout = 'rows' | 'cross' | 'sides';
+
+const LAYOUTS: CounterLayout[] = ['rows', 'cross', 'sides'];
+const LAYOUT_LABELS: Record<CounterLayout, string> = {
+  rows: 'Due per lato',
+  cross: 'A croce',
+  sides: 'Ai lati',
+};
+const LAYOUT_KEY = 'mtglog:counterLayout';
+
+function readLayout(): CounterLayout {
+  try {
+    const value = localStorage.getItem(LAYOUT_KEY);
+    return LAYOUTS.find((l) => l === value) ?? 'rows';
+  } catch {
+    return 'rows';
+  }
+}
+
+function rememberLayout(value: CounterLayout) {
+  try {
+    localStorage.setItem(LAYOUT_KEY, value);
+  } catch {
+    /* storage non disponibile: pazienza */
+  }
+}
+
+interface Placement {
+  /** Posizione nella griglia (solo per la disposizione a croce). */
+  cell: CSSProperties;
+  /** Gradi di rotazione: chi siede da quel lato legge dritto. */
+  rotation: 0 | 90 | 180 | -90;
+}
+
+/** Dove va la scheda `i` e di quanto è ruotata. Giocatori in senso orario dal basso. */
+function placementFor(layout: CounterLayout, i: number, cols: number, rows: number): Placement {
+  if (layout === 'cross') {
+    return [
+      { cell: { gridColumn: '1 / span 2', gridRow: 3 }, rotation: 0 as const },
+      { cell: { gridColumn: 1, gridRow: 2 }, rotation: 90 as const },
+      { cell: { gridColumn: '1 / span 2', gridRow: 1 }, rotation: 180 as const },
+      { cell: { gridColumn: 2, gridRow: 2 }, rotation: -90 as const },
+    ][i];
+  }
+  if (layout === 'sides') return { cell: {}, rotation: i % 2 === 0 ? 90 : -90 };
+  return { cell: {}, rotation: shouldRotate(i, cols, rows) ? 180 : 0 };
+}
+
+/** Il contenuto della scheda ruota dentro la scheda: di 90° scambia larghezza e altezza (unità del contenitore). */
+function innerStyle(rotation: Placement['rotation']): CSSProperties {
+  if (rotation === 0) return { left: 0, top: 0, width: '100%', height: '100%' };
+  if (rotation === 180) return { left: 0, top: 0, width: '100%', height: '100%', transform: 'rotate(180deg)' };
+  return { left: '50%', top: '50%', width: '100cqh', height: '100cqw', transform: `translate(-50%, -50%) rotate(${rotation}deg)` };
+}
+
 function rollHighRoll(names: string[]): RollResult[] {
   const n = names.length;
   const maxVal = Math.max(20, n);
@@ -237,8 +293,17 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
   const [historyOpen, setHistoryOpen] = useState(false);
   const nextEntryId = useRef(1);
 
-  const cols = gridColumns(lives.length);
-  const rows = Math.ceil(lives.length / cols);
+  const four = lives.length === 4;
+  const [layoutChoice, setLayoutChoice] = useState<CounterLayout>(readLayout);
+  const layout: CounterLayout = four ? layoutChoice : 'rows';
+  const cols = layout === 'rows' ? gridColumns(lives.length) : 2;
+  const rows = layout === 'cross' ? 3 : Math.ceil(lives.length / cols);
+
+  function nextLayout() {
+    const next = LAYOUTS[(LAYOUTS.indexOf(layoutChoice) + 1) % LAYOUTS.length];
+    setLayoutChoice(next);
+    rememberLayout(next);
+  }
 
   /** Cambia un contatore e lo scrive nella cronologia (unendo i tocchi ravvicinati). */
   function change(index: number, field: CounterField, delta: number, source?: string) {
@@ -311,17 +376,18 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
       <div className="relative flex min-h-0 flex-1 flex-col">
       <div
         className="grid flex-1 gap-2.5"
-        style={{ gridTemplateColumns: `repeat(${cols}, 1fr)`, gridTemplateRows: `repeat(${rows}, 1fr)` }}
+        style={{ gridTemplateColumns: `repeat(${cols}, 1fr)`, gridTemplateRows: layout === 'cross' ? '1fr 1.35fr 1fr' : `repeat(${rows}, 1fr)` }}
       >
         {lives.map((p, i) => {
           const color = PIE_COLORS[i % PIE_COLORS.length];
-          const rotated = shouldRotate(i, cols, rows);
+          const place = placementFor(layout, i, cols, rows);
           return (
             <div
               key={p.name + i}
               className="relative overflow-hidden rounded-2xl"
-              style={{ background: color, transform: rotated ? 'rotate(180deg)' : undefined }}
+              style={{ background: color, containerType: 'size', ...place.cell }}
             >
+              <div className="absolute" style={innerStyle(place.rotation)}>
               {/* Come in Lotus: metà sinistra = −1, metà destra = +1, su tutta
                   la scheda. Il simbolo sta vicino al bordo, il punteggio al centro. */}
               <div className="absolute inset-0 flex">
@@ -526,6 +592,7 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
                   </Button>
                 </div>
               )}
+              </div>
             </div>
           );
         })}
@@ -587,13 +654,23 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
             <Button variant="ghost" className="flex h-16 text-base" disabled={history.length === 0} onClick={() => { undoLast(); setMenuOpen(false); }}>
               Annulla Ultimo
             </Button>
+            {four && (
+              <Button
+                variant="ghost"
+                className="flex h-16 flex-col gap-0 text-base"
+                onClick={() => { nextLayout(); setMenuOpen(false); }}
+              >
+                Disposizione
+                <span className="text-xs font-normal opacity-70">{LAYOUT_LABELS[layoutChoice]}</span>
+              </Button>
+            )}
             <Button variant="ghost" className="flex h-16 text-base" onClick={() => onEdit(...snapshot())}>
               Modifica Partita
             </Button>
             <Button className="flex h-16 text-base" onClick={() => onFinish(...snapshot())}>
               Fine Partita
             </Button>
-            <Button variant="ghost" className="col-span-2 flex h-16 text-base" onClick={() => setMenuOpen(false)}>
+            <Button variant="ghost" className={cx('flex h-16 text-base', !four && 'col-span-2')} onClick={() => setMenuOpen(false)}>
               Torna al Gioco
             </Button>
           </div>

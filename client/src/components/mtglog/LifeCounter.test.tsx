@@ -77,4 +77,27 @@ describe('LifeCounter', () => {
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
     random.mockRestore();
   });
+
+  it('offers the table layout only with four players and remembers the choice', async () => {
+    localStorage.removeItem('mtglog:counterLayout');
+    const user = userEvent.setup();
+    const { unmount } = render(<LifeCounter players={['A', 'B', 'C', 'D']} startLife={40} onEdit={vi.fn()} onFinish={vi.fn()} />);
+    await user.click(screen.getByRole('button', { name: 'Opzioni di gioco' }));
+    expect(screen.getByRole('button', { name: /Disposizione/ })).toHaveTextContent('Due per lato');
+    await user.click(screen.getByRole('button', { name: /Disposizione/ }));
+    await user.click(screen.getByRole('button', { name: 'Opzioni di gioco' }));
+    expect(screen.getByRole('button', { name: /Disposizione/ })).toHaveTextContent('A croce');
+    unmount();
+
+    render(<LifeCounter players={['A', 'B', 'C', 'D']} startLife={40} onEdit={vi.fn()} onFinish={vi.fn()} />);
+    await user.click(screen.getByRole('button', { name: 'Opzioni di gioco' }));
+    expect(screen.getByRole('button', { name: /Disposizione/ })).toHaveTextContent('A croce');
+    localStorage.removeItem('mtglog:counterLayout');
+  });
+
+  it('hides the layout choice with fewer than four players', async () => {
+    const { user } = setup();
+    await user.click(screen.getByRole('button', { name: 'Opzioni di gioco' }));
+    expect(screen.queryByRole('button', { name: /Disposizione/ })).not.toBeInTheDocument();
+  });
 });
