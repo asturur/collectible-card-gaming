@@ -41,11 +41,11 @@ describe('LifeCounter', () => {
     await user.click(screen.getByRole('checkbox', { name: 'COMMANDER' }));
     await user.click(screen.getByRole('button', { name: 'Alice: aggiungi 2 alla tassa del comandante' }));
     await user.click(screen.getByRole('button', { name: 'Alice: aggiungi 2 alla tassa del comandante' }));
-    expect(screen.getByText('Tassa +4')).toBeInTheDocument();
+    expect(screen.getByLabelText('Tassa del comandante')).toHaveTextContent('+4');
     await user.click(screen.getByRole('button', { name: 'Alice: togli 2 alla tassa del comandante' }));
     await user.click(screen.getByRole('button', { name: 'Alice: togli 2 alla tassa del comandante' }));
     await user.click(screen.getByRole('button', { name: 'Alice: togli 2 alla tassa del comandante' }));
-    expect(screen.getByText('Tassa +0')).toBeInTheDocument();
+    expect(screen.getByLabelText('Tassa del comandante')).toHaveTextContent('+0');
   });
 
   it('counts 21 commander damage from one player as a KILL', async () => {

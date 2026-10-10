@@ -15,6 +15,7 @@ import { rowToGame } from './stats';
 import LifeCounter, { type LifeCounterResume } from './LifeCounter';
 import type { LossCause } from './GameList';
 import { ManaPips } from './ManaIcon';
+import ColorFilter from './ColorFilter';
 import Button from '../ui/Button';
 import Modal from '../ui/Modal';
 import NumberStepper from '../ui/NumberStepper';
@@ -173,6 +174,8 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved, on
   const [playerPickerFor, setPlayerPickerFor] = useState<number | null>(null);
   const [deckPickerFor, setDeckPickerFor] = useState<number | null>(null);
   const [formatPickerOpen, setFormatPickerOpen] = useState(false);
+  /** Filtro per colore nella scelta del mazzo (si azzera a ogni apertura). */
+  const [deckColorFilter, setDeckColorFilter] = useState<Set<string>>(new Set());
 
   async function loadOptions(): Promise<DeckOption[]> {
     if (!supabase) return [];
@@ -275,6 +278,9 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved, on
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => { setDeckColorFilter(new Set()); }, [deckPickerFor]);
+  const visibleDeckOptions = decks.filter((d) => [...deckColorFilter].every((c) => d.colors.includes(c)));
 
   function updatePlayer(index: number, patch: Partial<PlayerRow>) {
     setPlayers((prev) => prev.map((p, i) => (i === index ? { ...p, ...patch } : p)));
@@ -559,8 +565,7 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved, on
                     type="button"
                     variant={format === f ? 'primary' : 'ghost'}
                     size="lg"
-                    fullWidth
-                    className="min-h-[64px] py-4 text-lg"
+                    className="h-16 w-full text-base leading-tight"
                     onClick={() => {
                       setFormat(f);
                       setFormatPickerOpen(false);
@@ -571,18 +576,20 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved, on
                 ))}
               </div>
               {format && (
-                <Button
-                  type="button"
-                  variant="link"
-                  size="sm"
-                  className="mt-3"
-                  onClick={() => {
-                    setFormat('');
-                    setFormatPickerOpen(false);
-                  }}
-                >
-                  Nessun formato
-                </Button>
+                <div className="mt-4 grid grid-cols-2 gap-2.5 border-t border-zaff-border pt-4">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="lg"
+                    className="h-16 w-full text-base leading-tight"
+                    onClick={() => {
+                      setFormat('');
+                      setFormatPickerOpen(false);
+                    }}
+                  >
+                    Nessun formato
+                  </Button>
+                </div>
               )}
             </Modal>
           )}
@@ -800,6 +807,19 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved, on
 
       {deckPickerFor !== null && (
         <Modal level={2} title="Mazzo" onClose={() => setDeckPickerFor(null)}>
+          <div className="mb-3 rounded-lg border border-zaff-border bg-zaff-surface p-2.5">
+            <ColorFilter
+              colors={deckColorFilter}
+              onToggle={(c) =>
+                setDeckColorFilter((prev) => {
+                  const next = new Set(prev);
+                  if (!next.delete(c)) next.add(c);
+                  return next;
+                })
+              }
+              onClear={() => setDeckColorFilter(new Set())}
+            />
+          </div>
           <div className="flex flex-col gap-2.5">
             <Button
               variant={!players[deckPickerFor]?.deckSelect ? 'primary' : 'ghost'}
@@ -813,7 +833,10 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved, on
             >
               Nessun mazzo
             </Button>
-            {decks.map((d) => (
+            {decks.length > 0 && visibleDeckOptions.length === 0 && (
+              <p className={TEXT_MUTED}>Nessun mazzo con questi colori.</p>
+            )}
+            {visibleDeckOptions.map((d) => (
               <Button
                 key={d.name}
                 variant={players[deckPickerFor]?.deckSelect === d.name ? 'primary' : 'ghost'}

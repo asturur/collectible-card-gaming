@@ -662,8 +662,8 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
                   {p.cmdrOn && (
                     <>
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-xs font-bold uppercase tracking-wider">Tassa +{p.tax}</span>
-                        <span className="flex items-center gap-2">
+                        <span className="min-w-0 text-xs font-bold uppercase leading-tight tracking-wider">Tassa</span>
+                        <span className="flex shrink-0 items-center gap-2">
                           <button
                             type="button"
                             onClick={() => change(i, 'tax', -TAX_STEP)}
@@ -672,6 +672,7 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
                           >
                             −
                           </button>
+                          <span className="w-10 text-center text-sm font-bold tabular-nums" aria-label="Tassa del comandante">+{p.tax}</span>
                           <button
                             type="button"
                             onClick={() => change(i, 'tax', TAX_STEP)}

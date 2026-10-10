@@ -2,7 +2,8 @@ import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { MAX_DECK_NAME_LENGTH } from '../../services/supabase';
 import { listSavedDecks, subscribeSavedDecks, type SavedDeck } from '../../services/savedDecks';
 import { parseDeckText, type DeckEntry } from '../../services/deckCards';
-import { ManaIcons, ManaPips } from './ManaIcon';
+import { ManaIcons } from './ManaIcon';
+import ColorFilter from './ColorFilter';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import { cx, STICKY_BELOW_TITLE, TEXT_MINI, TEXT_MUTED } from '../ui/styles';
@@ -102,23 +103,7 @@ export default function DeckList({ onCreate, onImportFile }: DeckListProps) {
           <>
             {/* Il filtro colore resta in cima mentre si scorre la lista. */}
             <div className={cx(STICKY_BELOW_TITLE, 'sticky z-10 -mx-1 mb-2 rounded-lg border border-zaff-border bg-zaff-surface p-2.5 shadow-lg')}>
-              <span className={cx('mb-1.5 block', TEXT_MINI)}>Colore</span>
-              <div className="flex flex-wrap items-center gap-2">
-                <ManaPips colors={colorFilter} onToggle={toggleColorFilter} />
-                <button
-                  type="button"
-                  onClick={() => setColorFilter(new Set())}
-                  aria-pressed={colorFilter.size === 0}
-                  className={cx(
-                    'rounded-lg border px-3 py-1.5 text-[13px] transition',
-                    colorFilter.size === 0
-                      ? 'border-transparent bg-gradient-to-r from-zaff-primary to-zaff-accent font-semibold text-zaff-bg'
-                      : 'border-zaff-border bg-zaff-surface text-zaff-muted hover:text-zaff-text'
-                  )}
-                >
-                  Nessun filtro
-                </button>
-              </div>
+              <ColorFilter colors={colorFilter} onToggle={toggleColorFilter} onClear={() => setColorFilter(new Set())} />
             </div>
             {filtersActive && (
               <p className={cx('mb-2', TEXT_MINI)}>
