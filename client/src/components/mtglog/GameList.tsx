@@ -7,35 +7,8 @@ import { Link, useNavigate, useParams } from 'react-router';
 import { appHref, paths } from '../../router';
 import Button from '../ui/Button';
 import FilterTabs from '../ui/FilterTabs';
-import { JpgBadge } from './ImageExport';
+import { ExportedImage, ShareBar } from './ImageExport';
 import { cx, FIELD_CONTROL, HEADING_SECTION, STICKY_BELOW_TITLE, TEXT_MINI, TEXT_MUTED } from '../ui/styles';
-
-interface IconButtonProps {
-  label: string;
-  onClick: () => void;
-  tone?: 'default' | 'danger';
-  children: ReactNode;
-}
-
-/** Bottone quadrato con solo un'icona (emoji) e un'etichetta accessibile
- *  (title + aria-label): stesso stile usato in "Gestisci Mazzi" e "Gestisci
- *  Giocatori". */
-function IconButton({ label, onClick, tone = 'default', children }: IconButtonProps) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      title={label}
-      aria-label={label}
-      className={cx(
-        'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-zaff-border bg-zaff-bg text-base leading-none text-zaff-muted transition',
-        tone === 'danger' ? 'hover:border-red-400 hover:text-red-400' : 'hover:border-zaff-gold hover:text-zaff-gold'
-      )}
-    >
-      {children}
-    </button>
-  );
-}
 
 /** Stesso schema di colori dei simboli mana "ufficiali": pallino chiaro con
  *  simbolo scuro per i colori chiari, pallino nero con simbolo chiaro per il
@@ -338,8 +311,6 @@ export default function GameList({ userId, onEdit, onRematch }: GameListProps) {
    *  il tasto "Esporta" non sembra mai non aver fatto nulla. */
   const [exportedImage, setExportedImage] = useState<string | null>(null);
   const shareCardRef = useRef<HTMLDivElement>(null);
-  /** Esito di "Condividi link" (es. "Link copiato"). */
-  const [linkNotice, setLinkNotice] = useState('');
   // Ricerca e filtri dell'elenco (non toccano i dati, solo cosa si vede).
   const [query, setQuery] = useState('');
   const [periodFilter, setPeriodFilter] = useState<'all' | '30' | 'year'>('all');
@@ -390,32 +361,12 @@ export default function GameList({ userId, onEdit, onRematch }: GameListProps) {
   }, [selectedGame]);
 
   useEffect(() => {
-    setLinkNotice('');
     setExportedImage(null);
   }, [selectedId]);
 
   useEffect(() => () => {
     if (exportedImage) URL.revokeObjectURL(exportedImage);
   }, [exportedImage]);
-
-  async function handleShareLink(g: Game) {
-    const url = gameLink(g.id);
-    setLinkNotice('');
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: 'Partita di Magic', text: 'Partita del ' + dateLabel(g.date), url });
-        return;
-      } catch {
-        // Annullato dall'utente o non disponibile: si prova a copiarlo.
-      }
-    }
-    try {
-      await navigator.clipboard.writeText(url);
-      setLinkNotice('Link copiato negli appunti.');
-    } catch {
-      setLinkNotice(url);
-    }
-  }
 
   const visibleGames = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -639,53 +590,28 @@ export default function GameList({ userId, onEdit, onRematch }: GameListProps) {
             </div>
           </div>
 
-          <div className="mt-3.5 flex flex-wrap items-center gap-2.5">
-            <Button onClick={() => handleExport(selectedGame)} disabled={exporting}>
-              {exporting ? (
-                'Genero immagine…'
-              ) : (
-                <>
-                  <JpgBadge />
-                  Esporta Risultati
-                </>
-              )}
-            </Button>
-
-            <Button onClick={() => onRematch(selectedGame)}>
+          {/* Rivincita è l'azione che viene dopo: sola, a tutta larghezza, staccata da quelle che modificano o cancellano.
+              Esporta e Link stanno nella barra fissa in fondo (vedi `ShareBar`). */}
+          <div className="mt-4">
+            <Button fullWidth onClick={() => onRematch(selectedGame)}>
               🔄 Rivincita
             </Button>
-
-            <Button variant="ghost" onClick={() => handleShareLink(selectedGame)}>
-              🔗 Link
-            </Button>
-
-            {canEdit(selectedGame.createdBy, userId) && (
-              <>
-                <IconButton label="Modifica partita" onClick={() => onEdit(selectedGame)}>
-                  ✏️
-                </IconButton>
-                <IconButton label="Cancella partita" tone="danger" onClick={() => handleDelete(selectedGame.id)}>
-                  🗑️
-                </IconButton>
-              </>
-            )}
           </div>
 
-          {linkNotice && <p className={cx('mt-2 break-all', TEXT_MINI)}>{linkNotice}</p>}
-
-          {exportedImage && (
-            <div className="mt-3.5 rounded-lg border border-zaff-border bg-zaff-bg p-3">
-              <p className={cx('mb-2', TEXT_MINI)}>
-                Tieni premuto sull&apos;immagine qui sotto e scegli &quot;Salva immagine&quot; (o condividila da lì) —
-                più affidabile del tasto, che su alcuni iPhone non riesce ad aprire da solo il foglio di condivisione.
-              </p>
-              <img
-                src={exportedImage}
-                alt="Risultato della partita, da salvare"
-                className="w-full rounded-lg border border-zaff-border"
-              />
+          {canEdit(selectedGame.createdBy, userId) && (
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <Button variant="ghost" fullWidth onClick={() => onEdit(selectedGame)}>
+                ✏️ Modifica
+              </Button>
+              <Button variant="danger" fullWidth onClick={() => handleDelete(selectedGame.id)}>
+                🗑️ Cancella
+              </Button>
             </div>
           )}
+
+          <ExportedImage image={exportedImage} error="" alt="Risultato della partita, da salvare" />
+
+          <ShareBar exporting={exporting} onExport={() => handleExport(selectedGame)} shareTitle="Partita di Magic" />
         </div>
       )}
     </>

@@ -318,40 +318,42 @@ function prefersReducedMotion(): boolean {
 }
 
 /**
- * La parola dell'esito (TESTA / CROCE) si compone lettera per lettera da caratteri
- * che cambiano, come nella pioggia di Matrix. Con "riduci animazioni" attivo compare subito.
- * L'esito è già deciso: l'animazione è solo scena (il testo per gli screen reader è a parte).
+ * Un testo (la parola della moneta, il nome di un giocatore) che si compone lettera per lettera
+ * da caratteri che cambiano, come nella pioggia di Matrix. Con "riduci animazioni" attivo compare subito.
+ * Il risultato è già deciso: l'animazione è solo scena (il testo per gli screen reader va messo a parte).
  */
-function CoinWord({ word }: { word: string }) {
-  const upper = word.toUpperCase();
+function MatrixText({ text, uppercase = false, className }: { text: string; uppercase?: boolean; className?: string }) {
+  const target = uppercase ? text.toUpperCase() : text;
   const [letters, setLetters] = useState<MatrixLetter[]>(() =>
-    [...upper].map((ch, i) => (prefersReducedMotion() ? { ch, done: true } : { ch: matrixChar(i, 0), done: false }))
+    [...target].map((ch, i) => (ch === ' ' || prefersReducedMotion() ? { ch, done: true } : { ch: matrixChar(i, 0), done: false }))
   );
 
   useEffect(() => {
     if (prefersReducedMotion()) return;
+    // Nomi lunghi: le lettere si fissano più in fretta, così l'effetto dura sempre circa lo stesso.
+    const step = Math.min(RESOLVE_STEP_MS, 900 / Math.max(1, target.length));
     const start = Date.now();
     let frame = 0;
     const timer = window.setInterval(() => {
       frame++;
       const elapsed = Date.now() - start;
-      const next = [...upper].map((ch, i): MatrixLetter =>
-        elapsed >= RESOLVE_START_MS + i * RESOLVE_STEP_MS ? { ch, done: true } : { ch: matrixChar(i, frame), done: false }
+      const next = [...target].map((ch, i): MatrixLetter =>
+        ch === ' ' || elapsed >= RESOLVE_START_MS + i * step ? { ch, done: true } : { ch: matrixChar(i, frame), done: false }
       );
       setLetters(next);
       if (next.every((l) => l.done)) window.clearInterval(timer);
     }, FRAME_MS);
     return () => window.clearInterval(timer);
-  }, [upper]);
+  }, [target]);
 
   return (
-    <span aria-hidden="true" className="flex justify-center gap-1.5 font-mono text-5xl font-bold">
+    <span aria-hidden="true" className={className}>
       {letters.map((l, i) => (
         <span
           key={i}
-          className={cx('inline-block w-[1.1ch] text-center transition-colors', l.done ? 'text-zaff-text' : 'text-emerald-400/80')}
+          className={cx('inline-block text-center transition-colors', l.ch === ' ' ? 'w-[0.6ch]' : 'w-[1.1ch]', l.done ? 'text-zaff-text' : 'text-emerald-400/80')}
         >
-          {l.ch}
+          {l.ch === ' ' ? '\u00A0' : l.ch}
         </span>
       ))}
     </span>
@@ -414,6 +416,8 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
   const [menuOpen, setMenuOpen] = useState(false);
   const [highRollOpen, setHighRollOpen] = useState(false);
   const [rolls, setRolls] = useState<RollResult[]>([]);
+  /** Cambia a ogni tiro, così i nomi si ricompongono anche con lo stesso esito. */
+  const [rollId, setRollId] = useState(0);
   /** Esito dell'ultimo lancio della moneta (null: popup chiuso). */
   const [coin, setCoin] = useState<{ id: number; result: 'Testa' | 'Croce' } | null>(null);
   /** Cronologia dei cambi: vive solo durante la partita, non si salva. */
@@ -477,6 +481,7 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
 
   function openHighRoll() {
     setRolls(rollHighRoll(lives.map((p) => p.name)));
+    setRollId((id) => id + 1);
     setHighRollOpen(true);
   }
 
@@ -547,7 +552,7 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
                 onClick={() => setOptionsFor(i)}
                 style={TAP_HIGHLIGHT_OFF}
                 aria-label={`${p.name}: opzioni`}
-                className="absolute bottom-2 left-1/2 z-10 flex h-[60px] w-[60px] -translate-x-1/2 select-none items-center justify-center rounded-full bg-black/25 text-[27px] leading-none text-white/85 active:bg-black/45"
+                className="absolute bottom-2 left-1/2 z-10 flex h-[54px] w-[54px] -translate-x-1/2 select-none items-center justify-center rounded-full bg-black/25 text-[25px] leading-none text-white/85 active:bg-black/45"
               >
                 ⋯
               </button>
@@ -680,7 +685,10 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
                       {lives.map((src, si) =>
                         si === i ? null : (
                           <div key={src.name + si} className="flex items-center justify-between gap-2">
-                            <span className="min-w-0 truncate text-xs">Danno da {src.name}</span>
+                            <span className="min-w-0 text-xs leading-tight">
+                              <span className="block">Danno da</span>
+                              <span className="block truncate font-bold">{src.name}</span>
+                            </span>
                             <span className="flex shrink-0 items-center gap-2">
                               <button
                                 type="button"
@@ -734,7 +742,7 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
         onClick={() => setMenuOpen(true)}
         style={TAP_HIGHLIGHT_OFF}
         aria-label="Opzioni di gioco"
-        className={`absolute z-30 flex h-[84px] w-[84px] select-none items-center justify-center rounded-full border border-white/30 bg-black/75 text-[40px] shadow-lg active:bg-black ${
+        className={`absolute z-30 flex h-[76px] w-[76px] select-none items-center justify-center rounded-full border border-white/30 bg-black/75 text-[40px] shadow-lg active:bg-black ${
           lives.length === 1
             ? 'bottom-3 left-1/2 -translate-x-1/2'
             : 'left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2'
@@ -842,7 +850,7 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
             <h2 className={HEADING_SECTION}>🪙 Moneta</h2>
             <p className="my-5" role="status">
               <span className="sr-only">{coin.result}</span>
-              <CoinWord key={coin.id} word={coin.result} />
+              <MatrixText key={coin.id} text={coin.result} uppercase className="flex justify-center gap-1.5 font-mono text-5xl font-bold" />
             </p>
             <div className="flex gap-2">
               <Button variant="ghost" className="flex-1" onClick={flipCoin}>
@@ -858,22 +866,23 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
 
       {highRollOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
-          <div className="w-full max-w-xs rounded-2xl border border-zaff-border bg-zaff-surface p-6 shadow-xl">
+          <div className="w-full max-w-sm rounded-2xl border border-zaff-border bg-zaff-surface p-6 shadow-xl">
             <h2 className={HEADING_SECTION}>🎲 High Roll</h2>
             <p className="mb-3 text-xs text-zaff-muted">Tiro 1–20: il numero più alto inizia.</p>
             <ul className="mb-4 space-y-1">
               {rolls.map((r) => (
-                <li key={r.name} className="flex items-center justify-between gap-2 text-sm text-zaff-text">
+                <li key={`${rollId}-${r.name}`} className="flex items-center justify-between gap-2 text-base text-zaff-text">
                   <span className="min-w-0 truncate">
-                    {r.name}
+                    <span className="sr-only">{r.name}</span>
+                    <MatrixText text={r.name} className="font-mono" />
                     {r.roll === topRoll ? ' 🏆' : ''}
                   </span>
-                  <span className="shrink-0">{r.roll}</span>
+                  <span className="shrink-0 text-lg font-bold">{r.roll}</span>
                 </li>
               ))}
             </ul>
             <div className="flex gap-2">
-              <Button variant="ghost" className="flex-1" onClick={() => setRolls(rollHighRoll(lives.map((p) => p.name)))}>
+              <Button variant="ghost" className="flex-1" onClick={() => { setRolls(rollHighRoll(lives.map((p) => p.name))); setRollId((id) => id + 1); }}>
                 Tira di Nuovo
               </Button>
               <Button className="flex-1" onClick={() => setHighRollOpen(false)}>

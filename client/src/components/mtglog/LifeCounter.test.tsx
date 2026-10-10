@@ -135,4 +135,15 @@ describe('LifeCounter', () => {
       vi.restoreAllMocks();
     }
   });
+
+  it('lists every player in the high roll, composing the names unless motion is reduced', async () => {
+    vi.stubGlobal('matchMedia', () => ({ matches: true }));
+    const { user } = setup();
+    await user.click(screen.getByRole('button', { name: 'Opzioni di gioco' }));
+    await user.click(screen.getByRole('button', { name: /High Roll/ }));
+    const items = screen.getAllByRole('listitem');
+    expect(items).toHaveLength(2);
+    expect(items.map((li) => li.textContent)).toEqual(expect.arrayContaining([expect.stringContaining('Alice'), expect.stringContaining('Bob')]));
+    vi.unstubAllGlobals();
+  });
 });

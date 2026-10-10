@@ -474,7 +474,7 @@ describe('Registro routes', () => {
 
   it('renders a shared game detail on a direct URL with its existing export controls', async () => {
     openApp('/games/g1');
-    expect(await screen.findByRole('button', { name: /Esporta Risultati/ })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Esporta' })).toBeInTheDocument();
     expect(screen.getAllByText('🎉 Alice')).toHaveLength(2);
     expect(screen.getAllByText(/^vincitore — /)).toHaveLength(2);
     expect(screen.queryByLabelText('Cerca nelle partite')).not.toBeInTheDocument();
@@ -484,7 +484,7 @@ describe('Registro routes', () => {
 
   it('supports old shared game links', async () => {
     const { router } = openApp('/?partita=g1');
-    expect(await screen.findByRole('button', { name: /Esporta Risultati/ })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Esporta' })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/games/g1');
     expect(router.state.location.search).toBe('');
   });
