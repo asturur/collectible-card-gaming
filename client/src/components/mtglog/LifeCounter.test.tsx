@@ -64,4 +64,17 @@ describe('LifeCounter', () => {
       { Alice: 0, Bob: 0 }
     );
   });
+
+  it('flips a coin from the game menu', async () => {
+    const { user } = setup();
+    const random = vi.spyOn(Math, 'random').mockReturnValueOnce(0.1).mockReturnValueOnce(0.9);
+    await user.click(screen.getByRole('button', { name: 'Opzioni di gioco' }));
+    await user.click(screen.getByRole('button', { name: /Moneta/ }));
+    expect(screen.getByRole('status')).toHaveTextContent('Testa');
+    await user.click(screen.getByRole('button', { name: 'Lancia di Nuovo' }));
+    expect(screen.getByRole('status')).toHaveTextContent('Croce');
+    await user.click(screen.getByRole('button', { name: 'Chiudi' }));
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    random.mockRestore();
+  });
 });

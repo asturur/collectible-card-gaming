@@ -230,6 +230,8 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
   const [menuOpen, setMenuOpen] = useState(false);
   const [highRollOpen, setHighRollOpen] = useState(false);
   const [rolls, setRolls] = useState<RollResult[]>([]);
+  /** Esito dell'ultimo lancio della moneta (null: popup chiuso). */
+  const [coin, setCoin] = useState<'Testa' | 'Croce' | null>(null);
   /** Cronologia dei cambi: vive solo durante la partita, non si salva. */
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -274,6 +276,10 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
 
   function patchPlayer(index: number, patch: Partial<LcPlayer>) {
     setLives((prev) => prev.map((p, i) => (i === index ? { ...p, ...patch } : p)));
+  }
+
+  function flipCoin() {
+    setCoin(Math.random() < 0.5 ? 'Testa' : 'Croce');
   }
 
   function openHighRoll() {
@@ -549,37 +555,45 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
           onClick={() => setMenuOpen(false)}
         >
           <div
-            className="grid w-full max-w-sm grid-cols-2 gap-3 rounded-2xl border border-zaff-border bg-zaff-surface p-4 shadow-xl"
+            className="grid max-h-[90vh] w-full max-w-sm grid-cols-2 gap-3 overflow-y-auto rounded-2xl border border-zaff-border bg-zaff-surface p-4 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Sei tasti in griglia 2x3: grandi e uguali, facili da toccare. */}
+            {/* Tasti grandi e uguali, facili da toccare; l'ultimo occupa tutta la riga. */}
             <Button
               variant="ghost"
-              className="flex h-20 flex-col gap-1 text-base"
+              className="flex h-16 flex-col gap-0.5 text-base"
               onClick={() => {
                 setMenuOpen(false);
                 openHighRoll();
               }}
             >
-              <span className="text-3xl leading-none">🎲</span>
+              <span className="text-2xl leading-none">🎲</span>
               High Roll
             </Button>
             <Button
-              className="flex h-20 text-base"
-              onClick={() => onFinish(...snapshot())}
+              variant="ghost"
+              className="flex h-16 flex-col gap-0.5 text-base"
+              onClick={() => {
+                setMenuOpen(false);
+                flipCoin();
+              }}
             >
-              Fine Partita
+              <span className="text-2xl leading-none">🪙</span>
+              Moneta
             </Button>
-            <Button variant="ghost" className="flex h-20 text-base" onClick={() => onEdit(...snapshot())}>
-              Modifica Partita
-            </Button>
-            <Button variant="ghost" className="flex h-20 text-base" onClick={() => { setMenuOpen(false); setHistoryOpen(true); }}>
+            <Button variant="ghost" className="flex h-16 text-base" onClick={() => { setMenuOpen(false); setHistoryOpen(true); }}>
               Cronologia
             </Button>
-            <Button variant="ghost" className="flex h-20 text-base" disabled={history.length === 0} onClick={() => { undoLast(); setMenuOpen(false); }}>
+            <Button variant="ghost" className="flex h-16 text-base" disabled={history.length === 0} onClick={() => { undoLast(); setMenuOpen(false); }}>
               Annulla Ultimo
             </Button>
-            <Button variant="ghost" className="flex h-20 text-base" onClick={() => setMenuOpen(false)}>
+            <Button variant="ghost" className="flex h-16 text-base" onClick={() => onEdit(...snapshot())}>
+              Modifica Partita
+            </Button>
+            <Button className="flex h-16 text-base" onClick={() => onFinish(...snapshot())}>
+              Fine Partita
+            </Button>
+            <Button variant="ghost" className="col-span-2 flex h-16 text-base" onClick={() => setMenuOpen(false)}>
               Torna al Gioco
             </Button>
           </div>
@@ -610,6 +624,23 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
                 Annulla Ultimo
               </Button>
               <Button className="flex-1" onClick={() => setHistoryOpen(false)}>
+                Chiudi
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {coin && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-xs rounded-2xl border border-zaff-border bg-zaff-surface p-6 text-center shadow-xl">
+            <h2 className={HEADING_SECTION}>🪙 Moneta</h2>
+            <p className="my-5 text-5xl font-bold text-zaff-text" role="status">{coin}</p>
+            <div className="flex gap-2">
+              <Button variant="ghost" className="flex-1" onClick={flipCoin}>
+                Lancia di Nuovo
+              </Button>
+              <Button className="flex-1" onClick={() => setCoin(null)}>
                 Chiudi
               </Button>
             </div>
