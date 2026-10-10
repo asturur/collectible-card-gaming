@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { canEdit, MAX_DECK_NAME_LENGTH } from '../../services/supabase';
-import { saveSavedDeck, getSavedDeck, DeckConflictError, UnresolvedCardsError } from '../../services/savedDecks';
+import { saveSavedDeck, getSavedDeck, findDeckWithSameName, DeckConflictError, UnresolvedCardsError } from '../../services/savedDecks';
 import { autocompleteCards } from '../../services/scryfall';
 import type { DeckEntry } from '../../services/deckCards';
 import { ManaPips } from './ManaIcon';
@@ -318,6 +318,12 @@ export default function DeckEditor({ deckId, userId, initialDraft, onBack, onSav
     try {
       const input = { id: deckId ?? newId.current, name: trimmedName, source, format,
         colors: [...colors], cards: draft, expectedRevision: openedRevision.current };
+      const sameNameDeck = await findDeckWithSameName(trimmedName, input.id);
+      if (controller.signal.aborted) return;
+      if (sameNameDeck) {
+        setError(`Esiste già un mazzo chiamato "${sameNameDeck}": scegli un nome diverso.`);
+        return;
+      }
       try {
         await saveSavedDeck(input, { allowUnresolved, signal: controller.signal, onPersisting: persist });
       } catch (err) {

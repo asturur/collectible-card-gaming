@@ -2,15 +2,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import DeckEditor from './DeckEditor';
-import { getSavedDeck, saveSavedDeck, DeckConflictError, UnresolvedCardsError } from '../../services/savedDecks';
-vi.mock('../../services/savedDecks', () => ({ getSavedDeck: vi.fn(), saveSavedDeck: vi.fn(),
+import { getSavedDeck, saveSavedDeck, findDeckWithSameName, DeckConflictError, UnresolvedCardsError } from '../../services/savedDecks';
+vi.mock('../../services/savedDecks', () => ({ getSavedDeck: vi.fn(), saveSavedDeck: vi.fn(), findDeckWithSameName: vi.fn(),
   DeckConflictError: class extends Error { constructor() { super('Changed'); } }, UnresolvedCardsError: class extends Error { constructor(names: string[]) { super(names.join(', ')); } } }));
 vi.mock('../../services/scryfall', () => ({ autocompleteCards: vi.fn(async () => []) }));
 vi.mock('./DeckStats', () => ({ DeckStatsButton: () => null }));
 vi.mock('./DeckCards', () => ({ useDeckImages: () => {}, default: ({ cards, editable }: { cards: { name: string; qty: number }[]; editable: { onChangeQty: (card: unknown, delta: number) => void } }) => <div>{cards.map(c => <button key={c.name} onClick={() => editable.onChangeQty(c, -1)}>Remove {c.name} ({c.qty})</button>)}</div> }));
 const deck = { id: 'deck', name: 'Saved', source: 'brew', format: 'Modern', colors: ['U'], revision: 4,
   cards: [{ name: 'Island', qty: 2, section: 'main', scryfallId: 'original-id', oracleId: 'original-oracle' }, { name: 'Forest', qty: 1, section: 'side' }] };
-beforeEach(() => { vi.clearAllMocks(); vi.mocked(getSavedDeck).mockResolvedValue(deck as never); vi.mocked(saveSavedDeck).mockResolvedValue(); });
+beforeEach(() => { vi.clearAllMocks(); vi.mocked(getSavedDeck).mockResolvedValue(deck as never); vi.mocked(saveSavedDeck).mockResolvedValue(); vi.mocked(findDeckWithSameName).mockResolvedValue(null); });
 describe('Registro save controls', () => {
   it('shows a missing-deck error without offering an empty editor', async () => {
     vi.mocked(getSavedDeck).mockRejectedValueOnce(new Error('Questo mazzo non esiste più.'));
@@ -69,6 +69,15 @@ describe('Registro save controls', () => {
     await user.click(screen.getByRole('button', { name: 'Salva Mazzo' }));
     expect(saveSavedDeck).toHaveBeenCalledWith(expect.objectContaining({ name: 'Commander Test', source: 'precon', cards: [{ name: 'Commander', qty: 1, section: 'main' }, { name: 'Island', qty: 3, section: 'main' }] }), expect.anything());
     vi.unstubAllGlobals();
+  });
+  it('refuses a name already used by another deck, ignoring case and spaces', async () => {
+    vi.mocked(findDeckWithSameName).mockResolvedValueOnce('Mono Black');
+    const user = userEvent.setup(); render(<DeckEditor deckId={null} initialDraft={{ name: ' mono black ', cards: [{ name: 'Swamp', qty: 1 }] }} onBack={() => {}} onSaved={() => {}} />);
+    await user.click(screen.getByRole('button', { name: 'Salva Mazzo' }));
+    expect(await screen.findByText('Esiste già un mazzo chiamato "Mono Black": scegli un nome diverso.')).toBeInTheDocument();
+    expect(findDeckWithSameName).toHaveBeenCalledWith('mono black', expect.any(String));
+    expect(saveSavedDeck).not.toHaveBeenCalled();
+    expect(screen.getByLabelText('Nome mazzo')).toHaveValue(' mono black ');
   });
 
 });

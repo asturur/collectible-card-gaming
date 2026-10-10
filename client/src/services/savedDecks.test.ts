@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({ rpc: vi.fn(), from: vi.fn(), resolve: vi.fn(), cached: vi.fn(), getCard: vi.fn() }));
-vi.mock('./supabase', () => ({ supabase: { rpc: mocks.rpc, from: mocks.from }, TABLE_DECKS: 'mazzi', TABLE_DECK_CARDS: 'mazzi-cards', subscribeToTable: () => () => {} }));
+vi.mock('./supabase', () => ({ sameName: (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase(), supabase: { rpc: mocks.rpc, from: mocks.from }, TABLE_DECKS: 'mazzi', TABLE_DECK_CARDS: 'mazzi-cards', subscribeToTable: () => () => {} }));
 vi.mock('./scryfall', () => ({ getCard: mocks.getCard }));
 vi.mock('./scryfallLookup', async original => ({ ...await original<object>(), resolveScryfallNames: mocks.resolve, cachedScryfallCard: mocks.cached }));
-import { saveSavedDeck, getSavedDeck, DeckConflictError, UnresolvedCardsError, CardLookupError } from './savedDecks';
+import { saveSavedDeck, getSavedDeck, findDeckWithSameName, DeckConflictError, UnresolvedCardsError, CardLookupError } from './savedDecks';
 const raw = { name: 'Forest', id: 'new-id', oracle_id: 'new-oracle', image_uris: { normal: 'https://cards.scryfall.io/new' }, type_line: 'Land' };
 const stored = { id: 'row', name: 'Island', qty: 1, section: 'main', position: 0, scryfall_id: 'stored-id', oracle_id: 'stored-oracle', image_url: 'https://cards.scryfall.io/stored', type_line: 'Land' };
 const row = { id: 'deck', name: 'Deck', cards: [{ name: 'Island', qty: 1 }], card_rows: [stored], revision: 4, created_by: 'user' };
@@ -12,6 +12,14 @@ beforeEach(() => {
   vi.clearAllMocks(); mocks.getCard.mockReturnValue(undefined); mocks.cached.mockReturnValue(undefined);
   mocks.rpc.mockResolvedValue({ error: null }); mocks.resolve.mockResolvedValue(new Map([['forest', raw]]));
   mocks.from.mockReturnValue({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: row, error: null }) }) }) });
+});
+describe('deck name uniqueness', () => {
+  it('finds another deck with the same name, ignoring case, spaces and the deck itself', async () => {
+    mocks.from.mockReturnValue({ select: async () => ({ data: [{ id: 'a', name: 'Mono Black' }, { id: 'b', name: 'Elfi' }], error: null }) });
+    await expect(findDeckWithSameName(' mono BLACK ', 'b')).resolves.toBe('Mono Black');
+    await expect(findDeckWithSameName('Mono Black', 'a')).resolves.toBeNull();
+    await expect(findDeckWithSameName('mono_black', 'b')).resolves.toBeNull();
+  });
 });
 describe('atomic saved deck service', () => {
   it('keeps assigned identity, resolves new groups only, and submits revision plus all metadata', async () => {

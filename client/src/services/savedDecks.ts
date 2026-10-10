@@ -1,4 +1,4 @@
-import { supabase, TABLE_DECKS, TABLE_DECK_CARDS, subscribeToTable } from './supabase';
+import { sameName, supabase, TABLE_DECKS, TABLE_DECK_CARDS, subscribeToTable } from './supabase';
 import { entryKey, nameKey, normalizeEntries, serializeEntry, type DeckEntry } from './deckCards';
 import { cachedScryfallCard, cardIdentity, fetchCardsById, fetchPrintings, firstImage, matchesName, resolveScryfallNames } from './scryfallLookup';
 import { getCard } from './scryfall';
@@ -58,6 +58,13 @@ export async function getSavedDeck(id: string): Promise<SavedDeck> {
   if (error) throw error;
   if (!data) throw new Error('Questo mazzo non esiste più: è stato cancellato.');
   return fromRow(data as unknown as DeckRow);
+}
+/** Nome di un altro mazzo uguale a `name` (a parte maiuscole/spazi), se c'è: due mazzi con lo
+ *  stesso nome si confonderebbero in Nuova Partita, che li sceglie per nome. */
+export async function findDeckWithSameName(name: string, exceptId: string): Promise<string | null> {
+  const { data, error } = await client().from(TABLE_DECKS).select('id,name');
+  if (error) throw error;
+  return (data ?? []).find((d) => String(d.id) !== exceptId && sameName(String(d.name), name))?.name ?? null;
 }
 export class DeckConflictError extends Error {
   constructor() { super('Qualcun altro ha modificato il mazzo. Le tue modifiche sono ancora qui.'); }
