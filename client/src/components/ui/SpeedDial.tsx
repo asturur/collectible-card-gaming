@@ -43,17 +43,16 @@ export default function SpeedDial({ open, label, items, onClose }: SpeedDialProp
       >
         {items.map((item) =>
           item.to ? (
-            <ButtonRouteLink key={item.id} to={item.to} variant="neutral" size="lg" fullWidth className="justify-start shadow-lg" onClick={onClose}>
+            <ButtonRouteLink key={item.id} to={item.to} variant="ghost" fullWidth className="justify-start bg-zaff-surface shadow-lg" onClick={onClose}>
               {item.icon}
               {item.label}
             </ButtonRouteLink>
           ) : (
             <Button
               key={item.id}
-              variant="neutral"
-              size="lg"
+              variant="ghost"
               fullWidth
-              className="justify-start shadow-lg"
+              className="justify-start bg-zaff-surface shadow-lg"
               onClick={() => {
                 onClose();
                 item.onSelect?.();
