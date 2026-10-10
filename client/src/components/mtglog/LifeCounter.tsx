@@ -197,13 +197,13 @@ function at(column: string | number, row: string | number, rotation: Rotation): 
 }
 
 /**
- * Disposizioni scelte dal tasto "Disposizione", per numero di giocatori (4, 5, 6).
+ * Disposizioni per numero di giocatori (3, 4, 5, 6); con più di una, il tasto "Disposizione" le alterna.
  * Chi siede da un lato legge dritto: capovolto in alto, ruotato di 90° ai lati del telefono.
  */
 const LAYOUT_OPTIONS: Record<number, LayoutSpec[]> = {
   3: [
     {
-      // Due riquadri affiancati in alto (uno per lato lungo) e uno a tutta larghezza in basso.
+      // Due riquadri affiancati in alto, ruotati verso i lati lunghi, e uno a tutta larghezza in basso.
       label: 'Due in alto, uno in basso',
       columns: '1fr 1fr',
       rows: '1.35fr 1fr',
@@ -262,7 +262,7 @@ const LAYOUT_OPTIONS: Record<number, LayoutSpec[]> = {
   ],
 };
 
-/** Disposizione di riserva (1, 2, 3 o più di 6 giocatori): griglia quadrata, metà alta capovolta. */
+/** Disposizione di riserva (1, 2 o più di 6 giocatori): griglia quadrata, metà alta capovolta. */
 function defaultLayout(n: number): LayoutSpec {
   const cols = gridColumns(n);
   const rows = Math.ceil(n / cols);
@@ -393,8 +393,8 @@ const TAP_HIGHLIGHT_OFF = { WebkitTapHighlightColor: 'transparent' } as const;
 /**
  * Contatore punti vita a tutto schermo. Scheda a colore pieno per ciascun
  * giocatore (come nei contatori punti vita dedicati): zona centrale grande
- * divisa a metà: sinistra −1, destra +1 (come in Lotus). Chi siede dal lato opposto del tavolo vede la propria scheda ruotata
- * di 180°, così legge dritto senza girare il telefono. High Roll (d20) per
+ * divisa a metà: sinistra −1, destra +1 (come in Lotus). Ogni scheda è ruotata verso chi siede da quel lato
+ * (180° di fronte, 90° ai lati lunghi), così legge dritto senza girare il telefono. High Roll (d20) per
  * decidere chi inizia.
  */
 export default function LifeCounter({ players, startLife, resume, onEdit, onFinish }: LifeCounterProps) {
