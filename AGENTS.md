@@ -510,7 +510,7 @@ Message handling in `useSocket`:
 | `shared/src/protocol.ts` | ClientMessage, ServerMessage envelopes |
 | `server/main.go` | Server entry, WebSocket handler, connection lifecycle |
 | `server/room.go` | Room: ProcessAction, ProcessUndo, AddClient, broadcast |
-| `server/reducer.go` | Reduce function — all 13 action types |
+| `server/reducer.go` | Reduce function — all 17 action types |
 | `server/protocol.go` | Go-side message/payload structs |
 | `server/state.go` | Go GameState, Player, Card structs, zone init |
 | `server/client.go` | Client: ReadLoop, handleMessage dispatch |

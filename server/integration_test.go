@@ -117,8 +117,8 @@ func TestIntegrationTwoPlayers(t *testing.T) {
 	// Connect Bob
 	bob := connectClient(t, srv, "Bob")
 	bobWelcome := readMsg(t, bob) // WELCOME
-	readMsg(t, bob)                // STATE_SYNC
-	readMsg(t, bob)                // PLAYER_JOINED (self)
+	readMsg(t, bob)               // STATE_SYNC
+	readMsg(t, bob)               // PLAYER_JOINED (self)
 
 	// Alice should receive PLAYER_JOINED for Bob
 	aliceBobJoin := readMsg(t, alice)
@@ -241,8 +241,8 @@ func TestIntegrationDisconnect(t *testing.T) {
 	// Connect Alice
 	alice := connectClient(t, srv, "Alice")
 	welcome := readMsg(t, alice) // WELCOME
-	readMsg(t, alice)             // STATE_SYNC
-	readMsg(t, alice)             // PLAYER_JOINED
+	readMsg(t, alice)            // STATE_SYNC
+	readMsg(t, alice)            // PLAYER_JOINED
 
 	playerID := welcome.PlayerID
 

@@ -59,21 +59,21 @@ type SequencedAction struct {
 
 // ClientMessage is the envelope for messages from client to server.
 type ClientMessage struct {
-	Msg    string `json:"msg"`
+	Msg    string  `json:"msg"`
 	Action *Action `json:"action,omitempty"`
 	Seq    uint64  `json:"seq,omitempty"`
 }
 
 // ServerMessage is the envelope for messages from server to client.
 type ServerMessage struct {
-	Msg        string           `json:"msg"`
-	PlayerID   string           `json:"playerId,omitempty"`
-	PlayerName string           `json:"playerName,omitempty"`
-	State      *GameState       `json:"state,omitempty"`
+	Msg        string            `json:"msg"`
+	PlayerID   string            `json:"playerId,omitempty"`
+	PlayerName string            `json:"playerName,omitempty"`
+	State      *GameState        `json:"state,omitempty"`
 	Log        []SequencedAction `json:"log,omitempty"`
-	Action     *SequencedAction `json:"action,omitempty"`
-	Error      string           `json:"error,omitempty"`
-	RefSeq     uint64           `json:"refSeq,omitempty"`
+	Action     *SequencedAction  `json:"action,omitempty"`
+	Error      string            `json:"error,omitempty"`
+	RefSeq     uint64            `json:"refSeq,omitempty"`
 }
 
 // Payload structs for each action type.
