@@ -107,7 +107,7 @@ export function useImageExport() {
  * Resta sempre visibile mentre si scorre; il distanziatore in fondo alla pagina evita che copra l'ultima riga.
  * Il link è quello della pagina in cui ci si trova (serve il login, come per tutto il registro).
  */
-export function ShareBar({ exporting, onExport, shareTitle }: { exporting: boolean; onExport: () => void; shareTitle: string }) {
+export function ShareBar({ exporting, onExport, shareTitle, shareText }: { exporting: boolean; onExport: () => void; shareTitle: string; shareText?: string }) {
   const { pathname } = useLocation();
   const [notice, setNotice] = useState('');
 
@@ -116,7 +116,7 @@ export function ShareBar({ exporting, onExport, shareTitle }: { exporting: boole
     setNotice('');
     if (navigator.share) {
       try {
-        await navigator.share({ title: shareTitle, url });
+        await navigator.share({ title: shareTitle, ...(shareText ? { text: shareText } : {}), url });
         return;
       } catch {
         // Annullato o non disponibile: si prova a copiarlo.

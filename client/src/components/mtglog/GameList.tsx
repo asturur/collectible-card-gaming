@@ -611,7 +611,7 @@ export default function GameList({ userId, onEdit, onRematch }: GameListProps) {
 
           <ExportedImage image={exportedImage} error="" alt="Risultato della partita, da salvare" />
 
-          <ShareBar exporting={exporting} onExport={() => handleExport(selectedGame)} shareTitle="Partita di Magic" />
+          <ShareBar exporting={exporting} onExport={() => handleExport(selectedGame)} shareTitle="Partita di Magic" shareText={'Partita del ' + dateLabel(selectedGame.date)} />
         </div>
       )}
     </>
