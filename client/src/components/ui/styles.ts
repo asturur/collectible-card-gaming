@@ -25,6 +25,9 @@ export const HEADING_PANEL = 'font-serif text-2xl text-zaff-text';
 /** Distanza dal bordo alto per un blocco fisso che sta sotto il titolo fisso di `SectionPage` (una riga). */
 export const STICKY_BELOW_TITLE = 'top-[calc(env(safe-area-inset-top)+2.7rem)]';
 
+/** Area che scorre senza mostrare la barra di scorrimento (che coprirebbe i controlli a destra in spazi stretti). */
+export const NO_SCROLLBAR = '[scrollbar-width:none] [&::-webkit-scrollbar]:hidden';
+
 export const HEADING_SECTION = 'font-serif text-lg text-zaff-text sm:text-xl';
 
 export const FIELD_LABEL = 'mb-2 block text-sm font-medium text-zaff-text';

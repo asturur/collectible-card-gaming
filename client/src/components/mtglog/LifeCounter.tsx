@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import Button from '../ui/Button';
 import { PIE_COLORS } from './stats';
-import { cx, HEADING_SECTION } from '../ui/styles';
+import { cx, HEADING_SECTION, NO_SCROLLBAR } from '../ui/styles';
 import type { LossCause } from './GameList';
 
 /** Stato salvato di un giocatore, per riprendere una partita già registrata. */
@@ -594,7 +594,7 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
 
               {optionsFor === i && (
                 <div className="absolute inset-0 z-20 flex flex-col bg-black/85 px-4 pb-3 pt-3 text-white">
-                  <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+                  <div className={cx('flex min-h-0 flex-1 flex-col overflow-y-auto', NO_SCROLLBAR)}>
                   <div className="my-auto flex flex-col gap-2.5">
                   <label className="flex items-center justify-between gap-3 text-[13px] font-bold tracking-wider">
                     <span>KILL</span>
@@ -728,7 +728,7 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
                   </div>
                   <Button
                     variant="ghost"
-                    size="lg"
+                    size="md"
                     fullWidth
                     onClick={() => setOptionsFor(null)}
                     className="mt-2"
