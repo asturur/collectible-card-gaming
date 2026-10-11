@@ -6,6 +6,7 @@ import { ManaIcons } from './ManaIcon';
 import { cx, TEXT_MINI } from '../ui/styles';
 import Badge from '../ui/Badge';
 import CloseButton from '../ui/CloseButton';
+import { CardPriceBox } from './CardPrices';
 
 export { useDeckImages };
 
@@ -156,6 +157,10 @@ function CardViewer({
         <button type="button" className={navBtn} onClick={() => go(1)} aria-label="Carta successiva">
           ›
         </button>
+      </div>
+
+      <div onClick={(e) => e.stopPropagation()}>
+        <CardPriceBox name={item.name} scryfallId={item.scryfallId} />
       </div>
 
       {faceCount > 1 && (

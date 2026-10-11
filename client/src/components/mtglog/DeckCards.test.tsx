@@ -6,6 +6,7 @@ import DeckCardsView from './DeckCards';
 import { getCard } from '../../services/scryfall';
 vi.mock('../../services/scryfall', () => ({ getCard: vi.fn(), isMissing: (name: string) => name === 'Unknown', getToken: () => undefined }));
 vi.mock('./useDeckImages', () => ({ useDeckImages: () => {}, useTokenImages: () => {} }));
+vi.mock('./CardPrices', () => ({ CardPriceBox: () => null }));
 const card = { name: 'Delver', scryfallId: 'pinned', oracleId: 'oracle', exactMatch: true, colors: ['U'], typeLine: 'Creature', cmc: 1, manaCost: '{U}', produced: [], tokens: [],
   faces: [{ small: 'front-small.jpg', normal: 'front.jpg', art: 'front-art.jpg' }, { small: 'back-small.jpg', normal: 'back.jpg', art: 'back-art.jpg' }] };
 beforeEach(() => { localStorage.clear(); vi.clearAllMocks(); vi.mocked(getCard).mockImplementation(name => name === 'Delver' ? card as never : undefined); });

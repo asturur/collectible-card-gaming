@@ -1,5 +1,6 @@
 /** Scryfall display cache backed by the shared exact lookup/scheduler. */
 import { cacheVerifiedCard, requestScryfall, resolveScryfallNames, rawNames, type RawCard, type RawFaceImages } from './scryfallLookup';
+import { rememberPrice } from './cardPrices';
 
 export interface ScryFace { small: string; normal: string; art: string }
 export interface ScryCard {
@@ -78,6 +79,8 @@ function remember(raw: RawCard, requestedName?: string): ScryCard | undefined {
     missing.delete(cardKey(name));
   }
   cacheVerifiedCard(raw, requestedName);
+  // La stessa risposta porta anche i prezzi del giorno: niente richieste in più per leggerli.
+  if (raw.prices) rememberPrice(raw);
   return card;
 }
 

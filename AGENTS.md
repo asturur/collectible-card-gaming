@@ -442,6 +442,7 @@ implementation sequence are in [plans/PLAN_DAISYUI_MIGRATION.md](plans/PLAN_DAIS
   | ZAFF deck adapters, validation, expansion | `services/playableDeck.ts` |
   | MTGJSON deck index/details | `services/mtgjson.ts` |
   | Card search/images/autocomplete | `services/scryfall.ts` and `mtglog/useDeckImages.ts` |
+  | Card prices (Cardmarket €, TCGplayer $, daily) | `services/cardPrices.ts`, `mtglog/CardPrices.tsx`, `mtglog/deckValue.ts` |
   | Scryfall request queue and verified resolution | `services/scryfallLookup.ts` |
   | Live game connection/actions | `network/useSocket.ts`, `network/socket.ts`, `@zaff/shared` |
   | Existing database client, table constants, subscriptions | `services/supabase.ts` |

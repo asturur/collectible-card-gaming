@@ -18,6 +18,10 @@ export interface RawCard {
   toughness?: string;
   oracle_text?: string;
   all_parts?: { id: string; component: string; name: string }[];
+  /** Prezzi del giorno (stringhe, null se non c'è un prezzo) e finiture in cui la stampa esiste. */
+  prices?: { eur?: string | null; eur_foil?: string | null; usd?: string | null; usd_foil?: string | null; usd_etched?: string | null };
+  finishes?: string[];
+  purchase_uris?: { cardmarket?: string };
   card_faces?: {
     name?: string; printed_name?: string; flavor_name?: string; oracle_id?: string;
     image_uris?: RawFaceImages; colors?: string[]; type_line?: string;

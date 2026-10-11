@@ -9,6 +9,8 @@ import Button, { ButtonRouteLink } from '../ui/Button';
 import Modal from '../ui/Modal';
 import CloseButton from '../ui/CloseButton';
 import { cx, TEXT_MINI } from '../ui/styles';
+import { useDeckValue } from './CardPrices';
+import { formatEur, formatPriceDate, formatUsd } from './deckValue';
 
 interface DeckStatsItem {
   name: string;
@@ -72,6 +74,7 @@ const BAR_RELIEF = [
 export default function DeckStatsContents({ cards }: { cards: DeckStatsItem[] }) {
   useDeckImages(cards);
   const stats = computeDeckStats(cards, getCard);
+  const deckValue = useDeckValue(cards);
   const [openToken, setOpenToken] = useState<ScryToken | null>(null);
   // Come in ManaBox: con l'interruttore acceso, il mana generico dei costi
   // ({1}, {2}…) entra nella torta come fetta grigia "Incolore".
@@ -255,6 +258,8 @@ export default function DeckStatsContents({ cards }: { cards: DeckStatsItem[] })
         </>
       )}
 
+      <DeckValueSection {...deckValue} />
+
       {openToken && (
         <div
           className="fixed inset-0 z-[70] flex items-center justify-center bg-black/90 p-4"
@@ -312,6 +317,76 @@ export function DeckStatsButton({ cards, deckName }: { cards: DeckStatsItem[]; d
           </Modal>,
           document.body
         )}
+    </>
+  );
+}
+
+/** Valore del mazzo (Main Deck e Sideboard) dai prezzi Scryfall: Cardmarket in euro, TCGplayer in dollari. */
+function DeckValueSection({ value, loading, failed }: ReturnType<typeof useDeckValue>) {
+  const box = 'rounded-lg border border-zaff-border bg-zaff-bg px-3 py-2.5';
+  const note = value.oldest !== null
+    ? `Prezzi Scryfall del ${formatPriceDate(value.oldest)} · stampa scelta, non foil.`
+    : 'Prezzi Scryfall · stampa scelta, non foil.';
+  return (
+    <>
+      <ChartTitle note={note}>Valore del mazzo</ChartTitle>
+      {loading ? (
+        <p className={TEXT_MINI}>Carico i prezzi…</p>
+      ) : value.oldest === null ? (
+        <p className={TEXT_MINI}>
+          {failed ? 'Non riesco a leggere i prezzi da Scryfall: riprova più tardi.' : 'Nessun prezzo disponibile per queste carte.'}
+        </p>
+      ) : (
+        <>
+          <div className="flex flex-wrap items-baseline gap-x-3">
+            <span className="bg-gradient-to-r from-zaff-primary to-zaff-accent bg-clip-text text-3xl font-extrabold tabular-nums text-transparent">
+              {formatEur(value.eur.total)}
+            </span>
+            <span className="text-[15px] font-semibold tabular-nums text-zaff-muted">{formatUsd(value.usd.total)}</span>
+          </div>
+          <p className={TEXT_MINI}>Cardmarket (€) · TCGplayer ($)</p>
+          <div className="my-3 grid grid-cols-2 gap-2.5">
+            <div className={box}>
+              <span className={TEXT_MINI}>Main Deck</span>
+              <b className="block text-[17px] tabular-nums text-zaff-text">{formatEur(value.eur.main)}</b>
+            </div>
+            <div className={box}>
+              <span className={TEXT_MINI}>Sideboard</span>
+              <b className="block text-[17px] tabular-nums text-zaff-text">{formatEur(value.eur.side)}</b>
+            </div>
+          </div>
+          {value.top.length > 0 && (
+            <>
+              <p className="mb-2 text-xs font-semibold text-zaff-text">Le carte che valgono di più nel mazzo</p>
+              <ul>
+                {value.top.map((c) => {
+                  const image = getCard(c.name, c.scryfallId)?.faces[0]?.small;
+                  return (
+                    <li key={c.key} className={cx(box, 'mb-2 flex items-center gap-2.5 py-2')}>
+                      {image ? (
+                        <img src={image} alt="" loading="lazy" decoding="async" className="h-[47px] w-[34px] shrink-0 rounded object-cover" />
+                      ) : (
+                        <span className="h-[47px] w-[34px] shrink-0 rounded bg-black/30" aria-hidden="true" />
+                      )}
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm text-zaff-text">{c.name}</span>
+                        {c.qty > 1 && <span className={cx('block tabular-nums', TEXT_MINI)}>{c.qty} × {formatEur(c.unit)}</span>}
+                      </span>
+                      <span className="shrink-0 text-sm font-bold tabular-nums text-zaff-text">{formatEur(c.total)}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
+          )}
+          {value.unpriced > 0 && (
+            <p className={cx('mt-1', TEXT_MINI)}>
+              {value.unpriced === 1 ? '1 carta senza prezzo non è contata.' : `${value.unpriced} carte senza prezzo non sono contate.`}
+            </p>
+          )}
+          {failed && <p className={cx('mt-1', TEXT_MINI)}>Alcuni prezzi non sono arrivati da Scryfall: il totale è parziale.</p>}
+        </>
+      )}
     </>
   );
 }
