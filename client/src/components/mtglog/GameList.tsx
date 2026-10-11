@@ -7,8 +7,9 @@ import { Link, useNavigate, useParams } from 'react-router';
 import { appHref, paths } from '../../router';
 import Button from '../ui/Button';
 import FilterTabs from '../ui/FilterTabs';
+import SearchField from '../ui/SearchField';
 import { ExportedImage, ShareBar } from './ImageExport';
-import { cx, FIELD_CONTROL, HEADING_SECTION, STICKY_BELOW_TITLE, TEXT_MINI, TEXT_MUTED } from '../ui/styles';
+import { cx, HEADING_SECTION, STICKY_BELOW_TITLE, TEXT_MINI, TEXT_MUTED } from '../ui/styles';
 
 /** Stesso schema di colori dei simboli mana "ufficiali": pallino chiaro con
  *  simbolo scuro per i colori chiari, pallino nero con simbolo chiaro per il
@@ -453,15 +454,12 @@ export default function GameList({ userId, games: sharedGames, loading, loadErro
         <>
           {/* Ricerca e periodo restano in cima mentre si scorre l'elenco. */}
           <div className={cx(STICKY_BELOW_TITLE, 'sticky z-10 -mx-1 mb-2 bg-zaff-surface px-1 pb-1 pt-1')}>
-          <input
-            type="search"
+          <SearchField
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={setQuery}
             placeholder="Cerca giocatore, mazzo, appunti…"
-            aria-label="Cerca nelle partite"
-            autoComplete="off"
-            enterKeyHint="search"
-            className={cx(FIELD_CONTROL, 'mb-2.5 w-full')}
+            label="Cerca nelle partite"
+            className="mb-2.5"
           />
           <FilterTabs
             value={periodFilter}

@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { paths } from '../../router';
 import type { Game } from './GameList';
@@ -16,7 +16,8 @@ import {
   todayLabel,
   useImageExport,
 } from './ImageExport';
-import { cx, HEADING_SECTION, TEXT_MINI, TEXT_MUTED } from '../ui/styles';
+import { cx, HEADING_SECTION, STICKY_BELOW_TITLE, TEXT_MINI, TEXT_MUTED } from '../ui/styles';
+import SearchField, { matchesSearch } from '../ui/SearchField';
 
 interface StandingsProps {
   rows: TallyRow[];
@@ -274,6 +275,9 @@ export function PlayerStatsDetail({
  */
 export default function Standings({ rows, showPie }: StandingsProps) {
   const exporter = useImageExport();
+  const [query, setQuery] = useState('');
+  // La ricerca filtra solo l'elenco: torta ed esportazione restano sul gruppo intero.
+  const shownRows = rows.filter((r) => matchesSearch(r.name, query));
 
   if (rows.length === 0) {
     return <p className={cx('mt-4', TEXT_MUTED)}>Ancora nessuna partita qui: la classifica compare da qui.</p>;
@@ -283,8 +287,15 @@ export default function Standings({ rows, showPie }: StandingsProps) {
     <>
       {showPie && <GroupPieSection rows={rows} idSuffix="group" />}
 
-      <div className="mt-4" />
-      <PlayerRows rows={rows} interactive tight />
+      {/* La ricerca resta in cima, sotto il titolo, mentre si scorre l'elenco. */}
+      <div className={cx(STICKY_BELOW_TITLE, 'sticky z-10 -mx-1 mb-2 mt-4 bg-zaff-surface px-1 pb-1 pt-1')}>
+        <SearchField value={query} onChange={setQuery} placeholder="Cerca giocatore…" label="Cerca nelle statistiche dei giocatori" />
+      </div>
+      {shownRows.length === 0 ? (
+        <p className={TEXT_MUTED}>Nessun giocatore corrisponde alla ricerca.</p>
+      ) : (
+        <PlayerRows rows={shownRows} interactive tight />
+      )}
 
       <ExportedImage image={exporter.image} error={exporter.error} alt="Statistiche giocatori, da salvare" />
       <ShareBar

@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import GameStats from './GameStats';
+import Standings from './Standings';
 import { listSavedDecks } from '../../services/savedDecks';
 
 vi.mock('../../services/supabase', () => ({
@@ -44,5 +46,36 @@ describe('Deck statistics navigation', () => {
     const renamed = await screen.findByRole('link', { name: /Goblin Rinominati/ });
     expect(renamed).toHaveAttribute('href', '/decks/d2');
     expect(screen.queryByText('Vecchio nome')).not.toBeInTheDocument();
+  });
+
+  it('filters the deck list by name while the export keeps every deck', async () => {
+    const user = userEvent.setup();
+    render(<MemoryRouter><GameStats /></MemoryRouter>);
+    await screen.findByRole('link', { name: /Elfi/ });
+    await user.type(screen.getByRole('searchbox', { name: 'Cerca nelle statistiche dei mazzi' }), ' goblin ');
+    expect(screen.getByRole('link', { name: /Goblin Rinominati/ })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /Elfi/ })).not.toBeInTheDocument();
+    const exportCard = screen.getByRole('heading', { name: 'Statistiche Mazzi', hidden: true }).closest('[aria-hidden="true"]') as HTMLElement;
+    expect(exportCard).toHaveTextContent('Elfi');
+
+    await user.clear(screen.getByRole('searchbox', { name: 'Cerca nelle statistiche dei mazzi' }));
+    await user.type(screen.getByRole('searchbox', { name: 'Cerca nelle statistiche dei mazzi' }), 'zzz');
+    expect(screen.getByText('Nessun mazzo corrisponde alla ricerca.')).toBeInTheDocument();
+  });
+});
+
+describe('Player statistics search', () => {
+  it('filters the player list by name, ignoring case', async () => {
+    const user = userEvent.setup();
+    const rows = [{ name: 'Alice', g: 3, w: 2 }, { name: 'Bob', g: 2, w: 1 }];
+    render(<MemoryRouter><Standings rows={rows} showPie={false} /></MemoryRouter>);
+    const list = () => within(screen.getByRole('list'));
+    expect(list().getAllByRole('link')).toHaveLength(2);
+    await user.type(screen.getByRole('searchbox', { name: 'Cerca nelle statistiche dei giocatori' }), 'BOB');
+    expect(list().getAllByRole('link')).toHaveLength(1);
+    expect(list().getByRole('link', { name: /Bob/ })).toBeInTheDocument();
+    await user.clear(screen.getByRole('searchbox', { name: 'Cerca nelle statistiche dei giocatori' }));
+    await user.type(screen.getByRole('searchbox', { name: 'Cerca nelle statistiche dei giocatori' }), 'zzz');
+    expect(screen.getByText('Nessun giocatore corrisponde alla ricerca.')).toBeInTheDocument();
   });
 });

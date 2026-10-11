@@ -14,7 +14,8 @@ import {
   useImageExport,
 } from './ImageExport';
 import { computeMatchups, PIE_COLORS, pieSlicePath, type MatchupRow } from './stats';
-import { cx, FIELD_CONTROL, STICKY_BELOW_TITLE, TEXT_MINI, TEXT_MUTED } from '../ui/styles';
+import { cx, STICKY_BELOW_TITLE, TEXT_MINI, TEXT_MUTED } from '../ui/styles';
+import SearchField, { matchesSearch } from '../ui/SearchField';
 
 interface MatchupStatsProps {
   games: Game[];
@@ -93,10 +94,7 @@ function MatchupDetail({ selected, idSuffix }: { selected: MatchupRow; idSuffix:
 export default function MatchupStats({ games }: MatchupStatsProps) {
   const matchups = useMemo(() => computeMatchups(games), [games]);
   const [query, setQuery] = useState('');
-  const shown = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return q ? matchups.filter((m) => m.label.toLowerCase().includes(q)) : matchups;
-  }, [matchups, query]);
+  const shown = useMemo(() => matchups.filter((m) => matchesSearch(m.label, query)), [matchups, query]);
 
   if (matchups.length === 0) {
     return (
@@ -110,16 +108,7 @@ export default function MatchupStats({ games }: MatchupStatsProps) {
     <>
       {/* La ricerca resta in cima, sotto il titolo, mentre si scorre l'elenco. */}
       <div className={cx(STICKY_BELOW_TITLE, 'sticky z-10 -mx-1 mb-2 bg-zaff-surface px-1 pb-1 pt-1')}>
-        <input
-          type="search"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Cerca giocatore…"
-          aria-label="Cerca nelle sfide"
-          autoComplete="off"
-          enterKeyHint="search"
-          className={cx(FIELD_CONTROL, 'w-full')}
-        />
+        <SearchField value={query} onChange={setQuery} placeholder="Cerca giocatore…" label="Cerca nelle sfide" />
       </div>
       {shown.length === 0 && <p className={TEXT_MUTED}>Nessuna sfida corrisponde alla ricerca.</p>}
       <ul>

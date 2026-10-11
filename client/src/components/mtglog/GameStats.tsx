@@ -17,6 +17,7 @@ import {
   useImageExport,
 } from './ImageExport';
 import { cx, STICKY_BELOW_TITLE, TEXT_MINI, TEXT_MUTED } from '../ui/styles';
+import SearchField, { matchesSearch } from '../ui/SearchField';
 
 type DeckSourceRow = Pick<SavedDeck, 'id' | 'name' | 'source'>;
 
@@ -150,6 +151,7 @@ export default function GameStats() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [sort, setSort] = useState<DeckSort>('games');
+  const [query, setQuery] = useState('');
   const exporter = useImageExport();
 
   async function loadData() {
@@ -186,6 +188,9 @@ export default function GameStats() {
     sort === 'games' ? b.g - a.g || b.pct - a.pct : b.pct - a.pct || b.g - a.g
   );
 
+  // La ricerca filtra solo l'elenco a schermo: l'immagine esportata resta la classifica completa.
+  const shownRows = rows.filter((r) => matchesSearch(r.deck, query));
+
   if (loading) {
     return <p className={TEXT_MUTED}>Caricamento…</p>;
   }
@@ -194,7 +199,12 @@ export default function GameStats() {
 
   return (
     <>
-      <div className={cx(STICKY_BELOW_TITLE, 'sticky z-10 -mx-1 mb-3 grid grid-cols-2 gap-2.5 bg-zaff-surface px-1 pb-1 pt-1')}>
+      {/* Ricerca e ordinamento restano in cima, sotto il titolo, mentre si scorre l'elenco. */}
+      <div className={cx(STICKY_BELOW_TITLE, 'sticky z-10 -mx-1 mb-3 bg-zaff-surface px-1 pb-1 pt-1')}>
+        {deckStats.length > 0 && (
+          <SearchField value={query} onChange={setQuery} placeholder="Cerca mazzo…" label="Cerca nelle statistiche dei mazzi" className="mb-2.5" />
+        )}
+        <div className="grid grid-cols-2 gap-2.5">
         {SORT_OPTIONS.map((o) => (
           <button
             key={o.value}
@@ -211,9 +221,14 @@ export default function GameStats() {
             {o.label}
           </button>
         ))}
+        </div>
       </div>
 
-      <DeckStatsList rows={rows} interactive />
+      {rows.length > 0 && shownRows.length === 0 ? (
+        <p className={TEXT_MUTED}>Nessun mazzo corrisponde alla ricerca.</p>
+      ) : (
+        <DeckStatsList rows={shownRows} interactive />
+      )}
 
       <ExportedImage image={exporter.image} error={exporter.error} alt="Statistiche mazzi, da salvare" />
       <ShareBar
