@@ -88,7 +88,8 @@ export default function DeckEditor({ deckId, userId, initialDraft, onBack, onSav
   );
   const [cardSearch, setCardSearch] = useState('');
   const [pickedCardName, setPickedCardName] = useState('');
-  const [qty, setQty] = useState(1);
+  /** Copie da aggiungere, come scritte nel campo: può restare vuoto mentre si corregge (vuoto = 1). */
+  const [qty, setQty] = useState('1');
   const [cardSection, setCardSection] = useState<'main' | 'side'>('main');
   const [suggestions, setSuggestions] = useState<string[]>([]);
   /** Selettore carte con immagini: aggiungere, oppure correggere (`replace`)
@@ -292,10 +293,10 @@ export default function DeckEditor({ deckId, userId, initialDraft, onBack, onSav
   function handleAddCard() {
     const cardName = pickedCardName || cardSearch.trim();
     if (!cardName) return;
-    const addQty = Math.max(1, qty || 1);
+    const addQty = Math.min(99, Math.max(1, parseInt(qty, 10) || 1));
     addToDraft(cardName, addQty, cardSection);
     setCardSearch('');
-    setQty(1);
+    setQty('1');
     setPickedCardName('');
     setSuggestions([]);
   }
@@ -544,8 +545,11 @@ export default function DeckEditor({ deckId, userId, initialDraft, onBack, onSav
           type="number"
           min={1}
           max={99}
+          inputMode="numeric"
           value={qty}
-          onChange={(e) => setQty(Math.max(1, parseInt(e.target.value, 10) || 1))}
+          onChange={(e) => setQty(e.target.value.replace(/\D/g, '').slice(0, 2))}
+          onFocus={(e) => e.target.select()}
+          onBlur={() => { if (!qty) setQty('1'); }}
           fieldClassName="mb-0"
         />
         <Button variant="ghost" onClick={handleAddCard}>

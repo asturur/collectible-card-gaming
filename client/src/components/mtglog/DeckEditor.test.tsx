@@ -97,6 +97,19 @@ describe('Registro save controls', () => {
       Object.defineProperty(document.documentElement, 'scrollHeight', { value: 0, configurable: true });
     }
   });
+  it('lets the copies field be cleared with backspace before typing a new number', async () => {
+    const user = userEvent.setup(); render(<DeckEditor deckId={null} onBack={() => {}} onSaved={() => {}} />);
+    const copies = screen.getByLabelText('Copie');
+    await user.click(copies);
+    await user.keyboard('{Backspace}');
+    expect(copies).toHaveValue(null);
+    await user.keyboard('4');
+    expect(copies).toHaveValue(4);
+    await user.type(document.getElementById('cardSearch')!, 'Island');
+    await user.click(screen.getByRole('button', { name: 'Aggiungi al Mazzo' }));
+    expect(screen.getByRole('button', { name: 'Remove Island (4)' })).toBeInTheDocument();
+    expect(copies).toHaveValue(1);
+  });
   it('refuses a name already used by another deck, ignoring case and spaces', async () => {
     vi.mocked(findDeckWithSameName).mockResolvedValueOnce('Mono Black');
     const user = userEvent.setup(); render(<DeckEditor deckId={null} initialDraft={{ name: ' mono black ', cards: [{ name: 'Swamp', qty: 1 }] }} onBack={() => {}} onSaved={() => {}} />);
