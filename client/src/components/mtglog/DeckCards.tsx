@@ -6,6 +6,7 @@ import { ManaIcons } from './ManaIcon';
 import { cx, TEXT_MINI } from '../ui/styles';
 import Badge from '../ui/Badge';
 import CloseButton from '../ui/CloseButton';
+import Button from '../ui/Button';
 import { CardPriceBox } from './CardPrices';
 
 export { useDeckImages };
@@ -34,26 +35,19 @@ export interface DeckCardsEditable {
   onMove: (card: DeckCardsItem) => void;
 }
 
-/** Tasto ⇄ dell'editor: una copia passa dal Main Deck alla Sideboard o viceversa. */
-function MoveButton({ card, editable, overlay = false }: { card: DeckCardsItem; editable: DeckCardsEditable; overlay?: boolean }) {
-  const label = card.section === 'side'
-    ? `Sposta una copia di ${card.name} nel Main Deck`
-    : `Sposta una copia di ${card.name} in Sideboard`;
+/** Testo dell'azione che sposta una copia nell'altra sezione. */
+const moveLabel = (card: DeckCardsItem) => (card.section === 'side' ? 'Main Deck' : 'Sideboard');
+
+/** "→ Sideboard" / "→ Main Deck" in piccolo sotto la carta (editor): non allarga la riga di − e +. */
+function MoveLink({ card, editable, className }: { card: DeckCardsItem; editable: DeckCardsEditable; className?: string }) {
   return (
     <button
       type="button"
       onClick={() => editable.onMove(card)}
-      aria-label={label}
-      title={label}
-      className={cx(
-        'flex shrink-0 items-center justify-center text-lg font-bold leading-none active:scale-95',
-        overlay
-          // Sull'immagine (vista Griglia), dove sotto non c'è spazio accanto a − e +.
-          ? 'absolute right-1 top-1 h-8 w-8 rounded-full border border-white/60 bg-black/65 text-white'
-          : 'h-9 w-9 rounded-md border border-zaff-border text-zaff-text'
-      )}
+      aria-label={`Sposta una copia di ${card.name} ${card.section === 'side' ? 'nel Main Deck' : 'in Sideboard'}`}
+      className={cx('py-1 text-xs font-semibold text-zaff-accent active:opacity-70', className)}
     >
-      ⇄
+      → {moveLabel(card)}
     </button>
   );
 }
@@ -97,16 +91,25 @@ function Placeholder({ name, pending, className }: { name: string; pending: bool
   );
 }
 
+/** Identità di una carta nell'elenco: sezione e nome (la stessa carta può stare in Main e in Sideboard). */
+const itemKey = (c: DeckCardsItem) => `${c.section === 'side' ? 'side' : 'main'}|${c.name}`;
+
 function CardViewer({
   items,
   startIndex,
   onClose,
+  onMove,
 }: {
   items: DeckCardsItem[];
   startIndex: number;
   onClose: () => void;
+  /** Solo nell'editor: sposta una copia nell'altra sezione. */
+  onMove?: (card: DeckCardsItem) => void;
 }) {
-  const [index, setIndex] = useState(startIndex);
+  // Il visore segue una carta, non una posizione: spostandola, l'elenco cambia ordine.
+  const [current, setCurrent] = useState(() => itemKey(items[startIndex]));
+  const found = items.findIndex((c) => itemKey(c) === current);
+  const index = found >= 0 ? found : Math.min(startIndex, items.length - 1);
   const [face, setFace] = useState(0);
   const touchX = useRef<number | null>(null);
 
@@ -117,7 +120,14 @@ function CardViewer({
 
   function go(delta: number) {
     setFace(0);
-    setIndex((i) => (i + delta + items.length) % items.length);
+    setCurrent(itemKey(items[(index + delta + items.length) % items.length]));
+  }
+
+  function move() {
+    if (!onMove) return;
+    onMove(item);
+    // Con l'ultima copia la carta passa all'altra sezione: il visore la segue lì.
+    if (item.qty <= 1) setCurrent(itemKey({ ...item, section: item.section === 'side' ? 'main' : 'side' }));
   }
 
   useEffect(() => {
@@ -187,6 +197,11 @@ function CardViewer({
 
       <div onClick={(e) => e.stopPropagation()}>
         <CardPriceBox name={item.name} scryfallId={item.scryfallId} />
+        {onMove && (
+          <Button variant="ghost" size="sm" onClick={move} className="mx-auto mt-3 flex">
+            Sposta 1 copia {item.section === 'side' ? 'nel Main Deck' : 'in Sideboard'}
+          </Button>
+        )}
       </div>
 
       {faceCount > 1 && (
@@ -205,11 +220,14 @@ function CardViewer({
   );
 }
 
-function QtyStepper({ card, editable }: { card: DeckCardsItem; editable: DeckCardsEditable }) {
-  const btn =
-    'flex h-9 w-9 shrink-0 items-center justify-center rounded-md border text-lg font-bold leading-none active:scale-95';
+/** − quantità +. `compact` in Griglia: sotto una carta stretta (telefoni sotto i 390 px) deve stare nella sua colonna. */
+function QtyStepper({ card, editable, compact = false }: { card: DeckCardsItem; editable: DeckCardsEditable; compact?: boolean }) {
+  const btn = cx(
+    'flex shrink-0 items-center justify-center rounded-md border text-lg font-bold leading-none active:scale-95',
+    compact ? 'h-8 w-8' : 'h-9 w-9'
+  );
   return (
-    <div className="flex shrink-0 items-center gap-1.5">
+    <div className={cx('flex shrink-0 items-center', compact ? 'gap-1' : 'gap-1.5')}>
       <button
         type="button"
         onClick={() => editable.onChangeQty(card, -1)}
@@ -287,7 +305,6 @@ function CardGrid({ cards, onOpen, editable }: ViewProps) {
                   )}
                 </button>
               )}
-              {editable && !missing && <MoveButton card={c} editable={editable} overlay />}
               {!editable && c.qty > 1 && (
                 <Badge tone="count" className="pointer-events-none absolute right-1 top-1">
                   ×{c.qty}
@@ -295,8 +312,9 @@ function CardGrid({ cards, onOpen, editable }: ViewProps) {
               )}
             </div>
             {editable && (
-              <div className="mt-1 flex justify-center">
-                <QtyStepper card={c} editable={editable} />
+              <div className="mt-1 flex flex-col items-center">
+                <QtyStepper card={c} editable={editable} compact />
+                {!missing && <MoveLink card={c} editable={editable} />}
               </div>
             )}
           </div>
@@ -313,34 +331,51 @@ function CardList({ cards, onOpen, editable }: ViewProps) {
         const scry = getCard(c.name, c.scryfallId);
         const img = scry?.faces[0];
         const missing = !scry && isMissing(c.name);
+        const thumb = img ? (
+          <img src={img.art} alt="" loading="lazy" decoding="async" className="h-14 w-14 shrink-0 rounded object-cover" />
+        ) : (
+          <span className="h-14 w-14 shrink-0 rounded border border-zaff-border bg-zaff-surface" />
+        );
         return (
           <li key={c.name} className="flex items-center gap-2.5 border-b border-zaff-border py-1.5 last:border-b-0">
             {missing && editable ? (
-              <FixTile card={c} onFix={editable.onFix} className="h-14 w-14 shrink-0 !p-0 text-[0px]" />
+              <>
+                <FixTile card={c} onFix={editable.onFix} className="h-14 w-14 shrink-0 !p-0 text-[0px]" />
+                <span className="min-w-0 flex-1 truncate text-sm text-zaff-gold">{c.name}</span>
+              </>
+            ) : editable ? (
+              // Nell'editor: immagine e nome aprono la carta; sotto il nome, "→ Sideboard"
+              // (un tasto separato, così − e + restano dove sono).
+              <>
+                <button type="button" onClick={() => scry && onOpen(c)} aria-label={c.name} className="shrink-0">
+                  {thumb}
+                </button>
+                <span className="min-w-0 flex-1">
+                  <button
+                    type="button"
+                    onClick={() => scry && onOpen(c)}
+                    className="block w-full truncate text-left text-sm text-zaff-text"
+                  >
+                    {c.name}
+                  </button>
+                  {printingLabel(c) && <span className={cx('block truncate', TEXT_MINI)}>{printingLabel(c)}</span>}
+                  <MoveLink card={c} editable={editable} className="block" />
+                </span>
+              </>
             ) : (
               <button
                 type="button"
                 onClick={() => scry && onOpen(c)}
                 className="flex min-w-0 flex-1 items-center gap-3 text-left text-sm text-zaff-text"
               >
-                {img ? (
-                  <img src={img.art} alt="" loading="lazy" decoding="async" className="h-14 w-14 shrink-0 rounded object-cover" />
-                ) : (
-                  <span className="h-14 w-14 shrink-0 rounded border border-zaff-border bg-zaff-surface" />
-                )}
+                {thumb}
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate">{editable ? c.name : `${c.qty}× ${c.name}`}</span>
+                  <span className="block truncate">{`${c.qty}× ${c.name}`}</span>
                   {printingLabel(c) && <span className={cx('block truncate', TEXT_MINI)}>{printingLabel(c)}</span>}
                 </span>
               </button>
             )}
-            {missing && editable && <span className="min-w-0 flex-1 truncate text-sm text-zaff-gold">{c.name}</span>}
-            {editable && (
-              <>
-                <MoveButton card={c} editable={editable} />
-                <QtyStepper card={c} editable={editable} />
-              </>
-            )}
+            {editable && <QtyStepper card={c} editable={editable} />}
           </li>
         );
       })}
@@ -495,7 +530,9 @@ export default function DeckCardsView({
         </div>
       )}
 
-      {openIndex !== null && <CardViewer items={ordered} startIndex={openIndex} onClose={() => setOpenIndex(null)} />}
+      {openIndex !== null && (
+        <CardViewer items={ordered} startIndex={openIndex} onClose={() => setOpenIndex(null)} onMove={editable?.onMove} />
+      )}
     </>
   );
 }

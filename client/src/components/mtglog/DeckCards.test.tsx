@@ -29,7 +29,7 @@ describe('Registro card controls with pinned identities', () => {
     await user.click(screen.getByRole('button', { name: /Carta non riconosciuta: Unknown/ })); expect(fix).toHaveBeenCalled();
     await user.click(screen.getByRole('button', { name: /Togli Unknown/ })); expect(qty).toHaveBeenCalledWith(expect.objectContaining({ name: 'Unknown' }), -1);
   });
-  it('offers ⇄ on every card in both views to move one copy to the other section', async () => {
+  it('offers "→ Sideboard" / "→ Main Deck" under every card in both views', async () => {
     const user = userEvent.setup(); const move = vi.fn();
     const editable = { onFix: vi.fn(), onChangeQty: vi.fn(), onMove: move };
     render(<DeckCardsView cards={[{ name: 'Delver', qty: 4 }, { name: 'Delver', qty: 1, section: 'side' }]} editable={editable} />);
@@ -39,5 +39,20 @@ describe('Registro card controls with pinned identities', () => {
     expect(move).toHaveBeenLastCalledWith(expect.objectContaining({ name: 'Delver', section: 'side' }));
     await user.click(screen.getByRole('button', { name: /Lista/ }));
     expect(screen.getAllByRole('button', { name: /Sposta una copia di Delver/ })).toHaveLength(2);
+  });
+  it('moves a copy from the card viewer in the editor and keeps showing the same card', async () => {
+    const user = userEvent.setup(); const move = vi.fn();
+    render(<DeckCardsView cards={[{ name: 'Delver', qty: 2 }]} editable={{ onFix: vi.fn(), onChangeQty: vi.fn(), onMove: move }} />);
+    await user.click(screen.getByRole('button', { name: 'Delver' }));
+    const viewer = screen.getByRole('dialog', { name: 'Delver' });
+    await user.click(within(viewer).getByRole('button', { name: 'Sposta 1 copia in Sideboard' }));
+    expect(move).toHaveBeenCalledWith(expect.objectContaining({ name: 'Delver', qty: 2 }));
+    expect(screen.getByRole('dialog', { name: 'Delver' })).toBeInTheDocument();
+  });
+  it('has no move action in the read-only viewer', async () => {
+    const user = userEvent.setup();
+    render(<DeckCardsView cards={[{ name: 'Delver', qty: 2 }]} />);
+    await user.click(screen.getByRole('button', { name: 'Delver' }));
+    expect(screen.queryByRole('button', { name: /Sposta 1 copia/ })).not.toBeInTheDocument();
   });
 });
