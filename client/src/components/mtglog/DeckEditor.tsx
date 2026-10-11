@@ -393,7 +393,9 @@ export default function DeckEditor({ deckId, userId, initialDraft, onBack, onSav
 
   return (
     <>
-      <fieldset disabled={saving}>
+      {/* min-w-0: un fieldset per natura non si stringe sotto il suo contenuto più largo, quindi un
+          nome di carta lungo (vista Lista) allargava tutto l'editor oltre lo schermo. */}
+      <fieldset disabled={saving} className="min-w-0">
       {/* Totali sempre in vista mentre si scorre. */}
       <div className="sticky top-[env(safe-area-inset-top)] z-10 -mx-1 mb-3.5 rounded-lg border border-zaff-primary bg-zaff-surface px-3 py-2 text-sm font-semibold text-zaff-text shadow-lg">
         <p className="mb-1 truncate text-base font-bold" title={name.trim() || 'Nuovo mazzo'}>
