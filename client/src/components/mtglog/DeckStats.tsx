@@ -63,6 +63,11 @@ function PieChart({ slices, idSuffix, unit }: { slices: Slice[]; idSuffix: strin
 }
 
 const CURVE_HEIGHT = 150;
+/** Ombreggiatura delle barre, con la stessa luce delle torte: riflesso in alto a sinistra, bordi più scuri. */
+const BAR_RELIEF = [
+  'radial-gradient(120% 60% at 30% 0%, rgba(255,255,255,0.32) 0%, rgba(255,255,255,0.08) 45%, rgba(255,255,255,0) 100%)',
+  'linear-gradient(to right, rgba(0,0,0,0.28) 0%, rgba(0,0,0,0) 22%, rgba(0,0,0,0) 70%, rgba(0,0,0,0.32) 100%)',
+].join(', ');
 
 export default function DeckStatsContents({ cards }: { cards: DeckStatsItem[] }) {
   useDeckImages(cards);
@@ -107,7 +112,7 @@ export default function DeckStatsContents({ cards }: { cards: DeckStatsItem[] })
           <div key={b.value} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end">
             <span className="mb-0.5 text-xs font-bold text-zaff-text">{b.total > 0 ? b.total : ''}</span>
             <div
-              className="flex w-full flex-col-reverse overflow-hidden rounded-t"
+              className="relative flex w-full flex-col-reverse overflow-hidden rounded-t drop-shadow-[0_6px_10px_rgba(0,0,0,0.45)]"
               style={{ height: (b.total / maxBar) * CURVE_HEIGHT }}
             >
               {b.segments.map((s) => (
@@ -118,6 +123,8 @@ export default function DeckStatsContents({ cards }: { cards: DeckStatsItem[] })
                   title={`${MANA_LABELS[s.key]}: ${s.n}`}
                 />
               ))}
+              {/* Rilievo come le torte (GlossyPie): lucido a sinistra in alto, più scuro verso i bordi. */}
+              <div className="pointer-events-none absolute inset-0" style={{ background: BAR_RELIEF }} aria-hidden="true" />
             </div>
           </div>
         ))}
