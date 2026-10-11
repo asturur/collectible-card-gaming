@@ -25,8 +25,19 @@ describe('Registro card controls with pinned identities', () => {
   });
   it('keeps correction and quantity actions available for unresolved groups', async () => {
     const user = userEvent.setup(); const fix = vi.fn(); const qty = vi.fn();
-    render(<DeckCardsView cards={[{ name: 'Unknown', qty: 1 }]} editable={{ onFix: fix, onChangeQty: qty }} />);
+    render(<DeckCardsView cards={[{ name: 'Unknown', qty: 1 }]} editable={{ onFix: fix, onChangeQty: qty, onMove: vi.fn() }} />);
     await user.click(screen.getByRole('button', { name: /Carta non riconosciuta: Unknown/ })); expect(fix).toHaveBeenCalled();
     await user.click(screen.getByRole('button', { name: /Togli Unknown/ })); expect(qty).toHaveBeenCalledWith(expect.objectContaining({ name: 'Unknown' }), -1);
+  });
+  it('offers ⇄ on every card in both views to move one copy to the other section', async () => {
+    const user = userEvent.setup(); const move = vi.fn();
+    const editable = { onFix: vi.fn(), onChangeQty: vi.fn(), onMove: move };
+    render(<DeckCardsView cards={[{ name: 'Delver', qty: 4 }, { name: 'Delver', qty: 1, section: 'side' }]} editable={editable} />);
+    await user.click(screen.getByRole('button', { name: 'Sposta una copia di Delver in Sideboard' }));
+    expect(move).toHaveBeenLastCalledWith(expect.objectContaining({ name: 'Delver', qty: 4 }));
+    await user.click(screen.getByRole('button', { name: 'Sposta una copia di Delver nel Main Deck' }));
+    expect(move).toHaveBeenLastCalledWith(expect.objectContaining({ name: 'Delver', section: 'side' }));
+    await user.click(screen.getByRole('button', { name: /Lista/ }));
+    expect(screen.getAllByRole('button', { name: /Sposta una copia di Delver/ })).toHaveLength(2);
   });
 });

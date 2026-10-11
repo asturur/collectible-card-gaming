@@ -273,6 +273,24 @@ export default function DeckEditor({ deckId, userId, initialDraft, onBack, onSav
     autoDetectColors([newName]);
   }
 
+  /** ⇄: una copia passa nell'altra sezione con la stessa stampa; se lì c'è già, le copie si sommano. */
+  function moveOne(card: { name: string; section?: string }) {
+    const from = normalizeSection(card.section);
+    const to = from === 'main' ? 'side' : 'main';
+    setDraft((prev) => {
+      const source = prev.find((c) => c.name === card.name && normalizeSection(c.section) === from);
+      if (!source) return prev;
+      const next = prev.flatMap((c) => (c !== source ? [c] : c.qty > 1 ? [{ ...c, qty: c.qty - 1 }] : []));
+      const idx = next.findIndex((c) => c.name.toLowerCase() === card.name.toLowerCase() && normalizeSection(c.section) === to);
+      if (idx >= 0) {
+        next[idx] = { ...next[idx], qty: next[idx].qty + 1 };
+        return next;
+      }
+      const { id: _rowId, ...printing } = source;
+      return [...next, { ...printing, qty: 1, section: to }];
+    });
+  }
+
   /** −/+ sulle carte dell'elenco; a 1 copia il "−" toglie la carta. */
   function changeQty(card: { name: string; section?: string }, delta: number) {
     const sec = normalizeSection(card.section);
@@ -565,6 +583,7 @@ export default function DeckEditor({ deckId, userId, initialDraft, onBack, onSav
             cards={draft}
             editable={{
               onChangeQty: changeQty,
+              onMove: moveOne,
               onFix: (c) =>
                 setPicker({ mode: 'replace', name: c.name, section: normalizeSection(c.section), qty: c.qty }),
             }}

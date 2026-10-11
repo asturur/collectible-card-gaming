@@ -30,6 +30,13 @@ describe('atomic saved deck service', () => {
       expect.objectContaining({ name: 'Forest', qty: 2, section: 'side', scryfall_id: 'new-id' }),
     ] }));
   });
+  it('keeps the stored printing of a card moved to the other section', async () => {
+    await saveSavedDeck({ ...input, cards: [{ name: 'Island', qty: 1, section: 'side' as const }] });
+    expect(mocks.resolve).not.toHaveBeenCalled();
+    expect(mocks.rpc.mock.calls[0][1].p_cards).toEqual([
+      expect.objectContaining({ name: 'Island', section: 'side', scryfall_id: 'stored-id', oracle_id: 'stored-oracle' }),
+    ]);
+  });
   it('does not write on unresolved lookup unless explicitly permitted', async () => {
     mocks.resolve.mockResolvedValue(new Map()); await expect(saveSavedDeck(input)).rejects.toBeInstanceOf(UnresolvedCardsError);
     expect(mocks.rpc).not.toHaveBeenCalled(); await saveSavedDeck(input, { allowUnresolved: true });

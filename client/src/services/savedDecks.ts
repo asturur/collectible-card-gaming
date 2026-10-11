@@ -91,8 +91,11 @@ export async function saveSavedDeck(input: SaveDeckInput, options: {
   // Existing groups always keep their stored printing, even if a new lookup returns another one.
   const previous = input.expectedRevision === null ? [] : (await getSavedDeck(input.id)).cardRows;
   const assigned = new Map(previous.filter(c => c.scryfallId).map(c => [entryKey(c), c]));
+  // Una carta spostata tra Main Deck e Sideboard tiene la stampa che aveva nell'altra sezione.
+  const assignedByName = new Map(previous.filter(c => c.scryfallId).map(c => [nameKey(c.name), c]));
+  const storedFor = (c: DeckEntry) => assigned.get(entryKey(c)) ?? assignedByName.get(nameKey(c.name));
   // Stampa esatta richiesta con espansione + numero (es. da un elenco ManaBox): una sola richiesta per tutte.
-  const hinted = entries.filter(c => !assigned.has(entryKey(c)) && c.setCode && c.collectorNumber);
+  const hinted = entries.filter(c => !storedFor(c) && c.setCode && c.collectorNumber);
   let printings: Awaited<ReturnType<typeof fetchPrintings>> = new Map();
   if (hinted.length) {
     try {
@@ -104,7 +107,7 @@ export async function saveSavedDeck(input: SaveDeckInput, options: {
   }
   const fromLocalMemory = new Set<string>();
   const cards = entries.map(c => {
-    const stored = assigned.get(entryKey(c));
+    const stored = storedFor(c);
     if (stored) return { ...c, scryfallId: stored.scryfallId, oracleId: stored.oracleId,
       imageUrl: stored.imageUrl, typeLine: stored.typeLine,
       setCode: stored.setCode ?? null, collectorNumber: stored.collectorNumber ?? null };

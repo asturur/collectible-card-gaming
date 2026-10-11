@@ -30,6 +30,32 @@ function printingLabel(card: DeckCardsItem): string {
 export interface DeckCardsEditable {
   onChangeQty: (card: DeckCardsItem, delta: number) => void;
   onFix: (card: DeckCardsItem) => void;
+  /** ⇄: sposta una copia nell'altra sezione (Main Deck ↔ Sideboard). */
+  onMove: (card: DeckCardsItem) => void;
+}
+
+/** Tasto ⇄ dell'editor: una copia passa dal Main Deck alla Sideboard o viceversa. */
+function MoveButton({ card, editable, overlay = false }: { card: DeckCardsItem; editable: DeckCardsEditable; overlay?: boolean }) {
+  const label = card.section === 'side'
+    ? `Sposta una copia di ${card.name} nel Main Deck`
+    : `Sposta una copia di ${card.name} in Sideboard`;
+  return (
+    <button
+      type="button"
+      onClick={() => editable.onMove(card)}
+      aria-label={label}
+      title={label}
+      className={cx(
+        'flex shrink-0 items-center justify-center text-lg font-bold leading-none active:scale-95',
+        overlay
+          // Sull'immagine (vista Griglia), dove sotto non c'è spazio accanto a − e +.
+          ? 'absolute right-1 top-1 h-8 w-8 rounded-full border border-white/60 bg-black/65 text-white'
+          : 'h-9 w-9 rounded-md border border-zaff-border text-zaff-text'
+      )}
+    >
+      ⇄
+    </button>
+  );
 }
 
 type ViewMode = 'grid' | 'list';
@@ -261,6 +287,7 @@ function CardGrid({ cards, onOpen, editable }: ViewProps) {
                   )}
                 </button>
               )}
+              {editable && !missing && <MoveButton card={c} editable={editable} overlay />}
               {!editable && c.qty > 1 && (
                 <Badge tone="count" className="pointer-events-none absolute right-1 top-1">
                   ×{c.qty}
@@ -308,7 +335,12 @@ function CardList({ cards, onOpen, editable }: ViewProps) {
               </button>
             )}
             {missing && editable && <span className="min-w-0 flex-1 truncate text-sm text-zaff-gold">{c.name}</span>}
-            {editable && <QtyStepper card={c} editable={editable} />}
+            {editable && (
+              <>
+                <MoveButton card={c} editable={editable} />
+                <QtyStepper card={c} editable={editable} />
+              </>
+            )}
           </li>
         );
       })}

@@ -7,7 +7,7 @@ vi.mock('../../services/savedDecks', () => ({ getSavedDeck: vi.fn(), saveSavedDe
   DeckConflictError: class extends Error { constructor() { super('Changed'); } }, UnresolvedCardsError: class extends Error { constructor(names: string[]) { super(names.join(', ')); } } }));
 vi.mock('../../services/scryfall', () => ({ autocompleteCards: vi.fn(async () => []) }));
 vi.mock('./DeckStats', () => ({ DeckStatsButton: () => null }));
-vi.mock('./DeckCards', () => ({ useDeckImages: () => {}, default: ({ cards, editable }: { cards: { name: string; qty: number }[]; editable: { onChangeQty: (card: unknown, delta: number) => void } }) => <div>{cards.map(c => <button key={c.name} onClick={() => editable.onChangeQty(c, -1)}>Remove {c.name} ({c.qty})</button>)}<div id="deck-sideboard" /></div> }));
+vi.mock('./DeckCards', () => ({ useDeckImages: () => {}, default: ({ cards, editable }: { cards: { name: string; qty: number; section?: string }[]; editable: { onChangeQty: (card: unknown, delta: number) => void; onMove: (card: unknown) => void } }) => <div>{cards.map(c => <span key={c.name + (c.section ?? '')}><button onClick={() => editable.onChangeQty(c, -1)}>Remove {c.name} ({c.qty})</button><button onClick={() => editable.onMove(c)}>Move {c.name} {c.section ?? 'main'} ({c.qty})</button></span>)}<div id="deck-sideboard" /></div> }));
 const deck = { id: 'deck', name: 'Saved', source: 'brew', format: 'Modern', colors: ['U'], revision: 4,
   cards: [{ name: 'Island', qty: 2, section: 'main', scryfallId: 'original-id', oracleId: 'original-oracle' }, { name: 'Forest', qty: 1, section: 'side' }] };
 beforeEach(() => { vi.clearAllMocks(); vi.mocked(getSavedDeck).mockResolvedValue(deck as never); vi.mocked(saveSavedDeck).mockResolvedValue(); vi.mocked(findDeckWithSameName).mockResolvedValue(null); });
@@ -109,6 +109,21 @@ describe('Registro save controls', () => {
     await user.click(screen.getByRole('button', { name: 'Aggiungi al Mazzo' }));
     expect(screen.getByRole('button', { name: 'Remove Island (4)' })).toBeInTheDocument();
     expect(copies).toHaveValue(1);
+  });
+  it('moves one copy at a time between Main Deck and Sideboard, keeping the printing', async () => {
+    const user = userEvent.setup(); render(<DeckEditor deckId="deck" onBack={() => {}} onSaved={() => {}} />);
+    await screen.findByDisplayValue('Saved');
+    await user.click(screen.getByRole('button', { name: 'Move Island main (2)' }));
+    await user.click(screen.getByRole('button', { name: 'Move Forest side (1)' }));
+    expect(screen.getByRole('button', { name: 'Move Island side (1)' })).toBeInTheDocument();
+    expect(screen.getByText('Main Deck 2')).toBeInTheDocument();
+    expect(screen.getByText('Sideboard 1')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Salva Modifiche' }));
+    expect(saveSavedDeck).toHaveBeenCalledWith(expect.objectContaining({ cards: expect.arrayContaining([
+      expect.objectContaining({ name: 'Island', qty: 1, section: 'main', scryfallId: 'original-id' }),
+      expect.objectContaining({ name: 'Island', qty: 1, section: 'side', scryfallId: 'original-id' }),
+      expect.objectContaining({ name: 'Forest', qty: 1, section: 'main' }),
+    ]) }), expect.anything());
   });
   it('refuses a name already used by another deck, ignoring case and spaces', async () => {
     vi.mocked(findDeckWithSameName).mockResolvedValueOnce('Mono Black');
