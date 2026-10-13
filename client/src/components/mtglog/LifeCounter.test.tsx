@@ -62,7 +62,8 @@ describe('LifeCounter', () => {
       { Alice: 20, Bob: 20 },
       { Alice: ['kill'], Bob: [] },
       { Alice: 0, Bob: 0 },
-      { Alice: { tax: 0, damage: { Bob: 21 } } }
+      { Alice: { tax: 0, damage: { Bob: 21 } } },
+      ['Alice', 'Bob']
     );
   });
 
@@ -82,7 +83,8 @@ describe('LifeCounter', () => {
       { Alice: 40, Bob: 40 },
       { Alice: [], Bob: [] },
       { Alice: 0, Bob: 0 },
-      { Alice: { tax: 2, damage: { Bob: 5 } } }
+      { Alice: { tax: 2, damage: { Bob: 5 } } },
+      ['Alice', 'Bob']
     );
     unmount();
 
@@ -134,15 +136,15 @@ describe('LifeCounter', () => {
     const user = userEvent.setup();
     const { unmount } = render(<LifeCounter players={['A', 'B', 'C', 'D']} startLife={40} onEdit={vi.fn()} onFinish={vi.fn()} />);
     await user.click(screen.getByRole('button', { name: 'Opzioni di gioco' }));
-    expect(screen.getByRole('button', { name: /Disposizione/ })).toHaveTextContent('Due per lato');
+    expect(screen.getByRole('button', { name: /Disposizione/ })).toHaveTextContent('passa a A croce');
     await user.click(screen.getByRole('button', { name: /Disposizione/ }));
     await user.click(screen.getByRole('button', { name: 'Opzioni di gioco' }));
-    expect(screen.getByRole('button', { name: /Disposizione/ })).toHaveTextContent('A croce');
+    expect(screen.getByRole('button', { name: /Disposizione/ })).toHaveTextContent('passa a Due per lato');
     unmount();
 
     render(<LifeCounter players={['A', 'B', 'C', 'D']} startLife={40} onEdit={vi.fn()} onFinish={vi.fn()} />);
     await user.click(screen.getByRole('button', { name: 'Opzioni di gioco' }));
-    expect(screen.getByRole('button', { name: /Disposizione/ })).toHaveTextContent('A croce');
+    expect(screen.getByRole('button', { name: /Disposizione/ })).toHaveTextContent('passa a Due per lato');
     localStorage.removeItem('mtglog:counterLayout:4');
   });
 
@@ -154,17 +156,17 @@ describe('LifeCounter', () => {
 
   it.each([
     [5, 'Tre e due per lato', 'Due per lato, uno a capotavola'],
-    [6, 'Tre per lato', 'Uno per lato'],
+    [6, 'Tre per lato', 'Due per lato e i capotavola'],
   ])('offers two layouts with %i players', async (n, first, second) => {
     localStorage.removeItem(`mtglog:counterLayout:${n}`);
     const user = userEvent.setup();
     const names = ['A', 'B', 'C', 'D', 'E', 'F'].slice(0, n);
     render(<LifeCounter players={names} startLife={20} onEdit={vi.fn()} onFinish={vi.fn()} />);
     await user.click(screen.getByRole('button', { name: 'Opzioni di gioco' }));
-    expect(screen.getByRole('button', { name: /Disposizione/ })).toHaveTextContent(first);
+    expect(screen.getByRole('button', { name: /Disposizione/ })).toHaveTextContent(`passa a ${second}`);
     await user.click(screen.getByRole('button', { name: /Disposizione/ }));
     await user.click(screen.getByRole('button', { name: 'Opzioni di gioco' }));
-    expect(screen.getByRole('button', { name: /Disposizione/ })).toHaveTextContent(second);
+    expect(screen.getByRole('button', { name: /Disposizione/ })).toHaveTextContent(`passa a ${first}`);
     localStorage.removeItem(`mtglog:counterLayout:${n}`);
   });
 
@@ -202,5 +204,31 @@ describe('LifeCounter', () => {
     await user.click(screen.getByRole('button', { name: 'Opzioni di gioco' }));
     expect(screen.queryByRole('button', { name: /Disposizione/ })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'A: aggiungi 1 punto vita' })).toBeInTheDocument();
+  });
+
+  it('swaps two seats with "Cambia posti", blocking life changes until "Fatto"', async () => {
+    const onFinish = vi.fn();
+    const user = userEvent.setup();
+    render(<LifeCounter players={['Alice', 'Bob', 'Carla']} startLife={20} onEdit={vi.fn()} onFinish={onFinish} />);
+    await user.click(screen.getByRole('button', { name: 'Opzioni di gioco' }));
+    await user.click(screen.getByRole('button', { name: 'Cambia posti' }));
+    expect(screen.queryByRole('button', { name: 'Opzioni di gioco' })).not.toBeInTheDocument();
+    expect(screen.getAllByText('Tocca il primo giocatore')).toHaveLength(3);
+
+    await user.click(screen.getByRole('button', { name: 'Bob: aggiungi 1 punto vita' }));
+    expect(screen.getAllByText('20')).toHaveLength(3);
+    await user.click(screen.getByRole('button', { name: 'Scegli Alice' }));
+    expect(screen.getByRole('button', { name: 'Annulla la scelta di Alice' })).toHaveAttribute('aria-pressed', 'true');
+    await user.click(screen.getByRole('button', { name: 'Scambia con Carla' }));
+    await user.click(screen.getByRole('button', { name: 'Fatto' }));
+
+    // Ordine dei riquadri sullo schermo: Carla dove era Alice e viceversa; i punti restano a ciascuno.
+    const names = screen.getAllByRole('button', { name: /: opzioni$/ }).map((b) => b.getAttribute('aria-label'));
+    expect(names).toEqual(['Carla: opzioni', 'Bob: opzioni', 'Alice: opzioni']);
+    await user.click(screen.getByRole('button', { name: 'Alice: aggiungi 1 punto vita' }));
+    await user.click(screen.getByRole('button', { name: 'Opzioni di gioco' }));
+    await user.click(screen.getByRole('button', { name: 'Fine Partita' }));
+    expect(onFinish.mock.calls[0][0]).toEqual({ Alice: 21, Bob: 20, Carla: 20 });
+    expect(onFinish.mock.calls[0][4]).toEqual(['Carla', 'Bob', 'Alice']);
   });
 });

@@ -138,6 +138,13 @@ function toLocalDateTimeValue(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+/** Righe nell'ordine dei posti scelto nel segna-punti ("Cambia posti"); le righe senza nome restano in fondo.
+ *  L'ordine si salva con la partita (seat), quindi vale anche per "Riprendi Partita" e per la rivincita. */
+function seatRows(rows: PlayerRow[], seating: string[]): PlayerRow[] {
+  const seat = new Map(seating.map((name, i) => [name, i]));
+  return [...rows].sort((a, b) => (seat.get(a.name.trim()) ?? seating.length) - (seat.get(b.name.trim()) ?? seating.length));
+}
+
 let lastRowId = 0;
 function newRowId(): string {
   lastRowId += 1;
@@ -418,13 +425,14 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved, on
     lives: Record<string, number>,
     causes: Record<string, LossCause[]>,
     poisons: Record<string, number>,
-    commanders: Record<string, CommanderCount>
+    commanders: Record<string, CommanderCount>,
+    seating: string[]
   ) {
     // Se un solo giocatore non ha KILL, MILL né veleno letale, è lui il
     // vincitore: lo preseleziono. Con più candidati non scelgo nessuno.
     const survivors = Object.keys(lives).filter((k) => (causes[k] ?? []).length === 0);
     setPlayers((prev) =>
-      prev.map((p) => {
+      seatRows(prev, seating).map((p) => {
         const key = p.name.trim();
         if (!(key in lives)) return p;
         return {
@@ -447,10 +455,11 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved, on
     lives: Record<string, number>,
     causes: Record<string, LossCause[]>,
     poisons: Record<string, number>,
-    commanders: Record<string, CommanderCount>
+    commanders: Record<string, CommanderCount>,
+    seating: string[]
   ) {
     setPlayers((prev) =>
-      prev.map((p) => {
+      seatRows(prev, seating).map((p) => {
         const key = p.name.trim();
         if (!(key in lives)) return p;
         return {

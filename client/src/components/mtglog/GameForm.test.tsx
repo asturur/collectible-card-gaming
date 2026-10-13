@@ -104,4 +104,29 @@ describe('GameForm', () => {
     await user.click(screen.getByRole('button', { name: 'Salva Partita' }));
     expect(insert).not.toHaveBeenCalled();
   });
+
+  it('keeps the seats chosen in the life counter for the game rows (and so for resume and rematch)', async () => {
+    const user = await renderForm();
+    await user.click(screen.getByRole('button', { name: /Scegli il giocatore 1/ }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Andrea' }));
+    await user.click(screen.getByRole('button', { name: /Scegli il giocatore 2/ }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Bea' }));
+    await user.click(screen.getByRole('button', { name: /Avvia Partita/ }));
+
+    await user.click(screen.getByRole('button', { name: 'Opzioni di gioco' }));
+    await user.click(screen.getByRole('button', { name: 'Cambia posti' }));
+    await user.click(screen.getByRole('button', { name: 'Scegli Andrea' }));
+    await user.click(screen.getByRole('button', { name: 'Scambia con Bea' }));
+    await user.click(screen.getByRole('button', { name: 'Fatto' }));
+    await user.click(screen.getByRole('button', { name: 'Opzioni di gioco' }));
+    await user.click(screen.getByRole('button', { name: 'Modifica Partita' }));
+
+    const bea = screen.getByRole('button', { name: /^Bea/ });
+    const andrea = screen.getByRole('button', { name: /^Andrea/ });
+    expect(bea.compareDocumentPosition(andrea) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    await user.click(screen.getByRole('button', { name: /Riprendi Partita/ }));
+    const seats = screen.getAllByRole('button', { name: /: opzioni$/ }).map((b) => b.getAttribute('aria-label'));
+    expect(seats).toEqual(['Bea: opzioni', 'Andrea: opzioni']);
+  });
 });

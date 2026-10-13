@@ -35,7 +35,9 @@ type LifeCounterResult = (
   causes: Record<string, LossCause[]>,
   poisons: Record<string, number>,
   /** Solo i giocatori con il Comandante acceso. */
-  commanders: Record<string, CommanderCount>
+  commanders: Record<string, CommanderCount>,
+  /** Nomi nell'ordine dei posti sullo schermo (dopo "Cambia posti"). */
+  seating: string[]
 ) => void;
 
 interface LcPlayer {
@@ -264,10 +266,12 @@ const LAYOUT_OPTIONS: Record<number, LayoutSpec[]> = {
       places: [at(1, 3, 90), at(1, 2, 90), at(1, 1, 90), at(2, 1, -90), at(2, 2, -90), at(2, 3, -90)],
     },
     {
-      label: 'Uno per lato',
-      columns: '0.7fr 1fr 1fr 0.7fr',
-      rows: '1fr 1fr',
-      places: [at(1, '1 / span 2', 90), at(2, 1, 180), at(3, 1, 180), at(4, '1 / span 2', -90), at(2, 2, 0), at(3, 2, 0)],
+      // Come a 5: due per lato lungo e uno a ogni capotavola, a tutta larghezza
+      // (niente colonne strette e alte). In senso orario dal capotavola in basso.
+      label: 'Due per lato e i capotavola',
+      columns: '1fr 1fr',
+      rows: '0.8fr 1fr 1fr 0.8fr',
+      places: [at('1 / span 2', 4, 0), at(1, 3, 90), at(1, 2, 90), at('1 / span 2', 1, 180), at(2, 2, -90), at(2, 3, -90)],
     },
   ],
 };
@@ -446,6 +450,27 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
   const [historyOpen, setHistoryOpen] = useState(false);
   const nextEntryId = useRef(1);
 
+  /** Posto sullo schermo → giocatore (indice in `lives`): "Cambia posti" scambia due posti. */
+  const [seats, setSeats] = useState(() => players.map((_, i) => i));
+  /** Modalità "Cambia posti": i tocchi scelgono i riquadri invece di cambiare i punti. */
+  const [swapping, setSwapping] = useState(false);
+  const [swapFirst, setSwapFirst] = useState<number | null>(null);
+
+  function pickSeat(seat: number) {
+    if (swapFirst === null) {
+      setSwapFirst(seat);
+      return;
+    }
+    if (swapFirst !== seat) {
+      setSeats((prev) => {
+        const next = [...prev];
+        [next[swapFirst], next[seat]] = [next[seat], next[swapFirst]];
+        return next;
+      });
+    }
+    setSwapFirst(null);
+  }
+
   const count = lives.length;
   const options = LAYOUT_OPTIONS[count];
   const [layoutIndex, setLayoutIndex] = useState(() => readLayoutIndex(count));
@@ -460,6 +485,8 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
 
   /** Cambia un contatore e lo scrive nella cronologia (unendo i tocchi ravvicinati). */
   function change(index: number, field: CounterField, delta: number, source?: string) {
+    // Durante "Cambia posti" i tocchi scelgono i posti, non cambiano i punti.
+    if (swapping) return;
     const player = lives[index];
     const from = readField(player, field, source);
     const to = field === 'life' ? from + delta : Math.max(0, from + delta);
@@ -513,6 +540,7 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
       Object.fromEntries(lives.map((p) => [p.name, lossCauses(p)])),
       Object.fromEntries(lives.map((p) => [p.name, p.poisonOn ? p.poison : 0])),
       Object.fromEntries(lives.filter((p) => p.cmdrOn).map((p) => [p.name, { tax: p.tax, damage: { ...p.cmdr } }])),
+      seats.map((i) => lives[i].name),
     ];
   }
 
@@ -533,9 +561,11 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
         className="grid flex-1 gap-2.5"
         style={{ gridTemplateColumns: layout.columns, gridTemplateRows: layout.rows }}
       >
-        {lives.map((p, i) => {
+        {seats.map((i, seat) => {
+          const p = lives[i];
+          // Il colore segue il giocatore, la posizione e la rotazione seguono il posto.
           const color = PIE_COLORS[i % PIE_COLORS.length];
-          const place = layout.places[i];
+          const place = layout.places[seat];
           return (
             <div
               key={p.name + i}
@@ -543,6 +573,24 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
               style={{ background: color, containerType: 'size', ...place.cell }}
             >
               <div className="absolute" style={innerStyle(place.rotation)}>
+              {swapping && (
+                // Copre −/+ e opzioni: durante lo scambio i tocchi scelgono solo i posti.
+                <button
+                  type="button"
+                  onClick={() => pickSeat(seat)}
+                  style={TAP_HIGHLIGHT_OFF}
+                  aria-label={swapFirst === null ? `Scegli ${p.name}` : swapFirst === seat ? `Annulla la scelta di ${p.name}` : `Scambia con ${p.name}`}
+                  aria-pressed={swapFirst === seat}
+                  className={cx(
+                    'absolute inset-0 z-40 flex items-start justify-center rounded-2xl pt-[6%] text-[clamp(13px,2.8vw,17px)] font-semibold text-white',
+                    swapFirst === seat ? 'border-4 border-white bg-black/35' : 'border-2 border-dashed border-white/70 bg-black/20'
+                  )}
+                >
+                  <span className="rounded-full bg-black/55 px-3 py-1">
+                    {swapFirst === null ? 'Tocca il primo giocatore' : swapFirst === seat ? 'Scelto: tocca con chi scambiarlo' : 'Tocca per scambiare'}
+                  </span>
+                </button>
+              )}
               {/* Come in Lotus: metà sinistra = −1, metà destra = +1, su tutta
                   la scheda. Il simbolo sta vicino al bordo, il punteggio al centro. */}
               <div className="absolute inset-0 flex">
@@ -762,9 +810,20 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
       {/* Opzioni di gioco: un solo tasto al centro del tavolo, senza testo,
           così si capisce da qualunque lato lo si guardi. Tra le schede (ogni
           giocatore ha la sua), non copre punteggi né nomi. */}
+      {swapping && (
+        <button
+          type="button"
+          onClick={() => { setSwapping(false); setSwapFirst(null); }}
+          style={TAP_HIGHLIGHT_OFF}
+          className="absolute left-1/2 top-1/2 z-50 flex h-[76px] w-[76px] -translate-x-1/2 -translate-y-1/2 select-none items-center justify-center rounded-full border-2 border-white bg-black/85 text-base font-bold text-white shadow-lg active:bg-black"
+        >
+          Fatto
+        </button>
+      )}
       <button
         type="button"
         onClick={() => setMenuOpen(true)}
+        hidden={swapping}
         style={TAP_HIGHLIGHT_OFF}
         aria-label="Opzioni di gioco"
         className={`absolute z-30 flex h-[76px] w-[76px] select-none items-center justify-center rounded-full border border-white/30 bg-black/75 text-[40px] shadow-lg active:bg-black ${
@@ -822,7 +881,13 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
                 onClick={() => { nextLayout(); setMenuOpen(false); }}
               >
                 Disposizione
-                <span className="text-xs font-normal opacity-70">{layout.label}</span>
+                {/* Cosa succede premendo: passa all'altra disposizione (quella attuale si vede già). */}
+                <span className="text-xs font-normal opacity-70">passa a {options[(layoutIndex + 1) % options.length].label}</span>
+              </Button>
+            )}
+            {lives.length > 1 && (
+              <Button variant="ghost" className="flex h-16 text-base" onClick={() => { setMenuOpen(false); setOptionsFor(null); setSwapping(true); }}>
+                Cambia posti
               </Button>
             )}
             <Button variant="ghost" className="flex h-16 text-base" onClick={() => onEdit(...snapshot())}>
@@ -831,7 +896,12 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
             <Button className="flex h-16 text-base" onClick={() => onFinish(...snapshot())}>
               Fine Partita
             </Button>
-            <Button variant="ghost" className={cx('flex h-16 text-base', !(options && options.length > 1) && 'col-span-2')} onClick={() => setMenuOpen(false)}>
+            {/* "Torna al Gioco" occupa tutta la riga quando i tasti sono dispari. */}
+            <Button
+              variant="ghost"
+              className={cx('flex h-16 text-base', (7 + (options && options.length > 1 ? 1 : 0) + (lives.length > 1 ? 1 : 0)) % 2 === 1 && 'col-span-2')}
+              onClick={() => setMenuOpen(false)}
+            >
               Torna al Gioco
             </Button>
           </div>

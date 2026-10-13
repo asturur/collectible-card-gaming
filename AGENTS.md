@@ -269,6 +269,9 @@ saved decks (games store only the deck, not its list): Main Deck only, no lands,
 merged by name. "Most played" counts copies; win rates count presence, need at least 5
 games, and are compared with the group average (wins / participations in the filter).
 Signature = the card a player uses most relative to the other players.
+Life counter (`mtglog/LifeCounter.tsx`): "Cambia posti" swaps screen seats (colour and counters
+follow the player, rotation follows the seat). The seat order is returned to `GameForm`, which
+reorders the player rows, so the saved `seat`, "Riprendi Partita" and the rematch keep it.
 Saved-deck charts use `/decks/:deckId/stats`, with a breadcrumb back to the deck.
 Detail and statistics pages share `mtglog/useSavedDeck.ts`; chart rendering stays
 in `DeckStatsContents`. The editor's local statistics preview uses its unsaved
