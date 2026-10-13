@@ -475,7 +475,8 @@ describe('Registro routes', () => {
   it('renders a shared game detail on a direct URL with its existing export controls', async () => {
     openApp('/games/g1');
     expect(await screen.findByRole('button', { name: 'Esporta' })).toBeInTheDocument();
-    expect(screen.getAllByText('🎉 Alice')).toHaveLength(2);
+    expect(screen.getAllByText('🎉')).toHaveLength(2);
+    expect(screen.getAllByText('Alice')).toHaveLength(2);
     expect(screen.getAllByText(/^vincitore — /)).toHaveLength(2);
     expect(screen.queryByLabelText('Cerca nelle partite')).not.toBeInTheDocument();
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();

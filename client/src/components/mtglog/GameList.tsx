@@ -171,11 +171,15 @@ function ShareCardBody({ game, orderedPlayerIndices, playerTags, playerEmojis, h
               style={p.winner ? { background: 'rgba(248,250,252,0.05)' } : undefined}
             >
               <div className="flex flex-col items-center px-1 text-center">
-                <span className="text-[15px] font-bold text-zaff-text">
-                  {p.winner && '🎉 '}
-                  {playerEmojis[i] && `${playerEmojis[i]} `}
-                  {p.name}
-                </span>
+                {/* Emoji su una riga a sé, che non può andare a capo: nel JPG (html-to-image)
+                    ogni elemento conserva l'altezza misurata a schermo, e su iPhone un'emoji
+                    disegnata più larga mandava a capo "🎉 Nome" sopra la riga seguente. */}
+                {(p.winner || playerEmojis[i]) && (
+                  <span className="whitespace-nowrap text-[17px] leading-tight" aria-hidden="true">
+                    {[p.winner ? '🎉' : null, playerEmojis[i]].filter(Boolean).join(' ')}
+                  </span>
+                )}
+                <span className="text-[15px] font-bold text-zaff-text">{p.name}</span>
                 {p.loss && p.loss.length > 0 && (
                   <span className="mt-0.5 text-[11px] font-bold uppercase tracking-wider text-red-400">
                     {p.loss.map((l) => l.toUpperCase()).join(' · ')}
