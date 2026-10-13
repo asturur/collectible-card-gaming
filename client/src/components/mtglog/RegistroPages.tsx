@@ -18,6 +18,7 @@ import MatchupStats, { MatchupStatsDetail } from './MatchupStats';
 import { computeMatchups, computeTally, matchupKey, rowToGame } from './stats';
 import SectionPage from '../ui/SectionPage';
 import TrendsStats from './TrendsStats';
+import CardStats from './CardStats';
 import { countNewGames, markGamesSeen } from './newGames';
 import { cx, HEADING_PAGE, STICKY_BELOW_TITLE, TEXT_MUTED } from '../ui/styles';
 import { useLeaveGuard } from '../ui/useLeaveGuard';
@@ -298,6 +299,11 @@ function PlayerDetailPage() {
   );
 }
 
+function CardStatsPage() {
+  const { games } = useRegistro();
+  return <SectionPage title="Statistiche Carte" stickyTitle wide><GameStatisticsData><CardStats games={games} /></GameStatisticsData></SectionPage>;
+}
+
 function TrendsPage() {
   const { games, decks } = useRegistro();
   return <SectionPage title="Andamento" stickyTitle wide><GameStatisticsData><TrendsStats games={games} decks={decks} /></GameStatisticsData></SectionPage>;
@@ -356,6 +362,7 @@ export const registroRoutes: RouteObject[] = [
   { path: 'stats/players', element: <PlayerStatsPage /> },
   { path: 'stats/players/:playerName', element: <PlayerDetailPage /> },
   { path: 'stats/trends', element: <TrendsPage /> },
+  { path: 'stats/cards', element: <CardStatsPage /> },
   { path: 'stats/matchups', element: <MatchupsPage /> },
   { path: 'stats/matchups/*', element: <MatchupDetailPage /> },
   { path: 'more', element: <Navigate to={paths.players} replace /> },

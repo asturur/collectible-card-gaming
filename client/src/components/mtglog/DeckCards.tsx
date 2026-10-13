@@ -94,7 +94,7 @@ function Placeholder({ name, pending, className }: { name: string; pending: bool
 /** Identità di una carta nell'elenco: sezione e nome (la stessa carta può stare in Main e in Sideboard). */
 const itemKey = (c: DeckCardsItem) => `${c.section === 'side' ? 'side' : 'main'}|${c.name}`;
 
-function CardViewer({
+export function CardViewer({
   items,
   startIndex,
   onClose,

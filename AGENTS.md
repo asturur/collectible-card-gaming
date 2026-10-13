@@ -227,6 +227,7 @@ the Vite basename (`/collectible-card-gaming/`).
 /stats/players             → player standings
 /stats/players/:playerName → individual player statistics / image export
 /stats/trends              → statistics over time (games and wins per month, streaks, favourite deck) / image export
+/stats/cards               → card statistics (most played, win rate, staples, signatures, colors, cursed) / image export
 /stats/matchups            → matchup statistics
 /stats/matchups/A/vs/B     → exact formation statistics / image export
 /more                     → redirects to /players (retired menu page)
@@ -263,6 +264,11 @@ is shortened once in Gestisci Giocatori, whose rename also updates saved games. 
 spaces (`sameName`): a player appears once per game, and no two saved decks share a
 name (`findDeckWithSameName` in `services/savedDecks.ts`), because Nuova Partita
 picks decks by name.
+Card statistics (`mtglog/cardStatsMath.ts`, page `CardStats.tsx`) use the CURRENT card lists of
+saved decks (games store only the deck, not its list): Main Deck only, no lands, printings
+merged by name. "Most played" counts copies; win rates count presence, need at least 5
+games, and are compared with the group average (wins / participations in the filter).
+Signature = the card a player uses most relative to the other players.
 Saved-deck charts use `/decks/:deckId/stats`, with a breadcrumb back to the deck.
 Detail and statistics pages share `mtglog/useSavedDeck.ts`; chart rendering stays
 in `DeckStatsContents`. The editor's local statistics preview uses its unsaved

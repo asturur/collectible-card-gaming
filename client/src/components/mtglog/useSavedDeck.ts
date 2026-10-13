@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getSavedDeck, subscribeSavedDecks, type SavedDeck } from '../../services/savedDecks';
+import { getSavedDeck, listSavedDecks, subscribeSavedDecks, type SavedDeck } from '../../services/savedDecks';
 
 interface DeckSnapshot {
   id: string;
@@ -33,4 +33,26 @@ export function useSavedDeck(deckId: string) {
   }, [deckId]);
   // A changed URL must never briefly show the previous deck while its effect starts.
   return snapshot.id === deckId ? snapshot : { deck: null, loading: true, error: '' };
+}
+
+/** Tutti i mazzi salvati con le loro carte (sola lettura), aggiornati quando qualcuno ne modifica uno. */
+export function useSavedDeckList() {
+  const [state, setState] = useState<{ decks: SavedDeck[]; loading: boolean; error: string }>({ decks: [], loading: true, error: '' });
+  useEffect(() => {
+    let active = true;
+    let request = 0;
+    async function load() {
+      const current = ++request;
+      try {
+        const decks = await listSavedDecks();
+        if (active && current === request) setState({ decks, loading: false, error: '' });
+      } catch (err) {
+        if (active && current === request) setState((prev) => ({ ...prev, loading: false, error: 'Non riesco a leggere i mazzi: ' + (err as Error).message }));
+      }
+    }
+    void load();
+    const unsubscribe = subscribeSavedDecks(load);
+    return () => { active = false; unsubscribe(); };
+  }, []);
+  return state;
 }
