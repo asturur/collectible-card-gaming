@@ -1,10 +1,13 @@
 import type { Game } from './GameList';
 import { makeDeckResolver } from './deckRefs';
+import { MIN_GAMES } from './stats';
 
-/** Partite con almeno questo numero di presenze entrano nelle classifiche di vittoria. */
-export const MIN_GAMES = 5;
+export { MIN_GAMES };
 /** Quante righe mostrare in ogni classifica. */
 export const TOP = 10;
+/** Firme: partite minime del giocatore (con mazzo salvato) e quota minima delle sue partite con la carta. */
+export const SIGNATURE_MIN_GAMES = 3;
+export const SIGNATURE_MIN_SHARE = 0.5;
 
 export type Period = 'all' | '30' | 'year';
 
@@ -66,6 +69,8 @@ export interface CardStats {
   gamesWithLists: number;
   /** Percentuale di vittoria media di una presenza (1 su N giocatori). */
   average: number;
+  /** Stessa media, ma sulle presenze con i colori del mazzo segnati: il riferimento di Colori. */
+  colorsAverage: number;
   played: CardRow[];
   winners: CardRow[];
   losers: CardRow[];
@@ -94,11 +99,18 @@ export function computeCardStats(games: Game[], decks: StatsDeck[]): CardStats {
   const colorTally = new Map<ColorRow['color'], { games: number; wins: number }>();
   let participations = 0;
   let wins = 0;
+  let colorParticipations = 0;
+  let colorWins = 0;
   let gamesWithLists = 0;
 
   for (const game of games) {
     let withList = false;
     for (const p of game.players) {
+      // La media di Colori conta ogni giocatore una volta, anche se il mazzo ha più colori.
+      if ((p.colors ?? []).some((color) => ['W', 'U', 'B', 'R', 'G'].includes(color))) {
+        colorParticipations++;
+        if (p.winner) colorWins++;
+      }
       for (const color of p.colors ?? []) {
         if (!['W', 'U', 'B', 'R', 'G'].includes(color)) continue;
         const t = colorTally.get(color as ColorRow['color']) ?? { games: 0, wins: 0 };
@@ -146,7 +158,7 @@ export function computeCardStats(games: Game[], decks: StatsDeck[]): CardStats {
 
   const signatures: SignatureRow[] = [];
   for (const [player, mine] of perPlayer) {
-    if (mine.games < 3) continue;
+    if (mine.games < SIGNATURE_MIN_GAMES) continue;
     const othersGames = participations - mine.games;
     let best: SignatureRow | null = null;
     let bestScore = -Infinity;
@@ -157,7 +169,7 @@ export function computeCardStats(games: Game[], decks: StatsDeck[]): CardStats {
       const othersShare = othersGames ? othersCount / othersGames : 0;
       // La carta che usa spesso e che gli altri usano poco (Sol Ring, che usano tutti, non la caratterizza).
       const score = myShare - othersShare;
-      if (myShare >= 0.5 && (score > bestScore || (score === bestScore && best && row.name.localeCompare(best.card.name, 'it') < 0))) {
+      if (myShare >= SIGNATURE_MIN_SHARE && (score > bestScore || (score === bestScore && best && row.name.localeCompare(best.card.name, 'it') < 0))) {
         bestScore = score;
         best = { player, card: all.find((r) => r.key === key)!, games: count, playerGames: mine.games, othersPct: Math.round(othersShare * 100) };
       }
@@ -169,6 +181,7 @@ export function computeCardStats(games: Game[], decks: StatsDeck[]): CardStats {
     games: games.length,
     gamesWithLists,
     average: pct(wins, participations),
+    colorsAverage: pct(colorWins, colorParticipations),
     played: [...all].sort((a, b) => b.copies - a.copies || b.games - a.games || byName(a, b)).slice(0, TOP),
     winners: [...ranked].sort((a, b) => b.pct - a.pct || b.games - a.games || byName(a, b)).slice(0, TOP),
     losers: [...ranked].sort((a, b) => a.pct - b.pct || b.games - a.games || byName(a, b)).slice(0, TOP),

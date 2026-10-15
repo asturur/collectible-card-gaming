@@ -215,8 +215,8 @@ describe('Registro routes', () => {
   });
 
   it.each([
-    ['/stats/players/missing', 'Nessuna partita registrata per questo giocatore.'],
-    ['/stats/matchups/Alice/vs/Carol', 'Nessuna partita registrata con questa formazione.'],
+    ['/stats/players/missing', 'Nessuna partita con vincitore registrata per questo giocatore.'],
+    ['/stats/matchups/Alice/vs/Carol', 'Nessuna partita con vincitore registrata con questa formazione.'],
     ['/stats/matchups/Alice', 'Indirizzo della sfida non valido.'],
     ['/stats/matchups/Alice/vs/Alice', 'Indirizzo della sfida non valido.'],
     ['/stats/matchups/Alice/vs/', 'Indirizzo della sfida non valido.'],
@@ -237,14 +237,14 @@ describe('Registro routes', () => {
     expect(router.state.location.pathname).toBe(path);
     mock.rows = [];
     await act(async () => { mock.subscribers.get('partite')?.forEach(onChange => onChange()); });
-    expect(await screen.findByRole('alert')).toHaveTextContent('Nessuna partita registrata');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Nessuna partita con vincitore registrata');
   });
 
   it.each(['/stats/players/Alice', '/stats/matchups/Alice/vs/Bob'])('shows shared-data failures at %s without a false empty state', async path => {
     mock.gamesError = { message: 'Riprova.' };
     openApp(path);
     expect(await screen.findByRole('alert')).toHaveTextContent('Non riesco a leggere il registro condiviso: Riprova.');
-    expect(screen.queryByText(/Nessuna partita registrata/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Nessuna partita con vincitore registrata/)).not.toBeInTheDocument();
   });
 
   it.each(['/stats/players', '/stats/matchups'])('builds drill-down links under the deployment base from %s', async path => {
@@ -596,5 +596,68 @@ describe('Registro routes', () => {
     openApp('/zaff/');
     expect(await screen.findByRole('heading', { name: 'ZAFF' })).toBeInTheDocument();
     expect(document.title).toBe('ZAFF — Collectible Card Gaming');
+  });
+});
+
+describe('Dati aggiornati e statistiche', () => {
+  const newGame = (id: string, name: string, winner = true) => ({
+    id, date: '2026-10-09', format: 'Commander', created_by: 'u1', players: [
+      { name, deck: 'Draghi', winner }, { name: 'Bob', deck: 'Elfi', winner: false },
+    ],
+  });
+  const mainNav = () => within(screen.getByRole('navigation', { name: 'Navigazione principale' }));
+
+  it('rilegge le partite dopo il salvataggio, senza aspettare il tempo reale', async () => {
+    const user = userEvent.setup();
+    openApp('/games/new');
+    await screen.findByText('Form partita: nuova');
+    mock.rows.push(newGame('g9', 'Zoe'));
+    await user.click(screen.getByRole('button', { name: 'Salva partita' }));
+    expect(await screen.findByRole('heading', { name: 'Partite Salvate' })).toBeInTheDocument();
+    expect(await screen.findAllByText(/Zoe/)).not.toHaveLength(0);
+  });
+
+  it('rilegge partite e mazzi toccando Home e tornando nell\'app', async () => {
+    const user = userEvent.setup();
+    openApp('/stats/players');
+    expect(await screen.findByRole('link', { name: 'Alice' })).toBeInTheDocument();
+    mock.rows.push(newGame('g9', 'Zoe'));
+    await user.click(mainNav().getByRole('link', { name: 'Home' }));
+    expect(await screen.findAllByText(/Zoe/)).not.toHaveLength(0);
+
+    mock.rows.push(newGame('g10', 'Ugo'));
+    await act(async () => { document.dispatchEvent(new Event('visibilitychange')); });
+    expect(await screen.findAllByText(/Ugo/)).not.toHaveLength(0);
+  });
+
+  it('non conta nelle statistiche le partite senza vincitore', async () => {
+    mock.rows.push(newGame('g9', 'Zoe', false));
+    openApp('/stats/players');
+    expect(await screen.findByRole('link', { name: 'Alice' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Zoe' })).not.toBeInTheDocument();
+  });
+
+  it('apre la FAQ dal menu Altro e mostra l\'argomento scelto nell\'indirizzo', async () => {
+    const user = userEvent.setup();
+    const { router } = openApp('/');
+    await screen.findByRole('heading', { name: 'Registro partite di Magic' });
+    await user.click(mainNav().getByRole('link', { name: 'Altro' }));
+    await user.click(screen.getByRole('link', { name: /FAQ/ }));
+    expect(router.state.location.pathname).toBe('/faq');
+    expect(await screen.findByRole('heading', { name: 'Regole comuni', level: 2 })).toBeInTheDocument();
+    await user.click(within(screen.getByRole('navigation', { name: 'Sezioni' })).getByRole('link', { name: 'Carte' }));
+    expect(router.state.location.pathname).toBe('/faq/cards');
+    await user.click(within(screen.getByRole('navigation', { name: 'Argomenti di Carte' })).getByRole('link', { name: 'Firme' }));
+    expect(router.state.location.pathname).toBe('/faq/cards/signature');
+    expect(screen.getByRole('heading', { name: 'Carte · Firme', level: 2 })).toBeInTheDocument();
+    expect(within(screen.getByRole('navigation', { name: 'Argomenti di Carte' })).getByRole('link', { name: 'Firme' })).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('porta da una pagina statistica alla sua spiegazione', async () => {
+    const user = userEvent.setup();
+    const { router } = openApp('/stats/players');
+    await user.click(await screen.findByRole('link', { name: /Come si calcola/ }));
+    expect(router.state.location.pathname).toBe('/faq/players');
+    expect(await screen.findByRole('heading', { name: 'Giocatori · Classifica', level: 2 })).toBeInTheDocument();
   });
 });

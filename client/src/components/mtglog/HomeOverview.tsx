@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { paths } from '../../router';
 import { ManaIcons } from './ManaIcon';
-import { computeTally, dateLabel } from './stats';
+import { computeTally, dateLabel, decidedGames } from './stats';
 import type { Game } from './GameList';
 import Badge from '../ui/Badge';
 import { cx } from '../ui/styles';
@@ -19,7 +19,8 @@ interface HomeOverviewProps {
 }
 
 /** Quante voci mostrare nelle liste della pagina iniziale. */
-const SHOWN = 3;
+/** Righe di ogni blocco della Home (anche la mini-classifica). */
+export const SHOWN = 3;
 
 function Section({ title, to, badge, children }: { title: string; to: string; badge?: ReactNode; children: ReactNode }) {
   return (
@@ -82,7 +83,8 @@ export default function HomeOverview({
     if (recentDecks.length >= SHOWN) break;
   }
 
-  const top = computeTally(games).slice(0, SHOWN);
+  // La mini-classifica è una statistica: le partite senza vincitore non contano.
+  const top = computeTally(decidedGames(games)).slice(0, SHOWN);
   const medals = ['🥇', '🥈', '🥉'];
 
   const stats: { label: string; value: number }[] = [

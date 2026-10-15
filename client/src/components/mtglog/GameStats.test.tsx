@@ -15,6 +15,13 @@ vi.mock('../../services/supabase', () => ({
     { id: 'g2', date: '2026-10-08', players: [
       { name: 'Alice', deck: 'Elfi', winner: false }, { name: 'Bob', deck: 'Vecchio nome', deckId: 'd2', winner: true },
     ] },
+    ...[3, 4, 5, 6].map((n) => ({ id: 'g' + n, date: '2026-10-09', players: [
+      { name: 'Alice', deck: 'Elfi', winner: false }, { name: 'Bob', deck: 'Vecchio nome', deckId: 'd2', winner: true },
+    ] })),
+    // Senza vincitore: non conta nelle statistiche.
+    { id: 'g7', date: '2026-10-10', players: [
+      { name: 'Alice', deck: 'Partita interrotta', winner: false }, { name: 'Bob', deck: 'Elfi', winner: false },
+    ] },
   ] }) }) },
 }));
 vi.mock('../../services/savedDecks', () => ({ listSavedDecks: vi.fn(), subscribeSavedDecks: () => () => {} }));
@@ -61,6 +68,22 @@ describe('Deck statistics navigation', () => {
     await user.clear(screen.getByRole('searchbox', { name: 'Cerca nelle statistiche dei mazzi' }));
     await user.type(screen.getByRole('searchbox', { name: 'Cerca nelle statistiche dei mazzi' }), 'zzz');
     expect(screen.getByText('Nessun mazzo corrisponde alla ricerca.')).toBeInTheDocument();
+  });
+});
+
+describe('Deck statistics ranking', () => {
+  it('ranks win rate only from 5 games and leaves the others below, without games lacking a winner', async () => {
+    const user = userEvent.setup();
+    render(<MemoryRouter><GameStats /></MemoryRouter>);
+    await screen.findByRole('link', { name: /Elfi/ });
+    expect(screen.queryByText('Partita interrotta')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Elfi/ })).toHaveTextContent('6 partite · 1 vittorie · 17%');
+    await user.click(screen.getByRole('button', { name: '% di vittoria' }));
+    const note = screen.getAllByText(/^Meno di 5 partite: fuori dalla classifica/)[0];
+    const order = [screen.getByRole('link', { name: /Goblin Rinominati/ }), screen.getByRole('link', { name: /Elfi/ }), note, screen.getAllByText('Mazzo cancellato')[0]];
+    for (let i = 1; i < order.length; i++) {
+      expect(order[i - 1].compareDocumentPosition(order[i]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    }
   });
 });
 

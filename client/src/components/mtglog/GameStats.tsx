@@ -2,8 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { subscribeToTable, supabase, TABLE_GAMES } from '../../services/supabase';
 import { listSavedDecks, subscribeSavedDecks, type SavedDeck } from '../../services/savedDecks';
 import type { Game } from './GameList';
-import { rowToGame } from './stats';
+import { decidedGames, MIN_GAMES, rowToGame } from './stats';
 import { makeDeckResolver } from './deckRefs';
+import { useReloadOnResume } from './useReloadOnResume';
+import { HowItWorks } from './Faq';
+
 import Badge from '../ui/Badge';
 import { Link } from 'react-router';
 import { paths } from '../../router';
@@ -127,14 +130,28 @@ function DeckRow({ r, interactive }: { r: DeckStatRow; interactive: boolean }) {
   );
 }
 
-/** Elenco mazzi: lo stesso identico a schermo e nell'immagine esportata. */
-function DeckStatsList({ rows, interactive = false }: { rows: DeckStatRow[]; interactive?: boolean }) {
+/** Elenco mazzi: lo stesso identico a schermo e nell'immagine esportata.
+ *  Ordinando per percentuale, i mazzi con meno di `MIN_GAMES` partite stanno in
+ *  fondo, fuori classifica: una sola partita vinta non vale un 100% in testa. */
+function DeckStatsList({ rows, sort, interactive = false }: { rows: DeckStatRow[]; sort: DeckSort; interactive?: boolean }) {
   if (rows.length === 0) return <p className={TEXT_MINI}>Nessun mazzo con partite registrate.</p>;
+  const ranked = sort === 'winrate' ? rows.filter((r) => r.g >= MIN_GAMES) : rows;
+  const unranked = sort === 'winrate' ? rows.filter((r) => r.g < MIN_GAMES) : [];
   return (
     <div>
-      {rows.map((r) => (
+      {ranked.map((r) => (
         <DeckRow key={r.deckId ?? r.deck} r={r} interactive={interactive} />
       ))}
+      {unranked.length > 0 && (
+        <>
+          <p className={cx('mb-2', ranked.length > 0 && 'mt-5', TEXT_MINI)}>
+            Meno di {MIN_GAMES} partite: fuori dalla classifica per percentuale, in ordine di partite giocate.
+          </p>
+          {unranked.map((r) => (
+            <DeckRow key={r.deckId ?? r.deck} r={r} interactive={interactive} />
+          ))}
+        </>
+      )}
     </div>
   );
 }
@@ -161,7 +178,7 @@ export default function GameStats() {
         supabase.from(TABLE_GAMES).select('*'), listSavedDecks(),
       ]);
       if (games.error) throw games.error;
-      setGames((games.data ?? []).map(rowToGame));
+      setGames(decidedGames((games.data ?? []).map(rowToGame)));
       setDecks(deckRows);
       setError('');
     } catch (err) { setError('Non riesco a leggere le statistiche: ' + (err as Error).message); }
@@ -182,10 +199,16 @@ export default function GameStats() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useReloadOnResume(() => { void loadData(); }, Boolean(supabase));
+
   const deckStats = useMemo(() => computeDeckStats(games, decks), [games, decks]);
 
+  // Per percentuale: prima i mazzi in classifica (almeno MIN_GAMES partite), poi gli altri per partite.
+  const ranked = (r: DeckStatRow) => (sort === 'winrate' && r.g >= MIN_GAMES ? 1 : 0);
   const rows = [...deckStats].sort((a, b) =>
-    sort === 'games' ? b.g - a.g || b.pct - a.pct : b.pct - a.pct || b.g - a.g
+    ranked(b) - ranked(a) ||
+    (ranked(a) ? b.pct - a.pct || b.g - a.g : b.g - a.g || b.pct - a.pct) ||
+    a.deck.localeCompare(b.deck, 'it')
   );
 
   // La ricerca filtra solo l'elenco a schermo: l'immagine esportata resta la classifica completa.
@@ -199,6 +222,7 @@ export default function GameStats() {
 
   return (
     <>
+      <HowItWorks to={paths.faqTopic('decks')} />
       {/* Ricerca e ordinamento restano in cima, sotto il titolo, mentre si scorre l'elenco. */}
       <div className={cx(STICKY_BELOW_TITLE, 'sticky z-10 -mx-1 mb-3 bg-zaff-surface px-1 pb-1 pt-1')}>
         {deckStats.length > 0 && (
@@ -227,7 +251,7 @@ export default function GameStats() {
       {rows.length > 0 && shownRows.length === 0 ? (
         <p className={TEXT_MUTED}>Nessun mazzo corrisponde alla ricerca.</p>
       ) : (
-        <DeckStatsList rows={shownRows} interactive />
+        <DeckStatsList rows={shownRows} sort={sort} interactive />
       )}
 
       <ExportedImage image={exporter.image} error={exporter.error} alt="Statistiche mazzi, da salvare" />
@@ -248,7 +272,7 @@ export default function GameStats() {
           title="Statistiche Mazzi"
           subtitle={`Percentuale di vittoria di ogni mazzo · ordinati per ${sortLabel.toLowerCase()} · aggiornato al ${todayLabel()}`}
         />
-        <DeckStatsList rows={rows} />
+        <DeckStatsList rows={rows} sort={sort} />
       </ExportCardHost>
 
       {error && (

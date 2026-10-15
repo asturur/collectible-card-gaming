@@ -10,12 +10,12 @@ import {
 } from './ImageExport';
 import type { Game } from './GameList';
 import type { DeckRef } from './deckRefs';
+import { HowItWorks } from './Faq';
+import { paths } from '../../router';
 import { computeTally, PIE_COLORS } from './stats';
-import { computeFavoriteDecks, computeMonthly, computeStreaks, monthLabel, monthShortLabel, monthSummary } from './trends';
+import { computeFavoriteDecks, computeMonthly, computeStreaks, monthLabel, monthShortLabel, monthSummary, SHOWN_MONTHS } from './trends';
 import { cx, TEXT_MINI, TEXT_MUTED } from '../ui/styles';
 
-/** Quanti mesi mostrare nei grafici. */
-const SHOWN_MONTHS = 12;
 
 const SECTION_TITLE = 'mb-2 mt-5 text-sm font-semibold uppercase tracking-wide text-zaff-muted';
 const ROW = 'mb-2 flex items-center gap-3 rounded-lg border border-zaff-border bg-zaff-bg px-3.5 py-2.5';
@@ -126,6 +126,7 @@ export default function TrendsStats({ games, decks }: { games: Game[]; decks: re
 
   return (
     <>
+      <HowItWorks to={paths.faqTopic('trends')} />
       <TrendsContent games={games} decks={decks} />
 
       <ExportedImage image={exporter.image} error={exporter.error} alt="Andamento nel tempo, da salvare" />

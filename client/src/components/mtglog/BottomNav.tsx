@@ -53,6 +53,7 @@ const DIALS: Record<'stats' | 'more', { label: string; items: SpeedDialItem[] }>
     items: [
       { id: 'roster', label: 'Gestisci Giocatori', icon: '👥', to: paths.players },
       { id: 'zaff', label: 'Vai a ZAFF', icon: '🎮', to: paths.zaff },
+      { id: 'faq', label: 'FAQ', icon: '❓', to: paths.faq },
       { id: 'logout', label: 'Esci', icon: '🚪', onSelect: () => { void supabase?.auth.signOut(); } },
     ],
   },
@@ -82,7 +83,10 @@ function CloseIcon() {
  * Partite, Mazzi, la casa al centro per tornare alla Home, Statistiche e Altro.
  * Le sezioni sono pagine; solo i dialoghi di lavoro e il segna-punti la coprono.
  */
-export default function BottomNav() {
+export default function BottomNav({ onHome }: {
+  /** Tocco sul tasto Home: rilegge partite e mazzi (anche se si è già sulla Home). */
+  onHome?: () => void;
+} = {}) {
   const location = useLocation();
   const [dial, setDial] = useState<'stats' | 'more' | null>(null);
   const pathname = location.pathname.replace(/\/+$/, '') || paths.home;
@@ -90,7 +94,7 @@ export default function BottomNav() {
     : pathname === paths.games || pathname.startsWith(`${paths.games}/`) ? 'games'
     : pathname === paths.decks || pathname.startsWith(`${paths.decks}/`) ? 'decks'
     : pathname === paths.stats || pathname.startsWith(`${paths.stats}/`) ? 'stats'
-    : pathname === paths.players || pathname === paths.more ? 'more' : null;
+    : pathname === paths.players || pathname === paths.more || pathname === paths.faq || pathname.startsWith(`${paths.faq}/`) ? 'more' : null;
   // Cambiando pagina il menu rapido si chiude; Esc lo chiude da tastiera.
   useEffect(() => { setDial(null); }, [location.pathname]);
   useEffect(() => {
@@ -145,7 +149,7 @@ export default function BottomNav() {
           to={paths.home}
           aria-label="Home"
           aria-current={active === 'home' ? 'page' : undefined}
-          onClick={() => setDial(null)}
+          onClick={() => { setDial(null); onHome?.(); }}
           className="flex h-16 items-center justify-center"
         >
           <span

@@ -40,6 +40,7 @@ describe('CardStats', () => {
     await user.click(screen.getByRole('button', { name: 'Più vincenti' }));
     expect(screen.getAllByText(/Media del gruppo/)[0]).toHaveTextContent('Media del gruppo: 50%');
     expect(list().getAllByRole('listitem')[0]).toHaveTextContent('Counterspell4 vittorie su 6 partite67%');
+    expect(screen.getByRole('link', { name: /Come si calcola/ })).toHaveAttribute('href', '/faq/cards/winners');
 
     await user.selectOptions(screen.getByLabelText('Formato'), 'Commander');
     expect(screen.getAllByText('Nessuna carta con almeno 5 partite in questo filtro.')[0]).toBeInTheDocument();

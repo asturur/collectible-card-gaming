@@ -8,6 +8,18 @@ export interface TallyRow {
   w: number;
 }
 
+/** Partite con almeno questo numero di presenze entrano nelle classifiche per percentuale di vittoria. */
+export const MIN_GAMES = 5;
+
+/**
+ * Partite che contano per le statistiche: quelle con almeno un vincitore segnato.
+ * Le partite salvate senza vincitore restano nel registro (elenco, Home), ma non
+ * spostano percentuali, classifiche e serie.
+ */
+export function decidedGames(games: Game[]): Game[] {
+  return games.filter((game) => game.players.some((p) => p.winner));
+}
+
 export const PIE_COLORS = ['#9E7A31', '#2C6FA8', '#AF3A2C', '#2E7A4E', '#4B3F57', '#8B857A', '#6B4E9E', '#C9762E'];
 
 /** Partite giocate e vinte per ciascun giocatore, dalle più vinte in giù. */

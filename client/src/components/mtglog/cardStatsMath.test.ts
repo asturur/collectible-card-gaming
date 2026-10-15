@@ -55,6 +55,20 @@ describe('computeCardStats', () => {
     expect(s.colors.map((c) => [c.color, c.wins, c.games])).toEqual([['U', 4, 6], ['G', 2, 6], ['R', 0, 6]]);
   });
 
+  it('compares colors with an average that counts each colored player once', () => {
+    const two: [string, string][] = [['Andrea', 'A'], ['Bea', 'B']];
+    const three: [string, string][] = [...two, ['Carlo', 'C']];
+    const multi = computeCardStats([
+      game('Andrea', two, { Andrea: ['W', 'U'], Bea: ['G'] }),
+      game('Bea', three, { Andrea: ['W', 'U'], Bea: ['G'] }),
+    ], decks);
+    // Colori: 2 vittorie su 4 giocatori con colori (Carlo non ne ha); carte: 2 su 5 presenze.
+    expect(multi.colorsAverage).toBe(50);
+    expect(multi.average).toBe(40);
+    expect(multi.colors.find((c) => c.color === 'W')).toMatchObject({ wins: 1, games: 2 });
+    expect(s.colorsAverage).toBe(Math.round((6 / 18) * 100));
+  });
+
   it('marks cards played at least 5 times without a win as cursed', () => {
     const cursed = computeCardStats(games.slice(0, 6), decks).cursed;
     expect(cursed.map((r) => r.name)).toEqual(['Lightning Bolt']);

@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import type { Game } from './GameList';
-import { computeCardStats, inPeriod, MIN_GAMES, type CardRow, type Period } from './cardStatsMath';
+import { computeCardStats, inPeriod, MIN_GAMES, SIGNATURE_MIN_GAMES, type CardRow, type Period } from './cardStatsMath';
 import { useSavedDeckList } from './useSavedDeck';
 import { useDeckImages } from './useDeckImages';
 import { CardViewer } from './DeckCards';
@@ -10,6 +10,8 @@ import FilterTabs from '../ui/FilterTabs';
 import { SelectField } from '../ui/Field';
 import { cx, TEXT_MINI, TEXT_MUTED } from '../ui/styles';
 import { ExportCardHost, ExportedImage, ExportHeader, ShareBar, todayIso, todayLabel, useImageExport } from './ImageExport';
+import { HowItWorks } from './Faq';
+import { paths } from '../../router';
 
 type View = 'played' | 'winners' | 'losers' | 'staples' | 'signature' | 'colors' | 'cursed';
 
@@ -154,7 +156,7 @@ export default function CardStats({ games }: { games: Game[] }) {
           </>
         );
       case 'signature':
-        return stats.signatures.length === 0 ? empty('Servono almeno 3 partite con mazzi salvati per giocatore.') : (
+        return stats.signatures.length === 0 ? empty(`Servono almeno ${SIGNATURE_MIN_GAMES} partite con mazzi salvati per giocatore.`) : (
           <>
             <p className={cx('mb-3', TEXT_MINI)}>La carta che ogni giocatore usa più spesso, rispetto a quanto la usano gli altri.</p>
             <ul>{stats.signatures.map((s) => (
@@ -166,7 +168,7 @@ export default function CardStats({ games }: { games: Game[] }) {
       case 'colors':
         return stats.colors.length === 0 ? empty('Nessuna partita con i colori dei mazzi segnati.') : (
           <>
-            <Average average={stats.average} note="percentuale di vittoria dei mazzi che contengono il colore." />
+            <Average average={stats.colorsAverage} note="dei giocatori con i colori del mazzo segnati: sopra questa percentuale un colore vince più del normale." />
             <ul>{stats.colors.map((c) => (
               <li key={c.color} className={ROW}>
                 <ManaIcons colors={[c.color]} className="shrink-0 text-2xl" />
@@ -177,7 +179,7 @@ export default function CardStats({ games }: { games: Game[] }) {
                     <span className="block h-full rounded bg-gradient-to-r from-zaff-primary to-zaff-accent" style={{ width: `${c.pct}%` }} />
                   </span>
                 </span>
-                <Pct pct={c.pct} average={stats.average} />
+                <Pct pct={c.pct} average={stats.colorsAverage} />
               </li>
             ))}</ul>
           </>
@@ -202,6 +204,7 @@ export default function CardStats({ games }: { games: Game[] }) {
         In base alle liste attuali dei mazzi · {stats.gamesWithLists} partite su {stats.games} con lista carte · solo Main Deck, terre escluse.
         {view === 'colors' && ' I colori vengono da tutte le partite del filtro.'}
       </p>
+      <HowItWorks to={paths.faqTopic('cards', view)} className="-mt-2" />
 
       {renderView(true)}
 

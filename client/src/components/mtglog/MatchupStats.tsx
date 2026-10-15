@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import { paths } from '../../router';
 import type { Game } from './GameList';
 import GlossyPie from './GlossyPie';
+import { HowItWorks } from './Faq';
 import {
   ShareBar,
   ExportCardHost,
@@ -106,6 +107,7 @@ export default function MatchupStats({ games }: MatchupStatsProps) {
 
   return (
     <>
+      <HowItWorks to={paths.faqTopic('matchups')} />
       {/* La ricerca resta in cima, sotto il titolo, mentre si scorre l'elenco. */}
       <div className={cx(STICKY_BELOW_TITLE, 'sticky z-10 -mx-1 mb-2 bg-zaff-surface px-1 pb-1 pt-1')}>
         <SearchField value={query} onChange={setQuery} placeholder="Cerca giocatore…" label="Cerca nelle sfide" />
@@ -142,6 +144,7 @@ export function MatchupStatsDetail({ selected }: { selected: MatchupRow }) {
   const exporter = useImageExport();
   return (
     <>
+      <HowItWorks to={paths.faqTopic('matchups')} />
       <MatchupDetail selected={selected} idSuffix="matchup" />
 
       <ExportedImage image={exporter.image} error={exporter.error} alt={`Statistiche della sfida ${selected.label}`} />

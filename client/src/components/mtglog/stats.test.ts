@@ -1,6 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { computeMatchups, matchupKey } from './stats';
+import { computeMatchups, decidedGames, matchupKey } from './stats';
 import type { Game } from './GameList';
+
+describe('decidedGames', () => {
+  it('keeps only games with a winner for the statistics', () => {
+    const base = { date: '2026-10-01', format: '', notes: '', group: '', createdBy: null, startedAt: null, endedAt: null };
+    const player = (name: string, winner: boolean) => ({ name, deck: '', desc: '', life: 0, winner, colors: [] });
+    const won = { ...base, id: 'a', players: [player('Anna', true), player('Bea', false)] };
+    const open = { ...base, id: 'b', players: [player('Anna', false), player('Bea', false)] };
+    expect(decidedGames([won, open]).map((g) => g.id)).toEqual(['a']);
+  });
+});
 
 describe('Exact matchup identities', () => {
   it('keeps names containing the old delimiter in separate formations', () => {

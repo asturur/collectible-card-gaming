@@ -3,6 +3,9 @@
 import type { Game } from './GameList';
 import { makeDeckResolver, type DeckRef } from './deckRefs';
 
+/** Quanti mesi mostrare nei grafici di Andamento. */
+export const SHOWN_MONTHS = 12;
+
 const MONTH_NAMES = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
 
 /** "2026-10" → "Ottobre 2026". */

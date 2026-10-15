@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useSectionInView } from './useSectionInView';
 import { Navigate, useLocation, useNavigate, useParams, type RouteObject } from 'react-router';
 import { useRegistro } from '../MtgLog';
@@ -15,7 +15,7 @@ import GameList, { type Game } from './GameList';
 import GameStats from './GameStats';
 import Standings, { PlayerStatsDetail } from './Standings';
 import MatchupStats, { MatchupStatsDetail } from './MatchupStats';
-import { computeMatchups, computeTally, matchupKey, rowToGame } from './stats';
+import { computeMatchups, computeTally, decidedGames, matchupKey, rowToGame } from './stats';
 import SectionPage from '../ui/SectionPage';
 import TrendsStats from './TrendsStats';
 import CardStats from './CardStats';
@@ -26,11 +26,18 @@ import { canEdit, supabase, TABLE_GAMES } from '../../services/supabase';
 import { deleteSavedDeck, type SavedDeck } from '../../services/savedDecks';
 import type { DeckEntry } from '../../services/deckCards';
 import { matchupNamesFromPath, paths, playerNameFromPath } from '../../router';
+import Faq from './Faq';
 
 const DECKS_CRUMB = { label: 'Mazzi', to: paths.decks };
 const GAMES_CRUMB = { label: 'Partite', to: paths.games };
 
 /** All game statistics use the already mounted Registro query and subscription. */
+/** Le partite delle statistiche: solo quelle con un vincitore segnato (vedi `decidedGames`). */
+function useStatsGames() {
+  const { games } = useRegistro();
+  return useMemo(() => decidedGames(games), [games]);
+}
+
 function GameStatisticsData({ children }: { children: ReactNode }) {
   const { gamesLoading, gamesError } = useRegistro();
   if (gamesLoading) return <p className={TEXT_MUTED}>Caricamento…</p>;
@@ -72,7 +79,7 @@ function GameEditorPage({ rematch = false }: { rematch?: boolean }) {
 }
 
 function GameEditorSession({ gameId, rematch }: { gameId?: string; rematch: boolean }) {
-  const { userId, games, gamesLoading, gamesError } = useRegistro();
+  const { userId, games, gamesLoading, gamesError, reloadGames } = useRegistro();
   const navigate = useNavigate();
   // The form's original record is also its conflict baseline. Realtime updates
   // must not replace it or discard a draft if someone deletes the record.
@@ -112,7 +119,8 @@ function GameEditorSession({ gameId, rematch }: { gameId?: string; rematch: bool
           rematchFrom={rematch ? game : null}
           onSavingChange={guard.onPersistingChange}
           onBack={() => { void navigate(backTo); }}
-          onSaved={() => guard.onSaved(paths.games)}
+          // Rilegge subito l'elenco: la partita appena salvata compare senza aspettare il tempo reale.
+          onSaved={() => { void reloadGames(); guard.onSaved(paths.games); }}
         />
       )}
     </SectionPage>
@@ -274,7 +282,7 @@ function DeckEditorSession({ deckId }: { deckId?: string }) {
 }
 
 function PlayerStatsPage() {
-  const { games } = useRegistro();
+  const games = useStatsGames();
   return (
     <SectionPage title="Statistiche Giocatori" stickyTitle wide>
       <GameStatisticsData><Standings rows={computeTally(games)} showPie /></GameStatisticsData>
@@ -283,7 +291,8 @@ function PlayerStatsPage() {
 }
 
 function PlayerDetailPage() {
-  const { games, decks } = useRegistro();
+  const { decks } = useRegistro();
+  const games = useStatsGames();
   const { pathname } = useLocation();
   const playerName = playerNameFromPath(pathname);
   const row = computeTally(games).find(player => player.name === playerName);
@@ -293,29 +302,30 @@ function PlayerDetailPage() {
     ]}>
       <GameStatisticsData>
         {row ? <PlayerStatsDetail key={row.name} row={row} games={games} decks={decks} />
-          : <p role="alert">Nessuna partita registrata per questo giocatore.</p>}
+          : <p role="alert">Nessuna partita con vincitore registrata per questo giocatore.</p>}
       </GameStatisticsData>
     </SectionPage>
   );
 }
 
 function CardStatsPage() {
-  const { games } = useRegistro();
+  const games = useStatsGames();
   return <SectionPage title="Statistiche Carte" stickyTitle wide><GameStatisticsData><CardStats games={games} /></GameStatisticsData></SectionPage>;
 }
 
 function TrendsPage() {
-  const { games, decks } = useRegistro();
+  const { decks } = useRegistro();
+  const games = useStatsGames();
   return <SectionPage title="Andamento" stickyTitle wide><GameStatisticsData><TrendsStats games={games} decks={decks} /></GameStatisticsData></SectionPage>;
 }
 
 function MatchupsPage() {
-  const { games } = useRegistro();
+  const games = useStatsGames();
   return <SectionPage title="Statistiche per Sfida" stickyTitle wide><GameStatisticsData><MatchupStats games={games} /></GameStatisticsData></SectionPage>;
 }
 
 function MatchupDetailPage() {
-  const { games } = useRegistro();
+  const games = useStatsGames();
   const { pathname } = useLocation();
   const names = matchupNamesFromPath(pathname);
   const selected = names ? computeMatchups(games).find(matchup => matchup.key === matchupKey(names)) : undefined;
@@ -325,7 +335,7 @@ function MatchupDetailPage() {
     ]}>
       <GameStatisticsData>
         {selected ? <MatchupStatsDetail key={selected.key} selected={selected} />
-          : <p role="alert">{names ? 'Nessuna partita registrata con questa formazione.' : 'Indirizzo della sfida non valido.'}</p>}
+          : <p role="alert">{names ? 'Nessuna partita con vincitore registrata con questa formazione.' : 'Indirizzo della sfida non valido.'}</p>}
       </GameStatisticsData>
     </SectionPage>
   );
@@ -336,6 +346,15 @@ function PlayersPage() {
   return (
     <SectionPage title="Giocatori" stickyTitle subtitle="Tocca un nome per vedere le partite giocate e le statistiche, o per rinominarlo o cancellarlo. Le partite già salvate mantengono comunque il nome che avevano.">
       <PlayersRoster userId={userId} games={games} />
+    </SectionPage>
+  );
+}
+
+function FaqPage() {
+  const { section, topic } = useParams();
+  return (
+    <SectionPage title="FAQ Statistiche" subtitle="Come si calcola ogni statistica del registro." stickyTitle>
+      <Faq sectionId={section} topicId={topic} />
     </SectionPage>
   );
 }
@@ -367,5 +386,8 @@ export const registroRoutes: RouteObject[] = [
   { path: 'stats/matchups/*', element: <MatchupDetailPage /> },
   { path: 'more', element: <Navigate to={paths.players} replace /> },
   { path: 'players', element: <PlayersPage /> },
+  { path: 'faq', element: <FaqPage /> },
+  { path: 'faq/:section', element: <FaqPage /> },
+  { path: 'faq/:section/:topic', element: <FaqPage /> },
   { path: '*', element: <NotFoundPage /> },
 ];

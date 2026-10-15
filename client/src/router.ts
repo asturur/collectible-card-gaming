@@ -25,6 +25,8 @@ export const paths = {
   matchup: (names: readonly string[]) => `/stats/matchups/${names.map(encodeURIComponent).join('/vs/')}`,
   more: '/more',
   players: '/players',
+  faq: '/faq',
+  faqTopic: (section: string, topic?: string) => `/faq/${encodeURIComponent(section)}${topic ? `/${encodeURIComponent(topic)}` : ''}`,
 } as const;
 
 /** Decode each name once, before interpreting it as app data. Keeping the raw

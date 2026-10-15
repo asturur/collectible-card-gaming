@@ -6,6 +6,7 @@ import { makeDeckResolver, type DeckRef } from './deckRefs';
 import type { TallyRow } from './stats';
 import { PIE_COLORS, pieSlicePath } from './stats';
 import GlossyPie from './GlossyPie';
+import { HowItWorks } from './Faq';
 import {
   ShareBar,
   ExportCardHost,
@@ -242,6 +243,7 @@ export function PlayerStatsDetail({
   const exporter = useImageExport();
   return (
     <>
+      <HowItWorks to={paths.faqTopic('players', 'detail')} />
       <PlayerDetail row={row} deckStats={deckStats} idSuffix="player" />
 
       <ExportedImage image={exporter.image} error={exporter.error} alt={`Statistiche di ${row.name}, da salvare`} />
@@ -285,6 +287,7 @@ export default function Standings({ rows, showPie }: StandingsProps) {
 
   return (
     <>
+      <HowItWorks to={paths.faqTopic('players')} />
       {showPie && <GroupPieSection rows={rows} idSuffix="group" />}
 
       {/* La ricerca resta in cima, sotto il titolo, mentre si scorre l'elenco. */}

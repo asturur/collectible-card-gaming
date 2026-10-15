@@ -232,6 +232,7 @@ the Vite basename (`/collectible-card-gaming/`).
 /stats/matchups/A/vs/B     → exact formation statistics / image export
 /more                     → redirects to /players (retired menu page)
 /players                  → player roster
+/faq                      → statistics FAQ; /faq/:section/:topic opens one explanation
 /zaff                     → JoinScreen → DeckPicker → DeckPreview → GameView
 ```
 
@@ -269,6 +270,15 @@ saved decks (games store only the deck, not its list): Main Deck only, no lands,
 merged by name. "Most played" counts copies; win rates count presence, need at least 5
 games, and are compared with the group average (wins / participations in the filter).
 Signature = the card a player uses most relative to the other players.
+Statistics count only games with a winner (`decidedGames` in `mtglog/stats.ts`); games saved
+without one stay in the game list and the Home counters. Win-rate rankings (cards, and
+Statistiche Mazzi sorted by %) need `MIN_GAMES` (5) games; Statistiche Mazzi lists the other decks
+below, unranked. The Colori average counts each player with deck colours once.
+FAQ (`mtglog/Faq.tsx`, texts in `mtglog/faqContent.tsx`, menu Altro → FAQ) explains every
+statistic; each statistics page links to its topic ("ⓘ Come si calcola?"). When a statistic's
+calculation changes, update its FAQ text in the same change; thresholds come from the code constants.
+Registro data is re-read after saving a game, on the Home button and when the app returns to
+the foreground (`mtglog/useReloadOnResume.ts`): realtime events missed in the background are lost.
 Life counter (`mtglog/LifeCounter.tsx`): "Cambia posti" swaps screen seats (colour and counters
 follow the player, rotation follows the seat). The seat order is returned to `GameForm`, which
 reorders the player rows, so the saved `seat`, "Riprendi Partita" and the rematch keep it.
@@ -305,6 +315,7 @@ Registro and ZAFF implementations. Some legacy controls still bypass it.
 | `CloseButton` | Shared square daisyUI button; default panel style or solid `surface="image"` contrast for card/token previews. Full label, title, and a decorative close icon. |
 | `Badge` | daisyUI badges for deck sources, format tags, and quantities; semantic tones and `xs`/`sm`/`md`/`lg`/`xl` sizes. |
 | `FilterTabs`, `NumberStepper` | Group/source filters, −/+ numeric input |
+| `NavTabs` | Rows of sub-page router links with the `FilterTabs` look (`aria-current`, history replace), e.g. FAQ sections |
 | `Tile` | `GridTile` and the existing navigation illustrations |
 | `styles.ts` | `PANEL`, `FIELD_*`, `HEADING_*`, `TEXT_*`, `cx()` |
 

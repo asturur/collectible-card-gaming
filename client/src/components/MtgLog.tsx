@@ -10,6 +10,7 @@ import { ButtonLink } from './ui/Button';
 import { cx, PANEL, TEXT_MUTED } from './ui/styles';
 import { navLinkProps, paths } from '../router';
 import type { DeckRef } from './mtglog/deckRefs';
+import { useReloadOnResume } from './mtglog/useReloadOnResume';
 
 export interface RegistroContext {
   userId: string;
@@ -46,6 +47,7 @@ export default function MtgLog() {
   const [gamesLoading, setGamesLoading] = useState(true);
   const [gamesError, setGamesError] = useState('');
   const reloadGamesRef = useRef<() => Promise<void>>(async () => {});
+  const reloadDecksRef = useRef<() => Promise<void>>(async () => {});
   const [deckCount, setDeckCount] = useState(0);
   const [decks, setDecks] = useState<DeckRef[]>([]);
   const [recovering, setRecovering] = useState(OPENED_FROM_RECOVERY_LINK);
@@ -112,9 +114,18 @@ export default function MtgLog() {
       setDecks((data ?? []).map((d) => ({ id: String(d.id), name: String(d.name) })));
       setDeckCount(count ?? 0);
     }
-    loadDeckCount();
-    return subscribeToTable(TABLE_DECKS, loadDeckCount);
+    reloadDecksRef.current = loadDeckCount;
+    void loadDeckCount();
+    const unsubscribe = subscribeToTable(TABLE_DECKS, loadDeckCount);
+    return () => {
+      reloadDecksRef.current = async () => {};
+      unsubscribe();
+    };
   }, [loggedIn]);
+
+  /** Partite e mazzi di nuovo dal database: tasto Home e ritorno in primo piano. */
+  const reloadAll = () => { void reloadGamesRef.current(); void reloadDecksRef.current(); };
+  useReloadOnResume(reloadAll, loggedIn);
 
   if (!isSupabaseConfigured) {
     return (
@@ -164,7 +175,7 @@ export default function MtgLog() {
   return (
     <div className="min-h-screen bg-zaff-bg text-zaff-text">
       <Outlet context={{ userId: session.user.id, email: session.user.email, games, gamesLoading, gamesError, reloadGames: () => reloadGamesRef.current(), deckCount, decks } satisfies RegistroContext} />
-      <BottomNav />
+      <BottomNav onHome={reloadAll} />
     </div>
   );
 }
