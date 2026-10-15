@@ -344,7 +344,7 @@ function MatchupDetailPage() {
 function PlayersPage() {
   const { userId, games } = useRegistro();
   return (
-    <SectionPage title="Giocatori" stickyTitle subtitle="Tocca un nome per vedere le partite giocate e le statistiche, o per rinominarlo o cancellarlo. Le partite già salvate mantengono comunque il nome che avevano.">
+    <SectionPage title="Giocatori" stickyTitle subtitle="Tocca un nome per vedere le partite giocate e le statistiche, o per rinominarlo o cancellarlo. Rinominando, il nome cambia anche nelle partite già salvate; cancellando, le partite già salvate mantengono il suo nome.">
       <PlayersRoster userId={userId} games={games} />
     </SectionPage>
   );
