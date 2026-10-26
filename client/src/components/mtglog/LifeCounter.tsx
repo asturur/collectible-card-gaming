@@ -333,6 +333,30 @@ function innerStyle(rotation: Rotation): CSSProperties {
   return { left: '50%', top: '50%', width: '100cqh', height: '100cqw', transform: `translate(-50%, -50%) rotate(${rotation}deg)` };
 }
 
+/** Punteggio: limiti in px e frazioni della scheda (larghezza di lettura / altezza di lettura). */
+const SCORE_MIN_PX = 40;
+const SCORE_MAX_PX = 200;
+/** Parte della larghezza di lettura occupata da punteggio più spazio per il totale dei tocchi ai lati. */
+const SCORE_ACROSS = 80;
+/** Spazio libero sotto il centro del punteggio per il tasto ⋯ (54px, margine 8px e un po' di respiro). */
+const OPTIONS_CLEARANCE_PX = 70;
+
+/**
+ * Grandezza del punteggio in proporzione alla scheda (unità container della scheda), così le
+ * schede grandi a 2-3 giocatori hanno numeri grandi e quelle piccole restano leggibili.
+ * Ruotata di 90°, chi legge ha come larghezza l'altezza della scheda.
+ */
+function scoreSize(rotation: Rotation, life: number): string {
+  const [across, along] = rotation === 90 || rotation === -90 ? ['cqh', 'cqw'] : ['cqw', 'cqh'];
+  // Ogni carattere è largo circa 0,62 em, il totale dei tocchi chiede circa 0,9 em per lato.
+  // Almeno 2 caratteri: scendendo sotto 10 il numero non si ingrandisce di colpo.
+  const chars = Math.max(2, String(life).length);
+  const fit = (SCORE_ACROSS / (chars * 0.62 + 1.8)).toFixed(1);
+  // In altezza: dal centro, mezza cifra (circa 0,37 em) deve fermarsi sopra il tasto ⋯.
+  const clear = `(50${along} - ${OPTIONS_CLEARANCE_PX}px) / 0.37`;
+  return `clamp(${SCORE_MIN_PX}px, min(${fit}${across}, ${clear}), ${SCORE_MAX_PX}px)`;
+}
+
 /** Caratteri che "piovono" prima che la parola si componga, in stile Matrix. */
 const MATRIX_CHARS = 'ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿ0123456789';
 /** Le lettere si fissano da sinistra a destra: la prima dopo RESOLVE_START, poi una ogni RESOLVE_STEP. */
@@ -716,16 +740,19 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
 
               {/* Il punteggio sta sempre al centro esatto della scheda: nome e stato stanno nella
                   riga sopra, il totale dei tocchi ai lati, senza spostarlo. */}
-              <div className="pointer-events-none absolute inset-0 grid grid-rows-[1fr_auto_1fr] justify-items-center">
+              <div
+                className="pointer-events-none absolute inset-0 grid grid-rows-[1fr_auto_1fr] justify-items-center"
+                style={{ '--score': scoreSize(place.rotation, p.life) } as CSSProperties}
+              >
                 <div className="flex w-full flex-col items-center justify-end">
                 <p
-                  className="mb-0.5 max-w-[85%] truncate text-[clamp(18px,3.4vw,28px)] font-semibold text-black/85"
+                  className="mb-0.5 max-w-[85%] truncate text-[length:clamp(18px,calc(var(--score)*0.28),36px)] font-semibold text-black/85"
                 >
                   {p.name}
                 </p>
                 {(p.kill || p.mill || p.poisonOn || (p.cmdrOn && (p.tax > 0 || maxCommanderDamage(p) > 0))) && (
                   <p
-                    className="mb-1 flex flex-wrap justify-center gap-x-2.5 text-[clamp(12px,2.6vw,17px)] font-bold uppercase tracking-wider text-black"
+                    className="mb-1 flex flex-wrap justify-center gap-x-2.5 text-[length:clamp(12px,calc(var(--score)*0.18),22px)] font-bold uppercase tracking-wider text-black"
                   >
                     {p.kill && <span>KILL</span>}
                     {p.mill && <span>MILL</span>}
@@ -735,7 +762,7 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
                   </p>
                 )}
                 </div>
-                <div className="relative text-[clamp(40px,9vw,80px)]">
+                <div className="relative text-[length:var(--score)]">
                   <p
                     className="text-[1em] font-bold leading-none tabular-nums text-black"
                   >
