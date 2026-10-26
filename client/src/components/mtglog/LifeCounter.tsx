@@ -73,7 +73,8 @@ interface HistoryEntry {
   to: number;
 }
 
-/** Tocchi ravvicinati sullo stesso contatore diventano una sola voce (altrimenti 40 righe di +1). */
+/** Tocchi ravvicinati sullo stesso contatore diventano una sola voce (altrimenti 40 righe di +1).
+ *  Lo stesso intervallo decide quanto resta visibile il totale accanto ai punti vita. */
 const MERGE_WINDOW_MS = 4000;
 const MAX_HISTORY = 500;
 /** Con 21 danni da un solo comandante si perde. */
@@ -97,6 +98,15 @@ function writeField(p: LcPlayer, field: CounterField, source: string | undefined
 
 function maxCommanderDamage(p: LcPlayer): number {
   return Math.max(0, ...Object.values(p.cmdr));
+}
+
+/** Punti vita cambiati con i tocchi ravvicinati di un giocatore (come in Lotus). */
+interface LifeBurst {
+  delta: number;
+  /** Cresce a ogni tocco: fa ripartire il piccolo "battito". */
+  taps: number;
+  /** Falso quando il gruppo di tocchi è finito: il numero sfuma e il prossimo tocco riparte da zero. */
+  visible: boolean;
 }
 
 function historyLabel(e: HistoryEntry): string {
@@ -405,6 +415,41 @@ function tapClass(extra = '') {
 const TAP_HIGHLIGHT_OFF = { WebkitTapHighlightColor: 'transparent' } as const;
 
 /**
+ * Totale dei tocchi ravvicinati, piccolo e semitrasparente accanto al punteggio:
+ * dal lato del − se si tolgono punti, dal lato del + se si aggiungono.
+ * Le dimensioni seguono il punteggio (em del contenitore). Solo scena: i tasti hanno già le loro etichette.
+ */
+function LifeDelta({ burst }: { burst?: LifeBurst }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const taps = burst?.visible ? burst.taps : 0;
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!taps || !el || typeof el.animate !== 'function' || prefersReducedMotion()) return;
+    el.animate([{ transform: 'scale(1.3)' }, { transform: 'scale(1)' }], { duration: 180, easing: 'ease-out' });
+  }, [taps]);
+
+  if (!burst) return null;
+  const gain = burst.delta > 0;
+  return (
+    <span
+      ref={ref}
+      aria-hidden="true"
+      data-testid="life-delta"
+      className={cx(
+        'absolute top-1/2 -translate-y-1/2 whitespace-nowrap text-[0.4em] font-bold leading-none tabular-nums text-white/70 transition-opacity duration-500',
+        gain ? 'left-full ml-[0.35em] origin-left' : 'right-full mr-[0.35em] origin-right',
+        burst.visible ? 'opacity-100' : 'opacity-0'
+      )}
+      style={{ textShadow: '0 1px 4px rgba(0,0,0,.35)' }}
+    >
+      {gain ? '+' : '−'}
+      {Math.abs(burst.delta)}
+    </span>
+  );
+}
+
+/**
  * Contatore punti vita a tutto schermo. Scheda a colore pieno per ciascun
  * giocatore (come nei contatori punti vita dedicati): zona centrale grande
  * divisa a metà: sinistra −1, destra +1 (come in Lotus). Ogni scheda è ruotata verso chi siede da quel lato
@@ -449,6 +494,33 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
   const nextEntryId = useRef(1);
+  /** Totale dei tocchi ravvicinati sui punti vita, per giocatore (indice in `lives`). */
+  const [bursts, setBursts] = useState<Record<number, LifeBurst>>({});
+  const burstTimers = useRef(new Map<number, number>());
+
+  useEffect(() => {
+    const timers = burstTimers.current;
+    return () => timers.forEach((t) => window.clearTimeout(t));
+  }, []);
+
+  /** Il totale sfuma: il prossimo tocco su questo giocatore parte da zero. */
+  function endBurst(index: number) {
+    window.clearTimeout(burstTimers.current.get(index));
+    burstTimers.current.delete(index);
+    setBursts((prev) => (prev[index]?.visible ? { ...prev, [index]: { ...prev[index], visible: false } } : prev));
+  }
+
+  function trackBurst(index: number, real: number) {
+    setBursts((prev) => {
+      const cur = prev[index];
+      const delta = (cur?.visible ? cur.delta : 0) + real;
+      // Tornati al punto di partenza: come in cronologia, il gruppo sparisce.
+      if (delta === 0) return cur ? { ...prev, [index]: { ...cur, visible: false } } : prev;
+      return { ...prev, [index]: { delta, taps: (cur?.taps ?? 0) + 1, visible: true } };
+    });
+    window.clearTimeout(burstTimers.current.get(index));
+    burstTimers.current.set(index, window.setTimeout(() => endBurst(index), MERGE_WINDOW_MS));
+  }
 
   /** Posto sullo schermo → giocatore (indice in `lives`): "Cambia posti" scambia due posti. */
   const [seats, setSeats] = useState(() => players.map((_, i) => i));
@@ -493,6 +565,7 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
     const real = to - from;
     if (real === 0) return;
     setLives((prev) => prev.map((p, i) => (i === index ? writeField(p, field, source, to) : p)));
+    if (field === 'life') trackBurst(index, real);
     const now = Date.now();
     setHistory((prev) => {
       const last = prev[prev.length - 1];
@@ -517,6 +590,7 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
       prev.map((p, i) => (i === last.index ? writeField(p, last.field, last.source, last.from) : p))
     );
     setHistory((prev) => prev.slice(0, -1));
+    if (last.field === 'life') endBurst(last.index);
   }
 
   function patchPlayer(index: number, patch: Partial<LcPlayer>) {
@@ -646,12 +720,15 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
                     {p.cmdrOn && maxCommanderDamage(p) > 0 && <span>CMD {maxCommanderDamage(p)}</span>}
                   </p>
                 )}
-                <p
-                  className="text-[clamp(40px,9vw,80px)] font-bold leading-none tabular-nums text-white"
-                  style={{ textShadow: '0 2px 8px rgba(0,0,0,.4)' }}
-                >
-                  {p.life}
-                </p>
+                <div className="relative text-[clamp(40px,9vw,80px)]">
+                  <p
+                    className="text-[1em] font-bold leading-none tabular-nums text-white"
+                    style={{ textShadow: '0 2px 8px rgba(0,0,0,.4)' }}
+                  >
+                    {p.life}
+                  </p>
+                  <LifeDelta burst={bursts[i]} />
+                </div>
               </div>
 
               {optionsFor === i && (
