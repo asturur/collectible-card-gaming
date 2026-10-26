@@ -211,6 +211,9 @@ interface LayoutSpec {
   columns: string;
   rows: string;
   places: Placement[];
+  /** Altezza del tasto opzioni, se il punto d'incontro dei riquadri non è a metà schermo.
+   *  Tiene conto dello spazio tra le righe (gap-2.5 = 10px). */
+  hubTop?: string;
 }
 
 /** Posto in griglia: colonna e riga (con eventuali estensioni) e rotazione. */
@@ -230,6 +233,8 @@ const LAYOUT_OPTIONS: Record<number, LayoutSpec[]> = {
       columns: '1fr 1fr',
       rows: '1.35fr 1fr',
       places: [at('1 / span 2', 2, 0), at(1, 1, 90), at(2, 1, -90)],
+      // Dove si incontrano i tre riquadri: fine della prima riga (1.35 su 2.35) più metà spazio.
+      hubTop: 'calc((100% - 10px) * 1.35 / 2.35 + 5px)',
     },
   ],
   4: [
@@ -264,6 +269,8 @@ const LAYOUT_OPTIONS: Record<number, LayoutSpec[]> = {
       columns: '1fr 1fr',
       rows: '1fr 1fr 0.8fr',
       places: [at('1 / span 2', 3, 0), at(1, 2, 90), at(1, 1, 90), at(2, 1, -90), at(2, 2, -90)],
+      // All'incrocio dei quattro riquadri laterali (fine della prima riga, 1 su 2.8).
+      hubTop: 'calc((100% - 20px) / 2.8 + 5px)',
     },
   ],
   6: [
@@ -547,6 +554,8 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
   const options = LAYOUT_OPTIONS[count];
   const [layoutIndex, setLayoutIndex] = useState(() => readLayoutIndex(count));
   const layout = options ? options[layoutIndex] : defaultLayout(count);
+  /** Il tasto opzioni (e "Fatto") sta dove si incontrano i riquadri, anche fuori dal centro. */
+  const hubStyle: CSSProperties = layout.hubTop ? { top: layout.hubTop } : {};
 
   function nextLayout() {
     if (!options) return;
@@ -884,14 +893,14 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
         })}
       </div>
 
-      {/* Opzioni di gioco: un solo tasto al centro del tavolo, senza testo,
+      {/* Opzioni di gioco: un solo tasto al centro del tavolo (dove si incontrano i riquadri), senza testo,
           così si capisce da qualunque lato lo si guardi. Tra le schede (ogni
           giocatore ha la sua), non copre punteggi né nomi. */}
       {swapping && (
         <button
           type="button"
           onClick={() => { setSwapping(false); setSwapFirst(null); }}
-          style={TAP_HIGHLIGHT_OFF}
+          style={{ ...TAP_HIGHLIGHT_OFF, ...hubStyle }}
           className="absolute left-1/2 top-1/2 z-50 flex h-[76px] w-[76px] -translate-x-1/2 -translate-y-1/2 select-none items-center justify-center rounded-full border-2 border-white bg-black/85 text-base font-bold text-white shadow-lg active:bg-black"
         >
           Fatto
@@ -901,7 +910,7 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
         type="button"
         onClick={() => setMenuOpen(true)}
         hidden={swapping}
-        style={TAP_HIGHLIGHT_OFF}
+        style={lives.length === 1 ? TAP_HIGHLIGHT_OFF : { ...TAP_HIGHLIGHT_OFF, ...hubStyle }}
         aria-label="Opzioni di gioco"
         className={`absolute z-30 flex h-[76px] w-[76px] select-none items-center justify-center rounded-full border border-white/30 bg-black/75 text-[40px] shadow-lg active:bg-black ${
           lives.length === 1
