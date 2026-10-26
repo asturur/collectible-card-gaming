@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import Button from '../ui/Button';
-import { PIE_COLORS } from './stats';
 import { cx, HEADING_SECTION, NO_SCROLLBAR } from '../ui/styles';
 import type { LossCause } from './GameList';
 
@@ -73,7 +72,8 @@ interface HistoryEntry {
   to: number;
 }
 
-/** Tocchi ravvicinati sullo stesso contatore diventano una sola voce (altrimenti 40 righe di +1). */
+/** Tocchi ravvicinati sullo stesso contatore diventano una sola voce (altrimenti 40 righe di +1).
+ *  Lo stesso intervallo decide quanto resta visibile il totale accanto ai punti vita. */
 const MERGE_WINDOW_MS = 4000;
 const MAX_HISTORY = 500;
 /** Con 21 danni da un solo comandante si perde. */
@@ -97,6 +97,15 @@ function writeField(p: LcPlayer, field: CounterField, source: string | undefined
 
 function maxCommanderDamage(p: LcPlayer): number {
   return Math.max(0, ...Object.values(p.cmdr));
+}
+
+/** Punti vita cambiati con i tocchi ravvicinati di un giocatore (come in Lotus). */
+interface LifeBurst {
+  delta: number;
+  /** Cresce a ogni tocco: fa ripartire il piccolo "battito". */
+  taps: number;
+  /** Falso quando il gruppo di tocchi è finito: il numero sfuma e il prossimo tocco riparte da zero. */
+  visible: boolean;
 }
 
 function historyLabel(e: HistoryEntry): string {
@@ -201,6 +210,9 @@ interface LayoutSpec {
   columns: string;
   rows: string;
   places: Placement[];
+  /** Altezza del tasto opzioni, se il punto d'incontro dei riquadri non è a metà schermo.
+   *  Tiene conto dello spazio tra le righe (gap-2.5 = 10px). */
+  hubTop?: string;
 }
 
 /** Posto in griglia: colonna e riga (con eventuali estensioni) e rotazione. */
@@ -220,6 +232,8 @@ const LAYOUT_OPTIONS: Record<number, LayoutSpec[]> = {
       columns: '1fr 1fr',
       rows: '1.35fr 1fr',
       places: [at('1 / span 2', 2, 0), at(1, 1, 90), at(2, 1, -90)],
+      // Dove si incontrano i tre riquadri: fine della prima riga (1.35 su 2.35) più metà spazio.
+      hubTop: 'calc((100% - 10px) * 1.35 / 2.35 + 5px)',
     },
   ],
   4: [
@@ -254,6 +268,8 @@ const LAYOUT_OPTIONS: Record<number, LayoutSpec[]> = {
       columns: '1fr 1fr',
       rows: '1fr 1fr 0.8fr',
       places: [at('1 / span 2', 3, 0), at(1, 2, 90), at(1, 1, 90), at(2, 1, -90), at(2, 2, -90)],
+      // All'incrocio dei quattro riquadri laterali (fine della prima riga, 1 su 2.8).
+      hubTop: 'calc((100% - 20px) / 2.8 + 5px)',
     },
   ],
   6: [
@@ -395,14 +411,54 @@ function rollHighRoll(names: string[]): RollResult[] {
   return rolls;
 }
 
+/**
+ * Colori fluo delle schede, come in Lotus: si riconoscono da tutto il tavolo e il testo nero
+ * si legge su ognuno (contrasto almeno 5:1). Solo per il segna-punti: i grafici usano PIE_COLORS.
+ */
+const SEAT_COLORS = ['#FFD600', '#2979FF', '#FF1744', '#00E676', '#D500F9', '#00E5FF', '#FF4081', '#FF9100'];
+
 /** Zona di tocco (metà scheda, ±1). Niente
  *  evidenziazione al tocco di sistema (iOS la mostra come un flash grigio
  *  posizionato male sotto transform); il feedback è tutto nostro. */
 function tapClass(extra = '') {
-  return `relative flex select-none items-center justify-center text-white/90 transition active:bg-white/20 active:text-white ${extra}`;
+  return `relative flex select-none items-center justify-center text-black/80 transition active:bg-black/10 active:text-black ${extra}`;
 }
 
 const TAP_HIGHLIGHT_OFF = { WebkitTapHighlightColor: 'transparent' } as const;
+
+/**
+ * Totale dei tocchi ravvicinati, piccolo e semitrasparente accanto al punteggio:
+ * dal lato del − se si tolgono punti, dal lato del + se si aggiungono.
+ * Le dimensioni seguono il punteggio (em del contenitore). Solo scena: i tasti hanno già le loro etichette.
+ */
+function LifeDelta({ burst }: { burst?: LifeBurst }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const taps = burst?.visible ? burst.taps : 0;
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!taps || !el || typeof el.animate !== 'function' || prefersReducedMotion()) return;
+    el.animate([{ transform: 'scale(1.3)' }, { transform: 'scale(1)' }], { duration: 180, easing: 'ease-out' });
+  }, [taps]);
+
+  if (!burst) return null;
+  const gain = burst.delta > 0;
+  return (
+    <span
+      ref={ref}
+      aria-hidden="true"
+      data-testid="life-delta"
+      className={cx(
+        'absolute top-1/2 -translate-y-1/2 whitespace-nowrap text-[0.4em] font-bold leading-none tabular-nums text-black/70 transition-opacity duration-500',
+        gain ? 'left-full ml-[0.35em] origin-left' : 'right-full mr-[0.35em] origin-right',
+        burst.visible ? 'opacity-100' : 'opacity-0'
+      )}
+    >
+      {gain ? '+' : '−'}
+      {Math.abs(burst.delta)}
+    </span>
+  );
+}
 
 /**
  * Contatore punti vita a tutto schermo. Scheda a colore pieno per ciascun
@@ -449,6 +505,33 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
   const nextEntryId = useRef(1);
+  /** Totale dei tocchi ravvicinati sui punti vita, per giocatore (indice in `lives`). */
+  const [bursts, setBursts] = useState<Record<number, LifeBurst>>({});
+  const burstTimers = useRef(new Map<number, number>());
+
+  useEffect(() => {
+    const timers = burstTimers.current;
+    return () => timers.forEach((t) => window.clearTimeout(t));
+  }, []);
+
+  /** Il totale sfuma: il prossimo tocco su questo giocatore parte da zero. */
+  function endBurst(index: number) {
+    window.clearTimeout(burstTimers.current.get(index));
+    burstTimers.current.delete(index);
+    setBursts((prev) => (prev[index]?.visible ? { ...prev, [index]: { ...prev[index], visible: false } } : prev));
+  }
+
+  function trackBurst(index: number, real: number) {
+    setBursts((prev) => {
+      const cur = prev[index];
+      const delta = (cur?.visible ? cur.delta : 0) + real;
+      // Tornati al punto di partenza: come in cronologia, il gruppo sparisce.
+      if (delta === 0) return cur ? { ...prev, [index]: { ...cur, visible: false } } : prev;
+      return { ...prev, [index]: { delta, taps: (cur?.taps ?? 0) + 1, visible: true } };
+    });
+    window.clearTimeout(burstTimers.current.get(index));
+    burstTimers.current.set(index, window.setTimeout(() => endBurst(index), MERGE_WINDOW_MS));
+  }
 
   /** Posto sullo schermo → giocatore (indice in `lives`): "Cambia posti" scambia due posti. */
   const [seats, setSeats] = useState(() => players.map((_, i) => i));
@@ -475,6 +558,8 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
   const options = LAYOUT_OPTIONS[count];
   const [layoutIndex, setLayoutIndex] = useState(() => readLayoutIndex(count));
   const layout = options ? options[layoutIndex] : defaultLayout(count);
+  /** Il tasto opzioni (e "Fatto") sta dove si incontrano i riquadri, anche fuori dal centro. */
+  const hubStyle: CSSProperties = layout.hubTop ? { top: layout.hubTop } : {};
 
   function nextLayout() {
     if (!options) return;
@@ -493,6 +578,7 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
     const real = to - from;
     if (real === 0) return;
     setLives((prev) => prev.map((p, i) => (i === index ? writeField(p, field, source, to) : p)));
+    if (field === 'life') trackBurst(index, real);
     const now = Date.now();
     setHistory((prev) => {
       const last = prev[prev.length - 1];
@@ -517,6 +603,7 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
       prev.map((p, i) => (i === last.index ? writeField(p, last.field, last.source, last.from) : p))
     );
     setHistory((prev) => prev.slice(0, -1));
+    if (last.field === 'life') endBurst(last.index);
   }
 
   function patchPlayer(index: number, patch: Partial<LcPlayer>) {
@@ -564,7 +651,7 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
         {seats.map((i, seat) => {
           const p = lives[i];
           // Il colore segue il giocatore, la posizione e la rotazione seguono il posto.
-          const color = PIE_COLORS[i % PIE_COLORS.length];
+          const color = SEAT_COLORS[i % SEAT_COLORS.length];
           const place = layout.places[seat];
           return (
             <div
@@ -622,22 +709,23 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
                 onClick={() => setOptionsFor(i)}
                 style={TAP_HIGHLIGHT_OFF}
                 aria-label={`${p.name}: opzioni`}
-                className="absolute bottom-2 left-1/2 z-10 flex h-[54px] w-[54px] -translate-x-1/2 select-none items-center justify-center rounded-full bg-black/25 text-[25px] leading-none text-white/85 active:bg-black/45"
+                className="absolute bottom-2 left-1/2 z-10 flex h-[54px] w-[54px] -translate-x-1/2 select-none items-center justify-center rounded-full bg-black/15 text-[25px] leading-none text-black/80 active:bg-black/30"
               >
                 ⋯
               </button>
 
-              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+              {/* Il punteggio sta sempre al centro esatto della scheda: nome e stato stanno nella
+                  riga sopra, il totale dei tocchi ai lati, senza spostarlo. */}
+              <div className="pointer-events-none absolute inset-0 grid grid-rows-[1fr_auto_1fr] justify-items-center">
+                <div className="flex w-full flex-col items-center justify-end">
                 <p
-                  className="mb-0.5 max-w-[85%] truncate text-[clamp(18px,3.4vw,28px)] font-semibold text-white/90"
-                  style={{ textShadow: '0 1px 4px rgba(0,0,0,.4)' }}
+                  className="mb-0.5 max-w-[85%] truncate text-[clamp(18px,3.4vw,28px)] font-semibold text-black/85"
                 >
                   {p.name}
                 </p>
                 {(p.kill || p.mill || p.poisonOn || (p.cmdrOn && (p.tax > 0 || maxCommanderDamage(p) > 0))) && (
                   <p
-                    className="mb-1 flex flex-wrap justify-center gap-x-2.5 text-[clamp(12px,2.6vw,17px)] font-bold uppercase tracking-wider text-white"
-                    style={{ textShadow: '0 1px 4px rgba(0,0,0,.5)' }}
+                    className="mb-1 flex flex-wrap justify-center gap-x-2.5 text-[clamp(12px,2.6vw,17px)] font-bold uppercase tracking-wider text-black"
                   >
                     {p.kill && <span>KILL</span>}
                     {p.mill && <span>MILL</span>}
@@ -646,12 +734,15 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
                     {p.cmdrOn && maxCommanderDamage(p) > 0 && <span>CMD {maxCommanderDamage(p)}</span>}
                   </p>
                 )}
-                <p
-                  className="text-[clamp(40px,9vw,80px)] font-bold leading-none tabular-nums text-white"
-                  style={{ textShadow: '0 2px 8px rgba(0,0,0,.4)' }}
-                >
-                  {p.life}
-                </p>
+                </div>
+                <div className="relative text-[clamp(40px,9vw,80px)]">
+                  <p
+                    className="text-[1em] font-bold leading-none tabular-nums text-black"
+                  >
+                    {p.life}
+                  </p>
+                  <LifeDelta burst={bursts[i]} />
+                </div>
               </div>
 
               {optionsFor === i && (
@@ -807,14 +898,14 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
         })}
       </div>
 
-      {/* Opzioni di gioco: un solo tasto al centro del tavolo, senza testo,
+      {/* Opzioni di gioco: un solo tasto al centro del tavolo (dove si incontrano i riquadri), senza testo,
           così si capisce da qualunque lato lo si guardi. Tra le schede (ogni
           giocatore ha la sua), non copre punteggi né nomi. */}
       {swapping && (
         <button
           type="button"
           onClick={() => { setSwapping(false); setSwapFirst(null); }}
-          style={TAP_HIGHLIGHT_OFF}
+          style={{ ...TAP_HIGHLIGHT_OFF, ...hubStyle }}
           className="absolute left-1/2 top-1/2 z-50 flex h-[76px] w-[76px] -translate-x-1/2 -translate-y-1/2 select-none items-center justify-center rounded-full border-2 border-white bg-black/85 text-base font-bold text-white shadow-lg active:bg-black"
         >
           Fatto
@@ -824,7 +915,7 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
         type="button"
         onClick={() => setMenuOpen(true)}
         hidden={swapping}
-        style={TAP_HIGHLIGHT_OFF}
+        style={lives.length === 1 ? TAP_HIGHLIGHT_OFF : { ...TAP_HIGHLIGHT_OFF, ...hubStyle }}
         aria-label="Opzioni di gioco"
         className={`absolute z-30 flex h-[76px] w-[76px] select-none items-center justify-center rounded-full border border-white/30 bg-black/75 text-[40px] shadow-lg active:bg-black ${
           lives.length === 1

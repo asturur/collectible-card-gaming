@@ -282,6 +282,10 @@ the foreground (`mtglog/useReloadOnResume.ts`): realtime events missed in the ba
 Life counter (`mtglog/LifeCounter.tsx`): "Cambia posti" swaps screen seats (colour and counters
 follow the player, rotation follows the seat). The seat order is returned to `GameForm`, which
 reorders the player rows, so the saved `seat`, "Riprendi Partita" and the rematch keep it.
+Cards use the fluo `SEAT_COLORS` with black text (charts keep `PIE_COLORS`). The score stays at
+the exact centre of its card; quick life taps show their net total beside it (− side for losses,
++ side for gains, 70% black) and fade after `MERGE_WINDOW_MS`, the same window that merges them
+into one history entry. In asymmetric layouts the options button sits where the cards meet (`hubTop`).
 Saved-deck charts use `/decks/:deckId/stats`, with a breadcrumb back to the deck.
 Detail and statistics pages share `mtglog/useSavedDeck.ts`; chart rendering stays
 in `DeckStatsContents`. The editor's local statistics preview uses its unsaved

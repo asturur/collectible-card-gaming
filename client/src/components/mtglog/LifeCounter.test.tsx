@@ -170,6 +170,34 @@ describe('LifeCounter', () => {
     localStorage.removeItem(`mtglog:counterLayout:${n}`);
   });
 
+  it('shows the net total of quick life taps on the side of the change, then fades it', () => {
+    vi.useFakeTimers();
+    try {
+      render(<LifeCounter players={['Alice', 'Bob']} startLife={20} onEdit={vi.fn()} onFinish={vi.fn()} />);
+      const minus = screen.getByRole('button', { name: 'Alice: togli 1 punto vita' });
+      const plus = screen.getByRole('button', { name: 'Alice: aggiungi 1 punto vita' });
+      const delta = () => screen.getByTestId('life-delta');
+      for (let i = 0; i < 3; i++) fireEvent.click(minus);
+      expect(delta()).toHaveTextContent('−3');
+      expect(delta()).toHaveClass('right-full', 'opacity-100');
+      fireEvent.click(plus);
+      expect(delta()).toHaveTextContent('−2');
+      act(() => { vi.advanceTimersByTime(3900); });
+      fireEvent.click(minus);
+      expect(delta()).toHaveTextContent('−3');
+      act(() => { vi.advanceTimersByTime(4000); });
+      expect(delta()).toHaveClass('opacity-0');
+      fireEvent.click(plus);
+      expect(delta()).toHaveTextContent('+1');
+      expect(delta()).toHaveClass('left-full', 'opacity-100');
+      fireEvent.click(minus);
+      expect(delta()).toHaveClass('opacity-0');
+      expect(screen.getByText('17')).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('composes the coin word letter by letter when motion is allowed', async () => {
     vi.useFakeTimers();
     try {
