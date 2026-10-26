@@ -286,6 +286,8 @@ Cards use the fluo `SEAT_COLORS` with black text (charts keep `PIE_COLORS`). The
 the exact centre of its card; quick life taps show their net total beside it (− side for losses,
 + side for gains, 70% black) and fade after `MERGE_WINDOW_MS`, the same window that merges them
 into one history entry. In asymmetric layouts the options button sits where the cards meet (`hubTop`).
+Score size follows the card (`scoreSize`: container units of the reading width/height, fitting the
+digits plus the tap total and leaving room for the ⋯ button), clamped between 40 and 200 px.
 Saved-deck charts use `/decks/:deckId/stats`, with a breadcrumb back to the deck.
 Detail and statistics pages share `mtglog/useSavedDeck.ts`; chart rendering stays
 in `DeckStatsContents`. The editor's local statistics preview uses its unsaved
