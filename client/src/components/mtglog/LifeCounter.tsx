@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import Button from '../ui/Button';
-import { PIE_COLORS } from './stats';
 import { cx, HEADING_SECTION, NO_SCROLLBAR } from '../ui/styles';
 import type { LossCause } from './GameList';
 
@@ -412,11 +411,17 @@ function rollHighRoll(names: string[]): RollResult[] {
   return rolls;
 }
 
+/**
+ * Colori fluo delle schede, come in Lotus: si riconoscono da tutto il tavolo e il testo nero
+ * si legge su ognuno (contrasto almeno 5:1). Solo per il segna-punti: i grafici usano PIE_COLORS.
+ */
+const SEAT_COLORS = ['#FFD600', '#2979FF', '#FF1744', '#00E676', '#D500F9', '#00E5FF', '#FF4081', '#FF9100'];
+
 /** Zona di tocco (metà scheda, ±1). Niente
  *  evidenziazione al tocco di sistema (iOS la mostra come un flash grigio
  *  posizionato male sotto transform); il feedback è tutto nostro. */
 function tapClass(extra = '') {
-  return `relative flex select-none items-center justify-center text-white/90 transition active:bg-white/20 active:text-white ${extra}`;
+  return `relative flex select-none items-center justify-center text-black/80 transition active:bg-black/10 active:text-black ${extra}`;
 }
 
 const TAP_HIGHLIGHT_OFF = { WebkitTapHighlightColor: 'transparent' } as const;
@@ -444,11 +449,10 @@ function LifeDelta({ burst }: { burst?: LifeBurst }) {
       aria-hidden="true"
       data-testid="life-delta"
       className={cx(
-        'absolute top-1/2 -translate-y-1/2 whitespace-nowrap text-[0.4em] font-bold leading-none tabular-nums text-white/70 transition-opacity duration-500',
+        'absolute top-1/2 -translate-y-1/2 whitespace-nowrap text-[0.4em] font-bold leading-none tabular-nums text-black/70 transition-opacity duration-500',
         gain ? 'left-full ml-[0.35em] origin-left' : 'right-full mr-[0.35em] origin-right',
         burst.visible ? 'opacity-100' : 'opacity-0'
       )}
-      style={{ textShadow: '0 1px 4px rgba(0,0,0,.35)' }}
     >
       {gain ? '+' : '−'}
       {Math.abs(burst.delta)}
@@ -647,7 +651,7 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
         {seats.map((i, seat) => {
           const p = lives[i];
           // Il colore segue il giocatore, la posizione e la rotazione seguono il posto.
-          const color = PIE_COLORS[i % PIE_COLORS.length];
+          const color = SEAT_COLORS[i % SEAT_COLORS.length];
           const place = layout.places[seat];
           return (
             <div
@@ -705,22 +709,23 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
                 onClick={() => setOptionsFor(i)}
                 style={TAP_HIGHLIGHT_OFF}
                 aria-label={`${p.name}: opzioni`}
-                className="absolute bottom-2 left-1/2 z-10 flex h-[54px] w-[54px] -translate-x-1/2 select-none items-center justify-center rounded-full bg-black/25 text-[25px] leading-none text-white/85 active:bg-black/45"
+                className="absolute bottom-2 left-1/2 z-10 flex h-[54px] w-[54px] -translate-x-1/2 select-none items-center justify-center rounded-full bg-black/15 text-[25px] leading-none text-black/80 active:bg-black/30"
               >
                 ⋯
               </button>
 
-              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+              {/* Il punteggio sta sempre al centro esatto della scheda: nome e stato stanno nella
+                  riga sopra, il totale dei tocchi ai lati, senza spostarlo. */}
+              <div className="pointer-events-none absolute inset-0 grid grid-rows-[1fr_auto_1fr] justify-items-center">
+                <div className="flex w-full flex-col items-center justify-end">
                 <p
-                  className="mb-0.5 max-w-[85%] truncate text-[clamp(18px,3.4vw,28px)] font-semibold text-white/90"
-                  style={{ textShadow: '0 1px 4px rgba(0,0,0,.4)' }}
+                  className="mb-0.5 max-w-[85%] truncate text-[clamp(18px,3.4vw,28px)] font-semibold text-black/85"
                 >
                   {p.name}
                 </p>
                 {(p.kill || p.mill || p.poisonOn || (p.cmdrOn && (p.tax > 0 || maxCommanderDamage(p) > 0))) && (
                   <p
-                    className="mb-1 flex flex-wrap justify-center gap-x-2.5 text-[clamp(12px,2.6vw,17px)] font-bold uppercase tracking-wider text-white"
-                    style={{ textShadow: '0 1px 4px rgba(0,0,0,.5)' }}
+                    className="mb-1 flex flex-wrap justify-center gap-x-2.5 text-[clamp(12px,2.6vw,17px)] font-bold uppercase tracking-wider text-black"
                   >
                     {p.kill && <span>KILL</span>}
                     {p.mill && <span>MILL</span>}
@@ -729,10 +734,10 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
                     {p.cmdrOn && maxCommanderDamage(p) > 0 && <span>CMD {maxCommanderDamage(p)}</span>}
                   </p>
                 )}
+                </div>
                 <div className="relative text-[clamp(40px,9vw,80px)]">
                   <p
-                    className="text-[1em] font-bold leading-none tabular-nums text-white"
-                    style={{ textShadow: '0 2px 8px rgba(0,0,0,.4)' }}
+                    className="text-[1em] font-bold leading-none tabular-nums text-black"
                   >
                     {p.life}
                   </p>
