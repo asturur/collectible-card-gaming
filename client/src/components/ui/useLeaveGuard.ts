@@ -30,5 +30,10 @@ export function useLeaveGuard(message?: string) {
       busy.current = false;
       void navigate(to, { replace: true });
     },
+    /** Uscita già confermata dall'utente: niente seconda domanda. */
+    leave: (to: string) => {
+      saved.current = true;
+      void navigate(to);
+    },
   };
 }

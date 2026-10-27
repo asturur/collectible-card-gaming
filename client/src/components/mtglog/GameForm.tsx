@@ -30,6 +30,8 @@ interface GameFormProps {
    *  partita (senza vita, vincitore e note) e apre subito il segna-punti. */
   rematchFrom?: Game | null;
   onBack: () => void;
+  /** Uscita confermata dal segna-punti senza salvare (senza una seconda domanda); se manca, onBack. */
+  onDiscard?: () => void;
   onSaved?: () => void;
   onSavingChange?: (saving: boolean) => void;
 }
@@ -170,7 +172,7 @@ function emptyPlayerRow(): PlayerRow {
 /** Form "Nuova partita"/"Modifica partita": giocatori dinamici, select mazzo/nome,
  *  punti vita, vincitore, note. Salva (insert) o aggiorna (update) su `partite`.
  *  La pagina gestisce titolo, navigazione e protezione durante il salvataggio. */
-export default function GameForm({ editingGame, rematchFrom, onBack, onSaved, onSavingChange }: GameFormProps) {
+export default function GameForm({ editingGame, rematchFrom, onBack, onDiscard, onSaved, onSavingChange }: GameFormProps) {
   const [playerNames, setPlayerNames] = useState<string[]>([]);
   /** Nomi in elenco appena letti (lo stato si aggiorna solo al render dopo). */
   const loadedNames = useRef<string[]>([]);
@@ -616,6 +618,8 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onSaved, on
         resume={resumeCounter ? resumeData : undefined}
         onEdit={handleLifeCounterBackToEdit}
         onFinish={handleLifeCounterFinish}
+        onQuit={onDiscard ?? onBack}
+        editingSaved={Boolean(editingGame)}
       />
     );
   }

@@ -1,11 +1,11 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import LifeCounter from './LifeCounter';
 
 function setup() {
   const onFinish = vi.fn();
-  render(<LifeCounter players={['Alice', 'Bob']} startLife={20} onEdit={vi.fn()} onFinish={onFinish} />);
+  render(<LifeCounter players={['Alice', 'Bob']} startLife={20} onEdit={vi.fn()} onFinish={onFinish} onQuit={vi.fn()} />);
   return { onFinish, user: userEvent.setup() };
 }
 
@@ -26,6 +26,43 @@ describe('LifeCounter', () => {
     await user.click(screen.getByRole('button', { name: 'Chiudi' }));
     expect(screen.queryByText('23')).not.toBeInTheDocument();
     expect(screen.getAllByText('20')).toHaveLength(2);
+  });
+
+  it('asks before quitting without saving, and only quits from the confirmation', async () => {
+    const onQuit = vi.fn();
+    const onFinish = vi.fn();
+    const onEdit = vi.fn();
+    const user = userEvent.setup();
+    render(<LifeCounter players={['Alice', 'Bob']} startLife={20} onEdit={onEdit} onFinish={onFinish} onQuit={onQuit} />);
+    await user.click(screen.getByRole('button', { name: 'Alice: aggiungi 1 punto vita' }));
+
+    await user.click(screen.getByRole('button', { name: 'Opzioni di gioco' }));
+    await user.click(screen.getByRole('button', { name: 'Esci senza salvare' }));
+    const dialog = screen.getByRole('alertdialog', { name: 'Uscire senza salvare?' });
+    expect(dialog).toHaveTextContent('I punteggi di questa partita andranno persi.');
+    expect(within(dialog).getByRole('button', { name: 'Torna al gioco' })).toHaveFocus();
+    expect(onQuit).not.toHaveBeenCalled();
+
+    // "Torna al gioco": la partita continua com'era.
+    await user.click(within(dialog).getByRole('button', { name: 'Torna al gioco' }));
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(screen.getByText('21')).toBeInTheDocument();
+    expect(onQuit).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: 'Opzioni di gioco' }));
+    await user.click(screen.getByRole('button', { name: 'Esci senza salvare' }));
+    await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Esci senza salvare' }));
+    expect(onQuit).toHaveBeenCalledTimes(1);
+    expect(onFinish).not.toHaveBeenCalled();
+    expect(onEdit).not.toHaveBeenCalled();
+  });
+
+  it('tells that a saved game stays as it was when quitting its edit', async () => {
+    const user = userEvent.setup();
+    render(<LifeCounter players={['Alice', 'Bob']} startLife={20} onEdit={vi.fn()} onFinish={vi.fn()} onQuit={vi.fn()} editingSaved />);
+    await user.click(screen.getByRole('button', { name: 'Opzioni di gioco' }));
+    await user.click(screen.getByRole('button', { name: 'Esci senza salvare' }));
+    expect(screen.getByRole('alertdialog')).toHaveTextContent("la partita salvata resta com'era");
   });
 
   it('keeps the undo button disabled until something changes', async () => {
@@ -70,7 +107,7 @@ describe('LifeCounter', () => {
   it('hands commander tax and damage to "Modifica Partita" and restores them on resume', async () => {
     const onEdit = vi.fn();
     const user = userEvent.setup();
-    const { unmount } = render(<LifeCounter players={['Alice', 'Bob']} startLife={40} onEdit={onEdit} onFinish={vi.fn()} />);
+    const { unmount } = render(<LifeCounter players={['Alice', 'Bob']} startLife={40} onEdit={onEdit} onFinish={vi.fn()} onQuit={vi.fn()} />);
     await user.click(screen.getByRole('button', { name: 'Alice: opzioni' }));
     await user.click(screen.getByRole('checkbox', { name: 'COMMANDER' }));
     await user.click(screen.getByRole('button', { name: 'Alice: aggiungi 2 alla tassa del comandante' }));
@@ -92,7 +129,7 @@ describe('LifeCounter', () => {
     const resume = Object.fromEntries(
       Object.keys(lives).map((name) => [name, { life: lives[name], loss: causes[name], poison: poisons[name], commander: commanders[name] }])
     );
-    render(<LifeCounter players={['Alice', 'Bob']} startLife={40} resume={resume} onEdit={vi.fn()} onFinish={vi.fn()} />);
+    render(<LifeCounter players={['Alice', 'Bob']} startLife={40} resume={resume} onEdit={vi.fn()} onFinish={vi.fn()} onQuit={vi.fn()} />);
     expect(screen.getByText('CMD 5')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Alice: opzioni' }));
     expect(screen.getByRole('checkbox', { name: 'COMMANDER' })).toBeChecked();
@@ -107,7 +144,7 @@ describe('LifeCounter', () => {
       Alice: { life: 30, loss: ['kill' as const], poison: 0, commander: { tax: 0, damage: { Bob: 21 } } },
       Bob: { life: 40, loss: [], poison: 0 },
     };
-    render(<LifeCounter players={['Alice', 'Bob']} startLife={40} resume={resume} onEdit={vi.fn()} onFinish={onFinish} />);
+    render(<LifeCounter players={['Alice', 'Bob']} startLife={40} resume={resume} onEdit={vi.fn()} onFinish={onFinish} onQuit={vi.fn()} />);
     await user.click(screen.getByRole('button', { name: 'Alice: opzioni' }));
     await user.click(screen.getByRole('button', { name: 'Alice: togli 1 danno da comandante di Bob' }));
     await user.click(screen.getByRole('button', { name: 'Chiudi' }));
@@ -134,7 +171,7 @@ describe('LifeCounter', () => {
   it('offers the table layout only with four players and remembers the choice', async () => {
     localStorage.removeItem('mtglog:counterLayout:4');
     const user = userEvent.setup();
-    const { unmount } = render(<LifeCounter players={['A', 'B', 'C', 'D']} startLife={40} onEdit={vi.fn()} onFinish={vi.fn()} />);
+    const { unmount } = render(<LifeCounter players={['A', 'B', 'C', 'D']} startLife={40} onEdit={vi.fn()} onFinish={vi.fn()} onQuit={vi.fn()} />);
     await user.click(screen.getByRole('button', { name: 'Opzioni di gioco' }));
     expect(screen.getByRole('button', { name: /Disposizione/ })).toHaveTextContent('passa a A croce');
     await user.click(screen.getByRole('button', { name: /Disposizione/ }));
@@ -142,7 +179,7 @@ describe('LifeCounter', () => {
     expect(screen.getByRole('button', { name: /Disposizione/ })).toHaveTextContent('passa a Due per lato');
     unmount();
 
-    render(<LifeCounter players={['A', 'B', 'C', 'D']} startLife={40} onEdit={vi.fn()} onFinish={vi.fn()} />);
+    render(<LifeCounter players={['A', 'B', 'C', 'D']} startLife={40} onEdit={vi.fn()} onFinish={vi.fn()} onQuit={vi.fn()} />);
     await user.click(screen.getByRole('button', { name: 'Opzioni di gioco' }));
     expect(screen.getByRole('button', { name: /Disposizione/ })).toHaveTextContent('passa a Due per lato');
     localStorage.removeItem('mtglog:counterLayout:4');
@@ -161,7 +198,7 @@ describe('LifeCounter', () => {
     localStorage.removeItem(`mtglog:counterLayout:${n}`);
     const user = userEvent.setup();
     const names = ['A', 'B', 'C', 'D', 'E', 'F'].slice(0, n);
-    render(<LifeCounter players={names} startLife={20} onEdit={vi.fn()} onFinish={vi.fn()} />);
+    render(<LifeCounter players={names} startLife={20} onEdit={vi.fn()} onFinish={vi.fn()} onQuit={vi.fn()} />);
     await user.click(screen.getByRole('button', { name: 'Opzioni di gioco' }));
     expect(screen.getByRole('button', { name: /Disposizione/ })).toHaveTextContent(`passa a ${second}`);
     await user.click(screen.getByRole('button', { name: /Disposizione/ }));
@@ -173,7 +210,7 @@ describe('LifeCounter', () => {
   it('shows the net total of quick life taps on the side of the change, then fades it', () => {
     vi.useFakeTimers();
     try {
-      render(<LifeCounter players={['Alice', 'Bob']} startLife={20} onEdit={vi.fn()} onFinish={vi.fn()} />);
+      render(<LifeCounter players={['Alice', 'Bob']} startLife={20} onEdit={vi.fn()} onFinish={vi.fn()} onQuit={vi.fn()} />);
       const minus = screen.getByRole('button', { name: 'Alice: togli 1 punto vita' });
       const plus = screen.getByRole('button', { name: 'Alice: aggiungi 1 punto vita' });
       const delta = () => screen.getByTestId('life-delta');
@@ -202,7 +239,7 @@ describe('LifeCounter', () => {
     vi.useFakeTimers();
     try {
       vi.spyOn(Math, 'random').mockReturnValue(0.1);
-      render(<LifeCounter players={['Alice', 'Bob']} startLife={20} onEdit={vi.fn()} onFinish={vi.fn()} />);
+      render(<LifeCounter players={['Alice', 'Bob']} startLife={20} onEdit={vi.fn()} onFinish={vi.fn()} onQuit={vi.fn()} />);
       fireEvent.click(screen.getByRole('button', { name: 'Opzioni di gioco' }));
       fireEvent.click(screen.getByRole('button', { name: /Moneta/ }));
       const word = () => screen.getByRole('status').querySelector('[aria-hidden="true"]')!.textContent;
@@ -228,7 +265,7 @@ describe('LifeCounter', () => {
 
   it('has a fixed layout with three players, so no layout button', async () => {
     const user = userEvent.setup();
-    render(<LifeCounter players={['A', 'B', 'C']} startLife={20} onEdit={vi.fn()} onFinish={vi.fn()} />);
+    render(<LifeCounter players={['A', 'B', 'C']} startLife={20} onEdit={vi.fn()} onFinish={vi.fn()} onQuit={vi.fn()} />);
     await user.click(screen.getByRole('button', { name: 'Opzioni di gioco' }));
     expect(screen.queryByRole('button', { name: /Disposizione/ })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'A: aggiungi 1 punto vita' })).toBeInTheDocument();
@@ -237,7 +274,7 @@ describe('LifeCounter', () => {
   it('swaps two seats with "Cambia posti", blocking life changes until "Fatto"', async () => {
     const onFinish = vi.fn();
     const user = userEvent.setup();
-    render(<LifeCounter players={['Alice', 'Bob', 'Carla']} startLife={20} onEdit={vi.fn()} onFinish={onFinish} />);
+    render(<LifeCounter players={['Alice', 'Bob', 'Carla']} startLife={20} onEdit={vi.fn()} onFinish={onFinish} onQuit={vi.fn()} />);
     await user.click(screen.getByRole('button', { name: 'Opzioni di gioco' }));
     await user.click(screen.getByRole('button', { name: 'Cambia posti' }));
     expect(screen.queryByRole('button', { name: 'Opzioni di gioco' })).not.toBeInTheDocument();

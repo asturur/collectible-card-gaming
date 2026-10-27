@@ -27,6 +27,10 @@ interface LifeCounterProps {
    *  (per correggere un nome o un mazzo senza perdere il conteggio). */
   onEdit: LifeCounterResult;
   onFinish: LifeCounterResult;
+  /** "Esci senza salvare", dopo la conferma: lascia la partita senza registrare niente. */
+  onQuit: () => void;
+  /** Si sta modificando una partita già salvata (cambia il testo della conferma di uscita). */
+  editingSaved?: boolean;
 }
 
 type LifeCounterResult = (
@@ -491,7 +495,7 @@ function LifeDelta({ burst }: { burst?: LifeBurst }) {
  * (180° di fronte, 90° ai lati lunghi), così legge dritto senza girare il telefono. High Roll (d20) per
  * decidere chi inizia.
  */
-export default function LifeCounter({ players, startLife, resume, onEdit, onFinish }: LifeCounterProps) {
+export default function LifeCounter({ players, startLife, resume, onEdit, onFinish, onQuit, editingSaved = false }: LifeCounterProps) {
   useKeepScreenAwake();
 
   const [lives, setLives] = useState<LcPlayer[]>(
@@ -528,6 +532,8 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
   /** Cronologia dei cambi: vive solo durante la partita, non si salva. */
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
+  /** Conferma di "Esci senza salvare": l'uscita avviene solo da qui. */
+  const [quitOpen, setQuitOpen] = useState(false);
   const nextEntryId = useRef(1);
   /** Totale dei tocchi ravvicinati sui punti vita, per giocatore (indice in `lives`). */
   const [bursts, setBursts] = useState<Record<number, LifeBurst>>({});
@@ -1022,6 +1028,39 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
             >
               Torna al Gioco
             </Button>
+            {/* Ultima riga, separata da "Fine Partita": chiede sempre conferma prima di uscire. */}
+            <Button variant="danger" className="col-span-2 flex h-14 text-base" onClick={() => { setMenuOpen(false); setQuitOpen(true); }}>
+              Esci senza salvare
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {quitOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4" onClick={() => setQuitOpen(false)}>
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="lc-quit-title"
+            aria-describedby="lc-quit-text"
+            className="w-full max-w-sm rounded-2xl border border-zaff-border bg-zaff-surface p-5 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 id="lc-quit-title" className={HEADING_SECTION}>Uscire senza salvare?</h2>
+            <p id="lc-quit-text" className="mb-4 text-sm text-zaff-muted">
+              {editingSaved
+                ? 'Le modifiche non verranno salvate: la partita salvata resta com\'era.'
+                : 'I punteggi di questa partita andranno persi.'}
+            </p>
+            <div className="flex flex-col gap-2">
+              {/* Il tasto più evidente (e già selezionato) resta nella partita. */}
+              <Button size="lg" autoFocus onClick={() => setQuitOpen(false)}>
+                Torna al gioco
+              </Button>
+              <Button variant="danger" size="lg" onClick={onQuit}>
+                Esci senza salvare
+              </Button>
+            </div>
           </div>
         </div>
       )}
