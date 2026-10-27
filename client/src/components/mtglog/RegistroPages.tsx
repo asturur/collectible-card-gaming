@@ -119,6 +119,8 @@ function GameEditorSession({ gameId, rematch }: { gameId?: string; rematch: bool
           rematchFrom={rematch ? game : null}
           onSavingChange={guard.onPersistingChange}
           onBack={() => { void navigate(backTo); }}
+          // Il segna-punti ha già chiesto conferma: niente seconda domanda all'uscita.
+          onDiscard={() => guard.leave(backTo)}
           // Rilegge subito l'elenco: la partita appena salvata compare senza aspettare il tempo reale.
           onSaved={() => { void reloadGames(); guard.onSaved(paths.games); }}
         />
