@@ -37,7 +37,6 @@ describe('computeCardStats', () => {
     expect(s.average).toBe(Math.round((7 / 19) * 100));
     expect(s.winners[0]).toMatchObject({ name: 'Counterspell', wins: 4, games: 6, pct: 67 });
     expect(s.losers[0]).toMatchObject({ name: 'Lightning Bolt', wins: 1, games: 7, pct: 14 });
-    expect(s.cursed).toEqual([]);
   });
 
   it('finds group staples by number of decks and each player signature card', () => {
@@ -69,9 +68,17 @@ describe('computeCardStats', () => {
     expect(s.colorsAverage).toBe(Math.round((6 / 18) * 100));
   });
 
-  it('marks cards played at least 5 times without a win as cursed', () => {
+  it('ranks cursed cards by the wins they missed against the group average', () => {
+    // Media: 7 vittorie su 19 presenze. Sol Ring (7 su 19) è esattamente nella media e resta fuori;
+    // Counterspell e Rhystic Study (4 su 6) sono sopra la media.
+    expect(s.cursed.map((r) => [r.name, r.wins, r.games])).toEqual([['Lightning Bolt', 1, 7], ['Llanowar Elves', 2, 6]]);
+    expect(s.cursed[0].missed).toBeCloseTo((7 * 7) / 19 - 1);
+    expect(s.cursed[1].missed).toBeCloseTo((6 * 7) / 19 - 2);
+  });
+
+  it('puts a card that never won first when it missed the most wins', () => {
     const cursed = computeCardStats(games.slice(0, 6), decks).cursed;
-    expect(cursed.map((r) => r.name)).toEqual(['Lightning Bolt']);
+    expect(cursed[0]).toMatchObject({ name: 'Lightning Bolt', wins: 0, games: 6 });
   });
 });
 

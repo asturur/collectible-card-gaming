@@ -27,6 +27,18 @@ const game = (format: string, winner: 'Andrea' | 'Carlo'): Game => ({
 const games = [...Array.from({ length: 4 }, () => game('Pauper', 'Andrea')), game('Pauper', 'Carlo'), game('Commander', 'Carlo')];
 
 describe('CardStats', () => {
+  it('lists cursed cards by the wins they missed against the group average', async () => {
+    const user = userEvent.setup();
+    render(<MemoryRouter><CardStats games={games} /></MemoryRouter>);
+    await user.click(screen.getByRole('button', { name: 'Maledette' }));
+    // Media 6 vittorie su 12 presenze: Lightning Bolt (2 su 6) ne attendeva 3, ne ha mancata 1.
+    // La lista compare anche nella copia nascosta usata per l'immagine esportata.
+    const row = screen.getAllByText('Lightning Bolt')[0].closest('li')!;
+    expect(row).toHaveTextContent('2 vittorie su 6 partite · attese 3,0');
+    expect(row).toHaveTextContent('−1,0');
+    expect(screen.queryByText('Counterspell')).not.toBeInTheDocument();
+  });
+
   it('shows most played cards by copies, without lands, and switches to win rates', async () => {
     const user = userEvent.setup();
     render(<MemoryRouter><CardStats games={games} /></MemoryRouter>);

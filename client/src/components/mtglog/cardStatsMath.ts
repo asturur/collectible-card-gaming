@@ -46,6 +46,12 @@ export interface CardRow {
   pct: number;
 }
 
+/** Carta "maledetta": quante vittorie le mancano rispetto alla media del gruppo. */
+export interface CursedRow extends CardRow {
+  /** Vittorie attese con la media del gruppo (presenze × media) meno vittorie reali. */
+  missed: number;
+}
+
 export interface SignatureRow {
   player: string;
   card: CardRow;
@@ -75,7 +81,7 @@ export interface CardStats {
   winners: CardRow[];
   losers: CardRow[];
   staples: CardRow[];
-  cursed: CardRow[];
+  cursed: CursedRow[];
   signatures: SignatureRow[];
   colors: ColorRow[];
 }
@@ -155,6 +161,11 @@ export function computeCardStats(games: Game[], decks: StatsDeck[]): CardStats {
   const all: CardRow[] = [...rows.values()].map(({ deckIds, ...r }) => ({ ...r, decks: deckIds.size, pct: pct(r.wins, r.games) }));
   const byName = (a: CardRow, b: CardRow) => a.name.localeCompare(b.name, 'it');
   const ranked = all.filter((r) => r.games >= MIN_GAMES);
+  // Maledette: le vittorie che mancano rispetto alla media, solo le carte sotto la media.
+  // Il confronto sul numeratore intero evita che una carta esattamente nella media entri per arrotondamento.
+  const cursed: CursedRow[] = participations === 0 ? [] : ranked
+    .filter((r) => r.games * wins > r.wins * participations)
+    .map((r) => ({ ...r, missed: (r.games * wins) / participations - r.wins }));
 
   const signatures: SignatureRow[] = [];
   for (const [player, mine] of perPlayer) {
@@ -186,7 +197,7 @@ export function computeCardStats(games: Game[], decks: StatsDeck[]): CardStats {
     winners: [...ranked].sort((a, b) => b.pct - a.pct || b.games - a.games || byName(a, b)).slice(0, TOP),
     losers: [...ranked].sort((a, b) => a.pct - b.pct || b.games - a.games || byName(a, b)).slice(0, TOP),
     staples: all.filter((r) => r.decks >= 2).sort((a, b) => b.decks - a.decks || b.games - a.games || byName(a, b)).slice(0, TOP),
-    cursed: ranked.filter((r) => r.wins === 0).sort((a, b) => b.games - a.games || byName(a, b)).slice(0, TOP),
+    cursed: cursed.sort((a, b) => b.missed - a.missed || b.games - a.games || byName(a, b)).slice(0, TOP),
     signatures: signatures.sort((a, b) => a.player.localeCompare(b.player, 'it')),
     colors: [...colorTally].map(([color, t]) => ({ color, games: t.games, wins: t.wins, pct: pct(t.wins, t.games) }))
       .sort((a, b) => b.pct - a.pct || b.games - a.games),
