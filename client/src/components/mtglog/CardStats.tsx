@@ -38,6 +38,9 @@ const COLOR_NAMES = { W: 'Bianco', U: 'Blu', B: 'Nero', R: 'Rosso', G: 'Verde' }
 const record = (wins: number, games: number) =>
   `${wins} ${wins === 1 ? 'vittoria' : 'vittorie'} su ${games} ${games === 1 ? 'partita' : 'partite'}`;
 
+/** Una cifra decimale, con la virgola: 5,1. */
+const oneDecimal = (n: number) => n.toLocaleString('it-IT', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
 const ROW = 'mb-2 flex w-full items-center gap-3 rounded-lg border border-zaff-border bg-zaff-bg px-3 py-2 text-left';
 
 /** Percentuale in verde sopra la media del gruppo, in rosso sotto (la media è scritta sopra l'elenco). */
@@ -147,12 +150,14 @@ export default function CardStats({ games }: { games: Game[] }) {
           ))}</ol>
         );
       case 'cursed':
-        return stats.cursed.length === 0 ? empty('Nessuna carta maledetta… per ora.') : (
+        return stats.cursed.length === 0 ? empty(`Nessuna carta con almeno ${MIN_GAMES} partite sotto la media… per ora.`) : (
           <>
-            <p className={cx('mb-3', TEXT_MINI)}>Giocate almeno {MIN_GAMES} volte e mai vincenti.</p>
-            <ul>{stats.cursed.map((c) => (
-              <CardLine key={c.key} card={c} onOpen={open(c)} detail={record(0, c.games)} />
-            ))}</ul>
+            <Average average={stats.average} note={`le carte che hanno mancato più vittorie rispetto a questa media. Almeno ${MIN_GAMES} partite.`} />
+            <ol>{stats.cursed.map((c, i) => (
+              <CardLine key={c.key} card={c} rank={i + 1} onOpen={open(c)}
+                detail={`${record(c.wins, c.games)} · attese ${oneDecimal(c.wins + c.missed)}`}
+                value={<span className="shrink-0 text-base font-bold tabular-nums text-error" title="Vittorie mancate rispetto alla media">−{oneDecimal(c.missed)}</span>} />
+            ))}</ol>
           </>
         );
       case 'signature':

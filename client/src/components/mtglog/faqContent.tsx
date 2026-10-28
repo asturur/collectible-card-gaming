@@ -512,7 +512,8 @@ const cardsLosers: FaqTopic = {
         <Example>
           <p>
             Una carta presente in 10 partite, vinte 1: 1 ÷ 10 = <b>10%</b>, in rosso se la media del
-            gruppo è 27%. Una carta mai vincente compare qui con lo 0%, e anche in Maledette.
+            gruppo è 27%. Una carta mai vincente compare qui con lo 0%; in Maledette passa avanti chi,
+            giocata più spesso, ha mancato più vittorie.
           </p>
         </Example>
       </Block>
@@ -712,8 +713,8 @@ const cardsCursed: FaqTopic = {
     <>
       <Block title="Cosa mostra">
         <p>
-          Le carte giocate almeno {MIN_GAMES} volte che non hanno <b>mai</b> vinto: chi le aveva nel
-          mazzo ha sempre perso.
+          Le carte che hanno <b>mancato più vittorie</b> rispetto alla media del gruppo: giocate
+          spesso, ma con chi le aveva nel mazzo che vinceva meno del normale.
         </p>
       </Block>
 
@@ -721,20 +722,30 @@ const cardsCursed: FaqTopic = {
         <Steps>
           <CardPresences />
           <li>
-            Restano le carte con almeno <b>{MIN_GAMES} presenze</b> e <b>0 vittorie</b>.
+            Restano le carte con almeno <b>{MIN_GAMES} presenze</b> e una percentuale di vittoria
+            sotto la media del gruppo.
+          </li>
+          <li>
+            Per ognuna si calcolano le vittorie che avrebbe avuto vincendo come la media, e si
+            tolgono quelle avute davvero.
           </li>
         </Steps>
+        <Formula>vittorie mancate = presenze × media del gruppo − vittorie</Formula>
         <p>
-          In ordine dalla carta con più presenze (la più &quot;maledetta&quot;), poi in ordine
-          alfabetico; al massimo {TOP}.
+          In ordine dalla carta con più vittorie mancate (la più &quot;maledetta&quot;); a parità
+          viene prima quella con più presenze, poi in ordine alfabetico; al massimo {TOP}.
         </p>
       </Block>
+
+      <GroupAverage />
 
       <Block title="Esempio">
         <Example>
           <p>
-            Una carta giocata in 7 partite, tutte perse: &quot;0 vittorie su 7 partite&quot;. Alla
-            prima vittoria esce dall&apos;elenco.
+            Con la media del gruppo al 27%: una carta presente in 30 partite e vinta 3 volte ne
+            avrebbe attese 30 × 27% = 8,1, quindi ha mancato <b>5,1 vittorie</b>. Una carta presente
+            in 5 partite e mai vincente ne ha mancate 1,4: in Meno vincenti viene prima lei (0%), qui
+            invece viene prima quella da 30 partite, perché ha deluso molte più volte.
           </p>
         </Example>
       </Block>

@@ -270,6 +270,8 @@ saved decks (games store only the deck, not its list): Main Deck only, no lands,
 merged by name. "Most played" counts copies; win rates count presence, need at least 5
 games, and are compared with the group average (wins / participations in the filter).
 Signature = the card a player uses most relative to the other players.
+Cursed (Maledette) = cards with at least `MIN_GAMES` games below the group average, ranked by
+missed wins (games × average − wins), so heavily played underperformers come first.
 Statistics count only games with a winner (`decidedGames` in `mtglog/stats.ts`); games saved
 without one stay in the game list and the Home counters. Win-rate rankings (cards, and
 Statistiche Mazzi sorted by %) need `MIN_GAMES` (5) games; Statistiche Mazzi lists the other decks
