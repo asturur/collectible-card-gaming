@@ -1,5 +1,5 @@
-import { cx } from './styles';
 import Button from './Button';
+import ChipRow from './ChipRow';
 
 export interface FilterTabOption {
   value: string;
@@ -13,10 +13,10 @@ interface FilterTabsProps {
   className?: string;
 }
 
-/** Fila di filtri (gruppi, origine mazzo): quello attivo è pieno. */
+/** Fila di filtri: quello attivo è pieno. Selettore a larghezza uguale o riga che scorre (vedi `ChipRow`). */
 export default function FilterTabs({ options, value, onChange, className }: FilterTabsProps) {
   return (
-    <div className={cx('flex flex-wrap gap-2', className)}>
+    <ChipRow className={className}>
       {options.map((option) => (
         <Button
           key={option.value}
@@ -28,6 +28,6 @@ export default function FilterTabs({ options, value, onChange, className }: Filt
           {option.label}
         </Button>
       ))}
-    </div>
+    </ChipRow>
   );
 }

@@ -1,5 +1,5 @@
-import { cx } from './styles';
 import { ButtonRouteLink, type ButtonSize } from './Button';
+import ChipRow from './ChipRow';
 
 export interface NavTabOption {
   value: string;
@@ -18,14 +18,14 @@ interface NavTabsProps {
 }
 
 /**
- * Fila di sotto-pagine con lo stesso aspetto di `FilterTabs`, ma fatta di link:
+ * Fila di sotto-pagine con lo stesso aspetto di `FilterTabs` (vedi `ChipRow`), ma fatta di link:
  * l'indirizzo dice quale voce è aperta (ricaricabile, condivisibile).
  * Passare da una voce all'altra sostituisce la cronologia, così Indietro torna
  * alla pagina da cui si è arrivati e non ripercorre ogni voce toccata.
  */
 export default function NavTabs({ label, options, value, size = 'sm', className }: NavTabsProps) {
   return (
-    <nav aria-label={label} className={cx('flex flex-wrap gap-2', className)}>
+    <ChipRow as="nav" label={label} className={className}>
       {options.map((option) => (
         <ButtonRouteLink
           key={option.value}
@@ -38,6 +38,6 @@ export default function NavTabs({ label, options, value, size = 'sm', className 
           {option.label}
         </ButtonRouteLink>
       ))}
-    </nav>
+    </ChipRow>
   );
 }
