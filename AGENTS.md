@@ -328,7 +328,7 @@ Registro and ZAFF implementations. Some legacy controls still bypass it.
 | `CloseButton` | Shared square daisyUI button; default panel style or solid `surface="image"` contrast for card/token previews. Full label, title, and a decorative close icon. |
 | `Badge` | daisyUI badges for deck sources, format tags, and quantities; semantic tones and `xs`/`sm`/`md`/`lg`/`xl` sizes. |
 | `FilterTabs`, `NumberStepper` | Group/source filters, −/+ numeric input |
-| `ChipRow` | Layout shared by `FilterTabs`/`NavTabs`: up to 4 options that fit → equal-width selector; otherwise one horizontally scrolling row (edge fade, active option kept in view). No wrapping rows of chips. |
+| `ChipRow` | Layout shared by `FilterTabs`/`NavTabs`: up to 4 options that fit → equal-width selector; otherwise one horizontally scrolling row (edge fade, active option kept in view, pans only sideways: `touch-pan-x`, no vertical scroll). No wrapping rows of chips. |
 | `NavTabs` | Rows of sub-page router links with the `FilterTabs` look (`aria-current`, history replace), e.g. FAQ sections |
 | `Tile` | `GridTile` and the existing navigation illustrations |
 | `styles.ts` | `PANEL`, `FIELD_*`, `HEADING_*`, `TEXT_*`, `cx()` |

@@ -24,7 +24,8 @@ const isActive = (el: Element) => el.getAttribute('aria-pressed') === 'true' || 
  * Fila di voci comune a `FilterTabs` e `NavTabs`, come nelle app più diffuse:
  * - poche voci (fino a 4) che ci stanno → selettore a larghezza uguale;
  * - altrimenti una sola riga che si scorre col dito, con una sfumatura sul lato
- *   che ha altre voci e la voce attiva sempre portata in vista.
+ *   che ha altre voci e la voce attiva sempre portata in vista. Il dito sulla riga la fa
+ *   scorrere solo di lato: per scorrere la pagina si tocca fuori dalla riga.
  * La scelta si rifà a ogni cambio di larghezza (rotazione, finestra più stretta).
  */
 export default function ChipRow({ children, as: Tag = 'div', label, className }: ChipRowProps) {
@@ -90,7 +91,10 @@ export default function ChipRow({ children, as: Tag = 'div', label, className }:
       className={cx(
         // relative: le posizioni delle voci si misurano dalla riga.
         'relative gap-2 [&>*]:whitespace-nowrap',
-        segmented ? 'grid [&>*]:w-full [&>*]:min-w-0' : cx('flex overflow-x-auto overscroll-x-contain [&>*]:shrink-0', NO_SCROLLBAR),
+        // Riga che scorre solo in orizzontale: un dito in obliquo non la sposta né la fa
+        // rimbalzare in verticale (touch-pan-x), e dentro non c'è scorrimento verticale.
+        segmented ? 'grid [&>*]:w-full [&>*]:min-w-0'
+          : cx('flex overflow-x-auto overflow-y-hidden overscroll-contain touch-pan-x [&>*]:shrink-0', NO_SCROLLBAR),
         className
       )}
     >
