@@ -14,6 +14,8 @@ export interface ScryCard {
   cmc: number;
   manaCost: string;
   produced: string[];
+  /** Mana prodotto in una volta per colore (Sol Ring: C 2), dal testo della carta. Vedi `manaAmounts`. */
+  manaAmounts?: Record<string, number>;
   tokens: { id: string; name: string }[];
 }
 export interface ScryToken {
@@ -46,7 +48,9 @@ function loadStorage() {
     for (const [key, card] of entries) {
       if (card.exactMatch === true && typeof card.scryfallId === 'string' &&
         Array.isArray(card.faces) && card.faces[0]?.normal && Array.isArray(card.tokens) &&
-        Array.isArray(card.colors) && Array.isArray(card.produced) && typeof card.typeLine === 'string') {
+        Array.isArray(card.colors) && Array.isArray(card.produced) && typeof card.typeLine === 'string' &&
+        // Le carte salvate prima delle quantità di mana si richiedono di nuovo.
+        typeof card.manaAmounts === 'object' && card.manaAmounts !== null) {
         found.set(key, card); byId.set(card.scryfallId, card);
       }
     }
@@ -61,6 +65,27 @@ function toFaces(raw: RawCard): ScryFace[] {
   return images.filter((u): u is RawFaceImages => !!u?.normal)
     .map(u => ({ small: u.small ?? u.normal!, normal: u.normal!, art: u.art_crop ?? u.small ?? u.normal! }));
 }
+const WORD_NUMBERS: Record<string, number> = { one: 1, two: 2, three: 3, four: 4, five: 5 };
+
+/**
+ * Quanto mana di ogni colore una carta aggiunge in una volta, come in ManaBox: "Add {C}{C}"
+ * vale 2 incolore, "Add {W} or {U}" vale 1 bianco e 1 blu, "Add two mana of any one color"
+ * vale 2 per ogni colore. Solo i colori che Scryfall dichiara prodotti; in mancanza, 1.
+ */
+export function manaAmounts(oracle: string, produced: string[]): Record<string, number> {
+  const colors = [...new Set(produced)].filter((c) => c.length === 1 && 'WUBRGC'.includes(c));
+  const out: Record<string, number> = Object.fromEntries(colors.map((c) => [c, 1]));
+  for (const clause of oracle.match(/\badd\b[^.]*/gi) ?? []) {
+    const word = clause.match(/\badd (one|two|three|four|five) mana\b/i);
+    for (const c of colors) {
+      const symbols = clause.split(`{${c}}`).length - 1;
+      const n = symbols || (word ? WORD_NUMBERS[word[1].toLowerCase()] : 0);
+      if (n > out[c]) out[c] = n;
+    }
+  }
+  return out;
+}
+
 function remember(raw: RawCard, requestedName?: string): ScryCard | undefined {
   const faces = toFaces(raw);
   if (!raw.id || !faces.length) return;
@@ -71,8 +96,10 @@ function remember(raw: RawCard, requestedName?: string): ScryCard | undefined {
     typeLine: (raw.type_line ?? front?.type_line ?? '').split('//')[0].trim(),
     cmc: raw.cmc ?? 0, manaCost: raw.mana_cost || front?.mana_cost || '',
     produced: raw.produced_mana ?? [...new Set((raw.card_faces ?? []).flatMap(f => f.produced_mana ?? []))],
+    manaAmounts: {},
     tokens: (raw.all_parts ?? []).filter(p => p.component === 'token').map(p => ({ id: p.id, name: p.name })),
   };
+  card.manaAmounts = manaAmounts(raw.oracle_text ?? (raw.card_faces ?? []).map(f => f.oracle_text ?? '').join('\n'), card.produced);
   byId.set(raw.id, card);
   for (const name of [...rawNames(raw), ...(requestedName ? [requestedName] : [])]) {
     if (!found.has(cardKey(name))) found.set(cardKey(name), card);

@@ -293,6 +293,9 @@ digits plus the tap total and leaving room for the ⋯ button), clamped between 
 "Esci senza salvare" (last row of the options menu) always asks first in its own dialog; once
 confirmed, `GameForm`'s `onDiscard` leaves through `useLeaveGuard().leave` without a second prompt.
 Saved-deck charts use `/decks/:deckId/stats`, with a breadcrumb back to the deck.
+Mana production (`mtglog/deckMath.ts`) follows ManaBox: each source counts fully for every colour it
+can make, times the mana it adds at once (`manaAmounts` in `services/scryfall.ts`, from the card text:
+Sol Ring = 2 colourless); any-colour sources count only the colours in the deck's costs.
 Detail and statistics pages share `mtglog/useSavedDeck.ts`; chart rendering stays
 in `DeckStatsContents`. The editor's local statistics preview uses its unsaved
 draft, so it remains a task dialog and never substitutes the persisted card list.

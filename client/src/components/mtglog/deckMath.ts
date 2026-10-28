@@ -127,6 +127,13 @@ export function computeDeckStats(
   lookup: (name: string, scryfallId?: string | null) => ScryCard | undefined
 ): DeckStats {
   const main = cards.filter((c) => c.section !== 'side');
+  // Colori del mazzo, dai simboli colorati dei costi: le fonti di "qualsiasi colore"
+  // (Command Tower, Arcane Signet) producono solo quelli.
+  const deckColors = new Set<ManaKey>();
+  main.forEach((item) => {
+    const card = lookup(item.name, item.scryfallId);
+    if (card) (Object.keys(costPips(card.manaCost)) as ManaKey[]).forEach((k) => k !== 'C' && deckColors.add(k));
+  });
   let total = 0;
   let unknown = 0;
 
@@ -162,11 +169,12 @@ export function computeDeckStats(
     (Object.keys(pips) as ManaKey[]).forEach((k) => (cost[k] += (pips[k] ?? 0) * item.qty));
     genericCost += genericPips(card.manaCost) * item.qty;
 
-    // Produzione: ogni fonte vale 1 in tutto, divisa in parti uguali tra i
-    // colori che può fare (una terra doppia = ½ + ½, tripla = ⅓ ciascuno…),
-    // perché ne produce uno solo alla volta.
-    const made = [...new Set(card.produced)].filter((c): c is ManaKey => 'WUBRGC'.includes(c) && c.length === 1);
-    if (made.length > 0) made.forEach((c) => (production[c] += item.qty / made.length));
+    // Produzione, come in ManaBox: ogni fonte conta per ogni colore che può fare (una terra
+    // doppia vale 1 bianco e 1 blu), con il mana che aggiunge in una volta (Sol Ring: 2 incolore).
+    let made = [...new Set(card.produced)].filter((c): c is ManaKey => 'WUBRGC'.includes(c) && c.length === 1);
+    const anyColor = COLOR_LETTERS.split('').every((c) => made.includes(c as ManaKey));
+    if (anyColor && deckColors.size > 0) made = made.filter((c) => c === 'C' || deckColors.has(c));
+    made.forEach((c) => (production[c] += item.qty * (card.manaAmounts?.[c] ?? 1)));
 
     // Sottotipi, raggruppati per il tipo principale della carta.
     const subs = subtypesOf(card.typeLine);

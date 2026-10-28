@@ -181,10 +181,10 @@ export default function DeckStatsContents({ cards }: { cards: DeckStatsItem[] })
         </span>
       </button>
 
-      <ChartTitle note="Ogni fonte vale 1, divisa tra i colori che può fare (terra doppia ½ + ½, tripla ⅓ ciascuno).">
+      <ChartTitle note="Come in ManaBox: ogni fonte conta per ogni colore che può fare (terra doppia = 1 + 1), con il mana che aggiunge (Sol Ring = 2 incolore). Le fonti di qualsiasi colore contano solo i colori del mazzo.">
         Produzione di mana
       </ChartTitle>
-      <PieChart slices={stats.productionPie} idSuffix="deckstats-prod" unit="fonti" />
+      <PieChart slices={stats.productionPie} idSuffix="deckstats-prod" unit="mana" />
 
       <ChartTitle>Tipi di carte</ChartTitle>
       <PieChart slices={stats.typePie} idSuffix="deckstats-types" unit="carte" />
