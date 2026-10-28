@@ -203,8 +203,7 @@ export default function CardStats({ games }: { games: Game[] }) {
           {PERIODS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
         </SelectField>
       </div>
-      <FilterTabs options={RANKINGS} value={view} onChange={(v) => setView(v as View)} className="mb-2" />
-      <FilterTabs options={EXTRAS} value={view} onChange={(v) => setView(v as View)} className="mb-3" />
+      <FilterTabs options={[...RANKINGS, ...EXTRAS]} value={view} onChange={(v) => setView(v as View)} className="mb-3" />
       <p className={cx('mb-3', TEXT_MINI)}>
         In base alle liste attuali dei mazzi · {stats.gamesWithLists} partite su {stats.games} con lista carte · solo Main Deck, terre escluse.
         {view === 'colors' && ' I colori vengono da tutte le partite del filtro.'}

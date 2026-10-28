@@ -470,7 +470,7 @@ export default function GameList({ userId, games: sharedGames, loading, loadErro
             onChange={(v) => setPeriodFilter(v as 'all' | '30' | 'year')}
             options={[
               { value: 'all', label: 'Tutte' },
-              { value: '30', label: 'Ultimi 30 giorni' },
+              { value: '30', label: '30 giorni' },
               { value: 'year', label: "Quest'anno" },
             ]}
           />
