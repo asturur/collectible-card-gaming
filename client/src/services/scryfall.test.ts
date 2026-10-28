@@ -10,6 +10,17 @@ describe('Scryfall display and identity cache', () => {
     localStorage.setItem('mtg-scryfall-cache-v5', JSON.stringify([['island', { name: 'Island', faces: [{ normal: 'old' }] }]]));
     const api = await import('./scryfall'); expect(api.getCard('Island')).toBeUndefined();
   });
+  it('asks again for cached cards saved before mana amounts, and reads them from the card text', async () => {
+    const old = { name: 'Sol Ring', scryfallId: 'ring', exactMatch: true, faces: [{ normal: 'x' }], tokens: [], colors: [], produced: ['C'], typeLine: 'Artifact' };
+    localStorage.setItem('mtg-scryfall-cache-v6', JSON.stringify([['sol ring', old]]));
+    const fresh = { id: 'ring', oracle_id: 'o', name: 'Sol Ring', type_line: 'Artifact', cmc: 1, mana_cost: '{1}', produced_mana: ['C'],
+      oracle_text: '{T}: Add {C}{C}.', image_uris: { normal: 'https://cards.scryfall.io/ring/front' } };
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(reply([fresh])));
+    const api = await import('./scryfall');
+    expect(api.getCard('Sol Ring')).toBeUndefined();
+    api.requestCards(['Sol Ring']); await vi.runAllTimersAsync();
+    expect(api.getCard('Sol Ring')?.manaAmounts).toEqual({ C: 2 });
+  });
   it('hydrates saved printings by ID and keeps faces, mana and tokens after discovery', async () => {
     const fetch = vi.fn().mockResolvedValueOnce(reply([raw('saved')])).mockResolvedValueOnce(reply([raw('later')])); vi.stubGlobal('fetch', fetch);
     const api = await import('./scryfall'); const cards = [{ name: 'Delver of Secrets', scryfallId: 'saved' }];
