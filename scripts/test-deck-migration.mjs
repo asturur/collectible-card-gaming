@@ -16,7 +16,8 @@ try {
     await new Promise(resolve => setTimeout(resolve, 250));
   }
   if (!ready) throw new Error('Local Postgres did not start.');
-  const files = ['scripts/test-deck-migration.sql', 'supabase/migrations/20261007192702_playable_saved_deck_cards.sql', 'scripts/assert-deck-migration.sql'];
+  const files = ['scripts/test-deck-migration.sql', 'supabase/migrations/20261007192702_playable_saved_deck_cards.sql', 'scripts/assert-deck-migration.sql',
+    'scripts/test-account-deletion.sql', 'supabase/migrations/20261029120000_cancellazione_account.sql', 'scripts/assert-account-deletion.sql'];
   for (const file of files) {
     docker(['exec', '-i', container, 'psql', '-U', 'postgres', '-d', 'zaff_test', '-v', 'ON_ERROR_STOP=1', ...(file.includes('assert-') ? [] : ['--single-transaction'])], readFileSync(file));
   }
@@ -34,7 +35,7 @@ try {
     sql += `select public.test_assert((select sum(qty) from public."mazzi-cards") = ${decks.reduce((n, d) => n + d.cards.reduce((n, c) => n + c.qty, 0), 0)},'real copies preserved');\n`;
     docker(['exec', '-i', container, 'psql', '-U', 'postgres', '-d', 'zaff_test', '-v', 'ON_ERROR_STOP=1', '--single-transaction'], sql);
   }
-  console.log('Migration checks passed: parity, identities, permissions, rollback, conflicts and cascades.');
+  console.log('Migration checks passed: parity, identities, permissions, rollback, conflicts, cascades and account deletion.');
 } finally {
   spawnSync('docker', ['rm', '-f', container], { stdio: 'ignore' });
 }

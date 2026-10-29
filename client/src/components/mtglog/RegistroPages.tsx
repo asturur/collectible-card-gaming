@@ -27,6 +27,7 @@ import { deleteSavedDeck, type SavedDeck } from '../../services/savedDecks';
 import type { DeckEntry } from '../../services/deckCards';
 import { matchupNamesFromPath, paths, playerNameFromPath } from '../../router';
 import Faq from './Faq';
+import AccountPanel from './AccountPanel';
 
 const DECKS_CRUMB = { label: 'Mazzi', to: paths.decks };
 const GAMES_CRUMB = { label: 'Partite', to: paths.games };
@@ -361,6 +362,15 @@ function FaqPage() {
   );
 }
 
+function AccountPage() {
+  const { userId, email, games } = useRegistro();
+  return (
+    <SectionPage title="Account">
+      <AccountPanel userId={userId} email={email} games={games} />
+    </SectionPage>
+  );
+}
+
 function NotFoundPage() {
   return <SectionPage title="Pagina non trovata"><p className={TEXT_MUTED}>Questo indirizzo non corrisponde a una sezione del registro.</p></SectionPage>;
 }
@@ -391,5 +401,6 @@ export const registroRoutes: RouteObject[] = [
   { path: 'faq', element: <FaqPage /> },
   { path: 'faq/:section', element: <FaqPage /> },
   { path: 'faq/:section/:topic', element: <FaqPage /> },
+  { path: 'account', element: <AccountPage /> },
   { path: '*', element: <NotFoundPage /> },
 ];

@@ -233,6 +233,7 @@ the Vite basename (`/collectible-card-gaming/`).
 /more                     → redirects to /players (retired menu page)
 /players                  → player roster
 /faq                      → statistics FAQ; /faq/:section/:topic opens one explanation
+/account                  → account email, sign out, account deletion
 /zaff                     → JoinScreen → DeckPicker → DeckPreview → GameView
 ```
 
@@ -292,6 +293,10 @@ Score size follows the card (`scoreSize`: container units of the reading width/h
 digits plus the tap total and leaving room for the ⋯ button), clamped between 40 and 200 px.
 "Esci senza salvare" (last row of the options menu) always asks first in its own dialog; once
 confirmed, `GameForm`'s `onDiscard` leaves through `useLeaveGuard().leave` without a second prompt.
+Account deletion (`mtglog/AccountPanel.tsx`, `services/account.ts`, SQL `delete_my_account`): the user
+chooses to delete their decks or leave them to the group; games are never deleted (they involve other
+players). Everything left keeps `created_by = null` (editable by any account, like pre-account rows).
+Confirmation needs the typed word ELIMINA; `scripts/assert-account-deletion.sql` covers the SQL.
 Saved-deck charts use `/decks/:deckId/stats`, with a breadcrumb back to the deck.
 Mana production (`mtglog/deckMath.ts`) follows ManaBox: each source counts fully for every colour it
 can make, times the mana it adds at once (`manaAmounts` in `services/scryfall.ts`, from the card text:
@@ -321,7 +326,7 @@ Registro and ZAFF implementations. Some legacy controls still bypass it.
 | Component | Purpose |
 |-----------|---------|
 | `Button` / `ButtonLink` / `ButtonRouteLink` | daisyUI `primary`, outlined `ghost`, soft secondary `link`, `danger`, text-style `text`, `subtle` (daisyUI ghost), and solid `neutral` × `sm`/`md`/`lg`/`xl`. Square/circle shapes use daisyUI modifiers. `link` is a historical variant name; use `ButtonRouteLink` for internal navigation and `ButtonLink` for external links. |
-| `Field` | daisyUI `TextField`, `SelectField`, `TextAreaField` (label + control + associated hint/error), `density="compact"` for dense forms |
+| `Field` | daisyUI `TextField`, `SelectField`, `TextAreaField` (label + control + associated hint/error), `density="compact"` for dense forms; `ChoiceField` radio group with a hint per option |
 | `Panel` | `CenteredPanel` — the full-screen mask (ZAFF join, registro login, deck picker) |
 | `SectionPage` / `Breadcrumbs` | Shared routed page shell: mobile widths, heading, daisyUI breadcrumb hierarchy, safe-area padding |
 | `Modal` | Task overlay with ✕/Esc/backdrop close; `level={2}` stacks over another task |
