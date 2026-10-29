@@ -54,6 +54,7 @@ const DIALS: Record<'stats' | 'more', { label: string; items: SpeedDialItem[] }>
       { id: 'roster', label: 'Gestisci Giocatori', icon: '👥', to: paths.players },
       { id: 'zaff', label: 'Vai a ZAFF', icon: '🎮', to: paths.zaff },
       { id: 'faq', label: 'FAQ', icon: '❓', to: paths.faq },
+      { id: 'account', label: 'Account', icon: '👤', to: paths.account },
       { id: 'logout', label: 'Esci', icon: '🚪', onSelect: () => { void supabase?.auth.signOut(); } },
     ],
   },

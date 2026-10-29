@@ -26,6 +26,7 @@ export const paths = {
   more: '/more',
   players: '/players',
   faq: '/faq',
+  account: '/account',
   faqTopic: (section: string, topic?: string) => `/faq/${encodeURIComponent(section)}${topic ? `/${encodeURIComponent(topic)}` : ''}`,
 } as const;
 

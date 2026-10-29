@@ -24,6 +24,7 @@ ordine, su un progetto nuovo o per ricostruire lo schema in caso di necessità.
 | `012_aggiungi_formato_mazzi.sql` | Colonna formato mazzo |
 | `20261007192702_playable_saved_deck_cards.sql` | Carte normalizzate, identità Scryfall/Oracle, sincronizzazione JSON e salvataggio atomico |
 | `20261008230500_aggiungi_stampa_carte_mazzi.sql` | Espansione e numero di collezione delle carte dei mazzi (da eseguire a mano nello SQL Editor) |
+| `20261029120000_cancellazione_account.sql` | Funzione `delete_my_account`: cancellazione dell'account dall'app, mazzi eliminati o lasciati al gruppo, partite sempre conservate (da eseguire a mano nello SQL Editor; provata da `npm run test:db`) |
 
 Nota: questi file sono stati scritti a mano durante lo sviluppo (non generati
 dalla Supabase CLI), quindi non seguono il formato timestamp `YYYYMMDDHHMMSS_nome.sql`

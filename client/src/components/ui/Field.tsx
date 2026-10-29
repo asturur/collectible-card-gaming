@@ -98,3 +98,39 @@ export function TextAreaField({ label, hint, error, density = 'comfortable', fie
     </FieldShell>
   );
 }
+
+export interface ChoiceOption<T extends string> {
+  value: T;
+  label: ReactNode;
+  /** Conseguenze della scelta, sotto l'etichetta. */
+  hint?: ReactNode;
+}
+
+interface ChoiceFieldProps<T extends string> {
+  legend: ReactNode;
+  value: T;
+  options: readonly ChoiceOption<T>[];
+  onChange: (value: T) => void;
+  disabled?: boolean;
+  className?: string;
+}
+
+/** Scelta tra poche opzioni che si escludono (radio daisyUI), ognuna con la sua spiegazione. */
+export function ChoiceField<T extends string>({ legend, value, options, onChange, disabled, className }: ChoiceFieldProps<T>) {
+  const name = useId();
+  return (
+    <fieldset className={cx('fieldset mb-4 min-w-0', className)} disabled={disabled}>
+      <legend className="fieldset-legend text-sm font-medium text-base-content">{legend}</legend>
+      {options.map((option) => (
+        <label key={option.value} className="label cursor-pointer items-start gap-3 whitespace-normal py-1.5 text-sm text-base-content">
+          <input type="radio" className="radio radio-sm mt-0.5 shrink-0" name={name} value={option.value}
+            checked={value === option.value} onChange={() => onChange(option.value)} />
+          <span>
+            {option.label}
+            {option.hint && <span className="mt-0.5 block text-xs text-base-content/70">{option.hint}</span>}
+          </span>
+        </label>
+      ))}
+    </fieldset>
+  );
+}
