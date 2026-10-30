@@ -17,7 +17,7 @@ zaff/
 │       ├── state.ts     # GameState, Player, Card types
 │       ├── actions.ts   # ActionTypes enum, Action, SequencedAction
 │       └── protocol.ts  # ClientMessage, ServerMessage envelopes
-│── plans/           # Implementation plans
+│── plans/           # Implementation plans; DIARIO_LAVORI.md = working diary (workflow, decisions, fixes)
 └── supabase/        # supabase connection
     └── migrations/  # supabase sql files
 ```
