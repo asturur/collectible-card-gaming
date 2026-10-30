@@ -7,6 +7,12 @@ import { listSavedDecks } from '../../services/savedDecks';
 vi.mock('../../services/savedDecks', () => ({ listSavedDecks: vi.fn(), subscribeSavedDecks: () => () => {} }));
 vi.mock('./DeckEditor', () => ({ DECK_FORMATS: ['Modern', 'Commander'] }));
 vi.mock('./DeckCards', () => ({ default: () => null }));
+const cardData: Record<string, { keywords: string[]; oracle: string }> = {
+  'Fiery Temper': { keywords: ['Madness'], oracle: 'Madness {R}' },
+  Opt: { keywords: ['Scry'], oracle: 'Scry 1. Draw a card.' },
+};
+vi.mock('../../services/scryfall', () => ({ getCard: (name: string) => cardData[name], isMissing: () => false }));
+vi.mock('./useDeckImages', () => ({ useDeckImages: () => {} }));
 beforeEach(() => { vi.clearAllMocks(); vi.mocked(listSavedDecks).mockResolvedValue([]); });
 const props = () => ({ onCreate: vi.fn(), onImportFile: vi.fn() });
 describe('Registro import and list controls', () => {
@@ -32,6 +38,9 @@ describe('Registro import and list controls', () => {
       .map(d => ({ ...d, source: 'brew', cards: [{ name: 'Island', qty: 1 }], cardRows: [], revision: 0 }));
     vi.mocked(listSavedDecks).mockResolvedValue(rows as never);
     const user = userEvent.setup(); render(<MemoryRouter><DeckList {...props()} /></MemoryRouter>); await screen.findByRole('link', { name: /Other/ });
+    // I colori stanno nel pannello Filtri, come gli altri filtri.
+    expect(screen.queryByRole('button', { name: 'U' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /Filtri/ }));
     await user.click(screen.getByRole('button', { name: 'U' }));
     expect(screen.queryByRole('link', { name: /Other/ })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Own/ })).toHaveAttribute('href', '/decks/own');
@@ -39,6 +48,34 @@ describe('Registro import and list controls', () => {
     await user.click(screen.getByRole('button', { name: 'G' }));
     expect(screen.queryByRole('link', { name: /Own/ })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Other/ })).toHaveAttribute('href', '/decks/other');
+    await user.click(screen.getByRole('button', { name: 'Mostra 1 mazzo' }));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    // Il colore scelto resta visibile in cima e si toglie con un tocco.
+    await user.click(screen.getByRole('button', { name: 'Togli il filtro Colore' }));
+    expect(screen.getByRole('link', { name: /Own/ })).toBeInTheDocument();
+  });
+  it('filters by card name, keyword and rules text from the Filtri panel, and shows why a deck matches', async () => {
+    const deck = (id: string, cards: string[]) => ({ id, name: id, createdBy: 'me', colors: [], format: '', source: 'brew', cards: [], revision: 0,
+      cardRows: cards.map((name) => ({ name, qty: 1, section: 'main', scryfallId: null })) });
+    vi.mocked(listSavedDecks).mockResolvedValue([deck('Rosso', ['Fiery Temper', 'Sol Ring']), deck('Blu', ['Opt'])] as never);
+    const user = userEvent.setup(); render(<MemoryRouter><DeckList {...props()} /></MemoryRouter>); await screen.findByRole('link', { name: /Blu/ });
+
+    await user.click(screen.getByRole('button', { name: /Filtri/ }));
+    await user.selectOptions(screen.getByLabelText('Parola chiave'), 'Madness');
+    expect(screen.getByRole('option', { name: 'Madness (1 mazzo)' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Mostra 1 mazzo' }));
+    expect(screen.queryByRole('link', { name: /Blu/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Rosso/ })).toHaveTextContent('Madness ×1');
+
+    // Il filtro attivo resta visibile e si toglie con un tocco.
+    await user.click(screen.getByRole('button', { name: 'Togli il filtro Parola chiave: Madness' }));
+    expect(screen.getByRole('link', { name: /Blu/ })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /Filtri/ }));
+    await user.type(screen.getByLabelText('Testo della carta'), 'draw');
+    await user.type(screen.getByLabelText('Nome carta'), 'op');
+    await user.click(screen.getByRole('button', { name: 'Mostra 1 mazzo' }));
+    expect(screen.getByRole('link', { name: /Blu/ })).toHaveTextContent('Opt · «draw» in 1 carta');
+    expect(screen.queryByRole('link', { name: /Rosso/ })).not.toBeInTheDocument();
   });
 });

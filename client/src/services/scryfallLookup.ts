@@ -17,6 +17,8 @@ export interface RawCard {
   power?: string;
   toughness?: string;
   oracle_text?: string;
+  /** Parole chiave della carta in inglese (Flying, Madness, Scry…). */
+  keywords?: string[];
   all_parts?: { id: string; component: string; name: string }[];
   /** Prezzi del giorno (stringhe, null se non c'è un prezzo) e finiture in cui la stampa esiste. */
   prices?: { eur?: string | null; eur_foil?: string | null; usd?: string | null; usd_foil?: string | null; usd_etched?: string | null };

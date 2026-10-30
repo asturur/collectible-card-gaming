@@ -55,16 +55,21 @@ interface CommonProps {
   fieldClassName?: string;
 }
 
-type TextFieldProps = CommonProps & InputHTMLAttributes<HTMLInputElement>;
+type TextFieldProps = CommonProps & InputHTMLAttributes<HTMLInputElement> & {
+  /** Suggerimenti mentre si scrive (datalist nativo del browser). */
+  suggestions?: readonly string[];
+};
 
-export function TextField({ label, hint, error, density = 'comfortable', fieldClassName, className, id,
+export function TextField({ label, hint, error, density = 'comfortable', fieldClassName, className, id, suggestions,
   'aria-describedby': description, 'aria-invalid': invalid, ...rest }: TextFieldProps) {
   const autoId = useId();
   const fieldId = id ?? autoId;
+  const listId = suggestions?.length ? `${fieldId}-suggestions` : undefined;
   return (
     <FieldShell id={fieldId} label={label} hint={hint} error={error} className={fieldClassName}>
-      <input id={fieldId} className={controlClass('input', density, error, className)}
+      <input id={fieldId} className={controlClass('input', density, error, className)} list={listId}
         aria-describedby={describedBy(fieldId, hint, error, description)} aria-invalid={error ? true : invalid} {...rest} />
+      {listId && <datalist id={listId}>{suggestions!.map((s) => <option key={s} value={s} />)}</datalist>}
     </FieldShell>
   );
 }
