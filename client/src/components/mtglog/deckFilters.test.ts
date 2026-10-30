@@ -23,15 +23,24 @@ describe('deck filters', () => {
   });
 
   it('matches a keyword and the rules text, counting distinct cards', () => {
-    expect(matchDeck(red, { ...NO_DECK_FILTERS, keyword: 'Madness' }, lookup)).toEqual({ ok: true, notes: ['Madness ×1'] });
-    expect(matchDeck(blue, { ...NO_DECK_FILTERS, keyword: 'Madness' }, lookup).ok).toBe(false);
+    expect(matchDeck(red, { ...NO_DECK_FILTERS, keywords: ['Madness'] }, lookup)).toEqual({ ok: true, notes: ['Madness ×1'] });
+    expect(matchDeck(blue, { ...NO_DECK_FILTERS, keywords: ['Madness'] }, lookup).ok).toBe(false);
     expect(matchDeck(blue, { ...NO_DECK_FILTERS, text: 'DRAW' }, lookup)).toEqual({ ok: true, notes: ['«DRAW» in 1 carta'] });
     expect(matchDeck(red, { ...NO_DECK_FILTERS, text: 'draw' }, lookup).notes).toEqual(['«draw» in 1 carta']);
   });
 
   it('needs every active filter at once', () => {
-    expect(matchDeck(red, { card: 'sol', keyword: 'Madness', text: 'draw' }, lookup).notes).toEqual(['Sol Ring', 'Madness ×1', '«draw» in 1 carta']);
-    expect(matchDeck(red, { card: 'sol', keyword: 'Scry', text: '' }, lookup).ok).toBe(false);
+    expect(matchDeck(red, { card: 'sol', keywords: ['Madness'], keywordMode: 'all', text: 'draw' }, lookup).notes).toEqual(['Sol Ring', 'Madness ×1', '«draw» in 1 carta']);
+    expect(matchDeck(red, { card: 'sol', keywords: ['Scry'], keywordMode: 'all', text: '' }, lookup).ok).toBe(false);
+  });
+
+  it('combines several keywords as "all" or "at least one"', () => {
+    const both = { ...NO_DECK_FILTERS, keywords: ['Madness', 'Scry'] };
+    expect(matchDeck(red, both, lookup).ok).toBe(false);
+    expect(matchDeck([...red, { name: 'Opt' }], both, lookup)).toEqual({ ok: true, notes: ['Madness ×1', 'Scry ×1'] });
+    // "Almeno una": basta una parola, e la nota dice solo quelle trovate.
+    expect(matchDeck(red, { ...both, keywordMode: 'any' }, lookup)).toEqual({ ok: true, notes: ['Madness ×1'] });
+    expect(matchDeck([{ name: 'Sol Ring' }], { ...both, keywordMode: 'any' }, lookup).ok).toBe(false);
   });
 
   it('lists card names, keywords with their deck counts, and how much card data has arrived', () => {

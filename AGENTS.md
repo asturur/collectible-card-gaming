@@ -298,8 +298,9 @@ chooses to delete their decks or leave them to the group; games are never delete
 players). Everything left keeps `created_by = null` (editable by any account, like pre-account rows).
 Confirmation needs the typed word ELIMINA; `scripts/assert-account-deletion.sql` covers the SQL.
 Saved decks list (`mtglog/DeckList.tsx`, logic in `mtglog/deckFilters.ts`): every filter (colours, card
-name, keyword, rules text) lives in the "Filtri" dialog; the page shows only the button with the active
-count and one removable chip per active filter. Filters combine (AND); each matching deck says why
+name, keywords, rules text) lives in the "Filtri" dialog; the page shows only the button with the active
+count and one removable chip per active filter (one per keyword). Filters combine (AND); several keywords
+match all of them or at least one ("Tutte · Almeno una"); each matching deck says why
 ("Madness ×1 · «draw» in 2 carte"). Keywords and oracle text come from Scryfall (`ScryCard.keywords`,
 `ScryCard.oracle`, English), requested only while filtering needs them; partial results say so.
 Saved-deck charts use `/decks/:deckId/stats`, with a breadcrumb back to the deck.
@@ -331,7 +332,7 @@ Registro and ZAFF implementations. Some legacy controls still bypass it.
 | Component | Purpose |
 |-----------|---------|
 | `Button` / `ButtonLink` / `ButtonRouteLink` | daisyUI `primary`, outlined `ghost`, soft secondary `link`, `danger`, text-style `text`, `subtle` (daisyUI ghost), and solid `neutral` × `sm`/`md`/`lg`/`xl`. Square/circle shapes use daisyUI modifiers. `link` is a historical variant name; use `ButtonRouteLink` for internal navigation and `ButtonLink` for external links. |
-| `Field` | daisyUI `TextField` (optional `suggestions` → native datalist), `SelectField`, `TextAreaField` (label + control + associated hint/error), `density="compact"` for dense forms; `ChoiceField` radio group with a hint per option |
+| `Field` | daisyUI `TextField` (optional `suggestions` → native datalist), `SelectField`, `TextAreaField` (label + control + associated hint/error), `density="compact"` for dense forms; `ChoiceField` radio group with a hint per option; `CheckboxListField` multi-select list (scrolls, chosen first, optional search) |
 | `Panel` | `CenteredPanel` — the full-screen mask (ZAFF join, registro login, deck picker) |
 | `SectionPage` / `Breadcrumbs` | Shared routed page shell: mobile widths, heading, daisyUI breadcrumb hierarchy, safe-area padding |
 | `Modal` | Task overlay with ✕/Esc/backdrop close; `level={2}` stacks over another task |

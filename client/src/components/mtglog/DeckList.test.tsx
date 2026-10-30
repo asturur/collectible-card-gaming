@@ -61,8 +61,8 @@ describe('Registro import and list controls', () => {
     const user = userEvent.setup(); render(<MemoryRouter><DeckList {...props()} /></MemoryRouter>); await screen.findByRole('link', { name: /Blu/ });
 
     await user.click(screen.getByRole('button', { name: /Filtri/ }));
-    await user.selectOptions(screen.getByLabelText('Parola chiave'), 'Madness');
-    expect(screen.getByRole('option', { name: 'Madness (1 mazzo)' })).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: 'Madness (1 mazzo)' })).not.toBeChecked();
+    await user.click(screen.getByRole('checkbox', { name: 'Madness (1 mazzo)' }));
     await user.click(screen.getByRole('button', { name: 'Mostra 1 mazzo' }));
     expect(screen.queryByRole('link', { name: /Blu/ })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Rosso/ })).toHaveTextContent('Madness ×1');
@@ -77,5 +77,32 @@ describe('Registro import and list controls', () => {
     await user.click(screen.getByRole('button', { name: 'Mostra 1 mazzo' }));
     expect(screen.getByRole('link', { name: /Blu/ })).toHaveTextContent('Opt · «draw» in 1 carta');
     expect(screen.queryByRole('link', { name: /Rosso/ })).not.toBeInTheDocument();
+  });
+  it('picks several keywords from a searchable list and combines them as all or at least one', async () => {
+    const deck = (id: string, cards: string[]) => ({ id, name: id, createdBy: 'me', colors: [], format: '', source: 'brew', cards: [], revision: 0,
+      cardRows: cards.map((name) => ({ name, qty: 1, section: 'main', scryfallId: null })) });
+    vi.mocked(listSavedDecks).mockResolvedValue([deck('Rosso', ['Fiery Temper']), deck('Blu', ['Opt'])] as never);
+    const user = userEvent.setup(); render(<MemoryRouter><DeckList {...props()} /></MemoryRouter>); await screen.findByRole('link', { name: /Blu/ });
+    await user.click(screen.getByRole('button', { name: /Filtri/ }));
+
+    // La ricerca restringe la lista; le voci scelte restano visibili.
+    await user.type(screen.getByRole('searchbox', { name: 'Cerca parola chiave' }), 'mad');
+    expect(screen.queryByRole('checkbox', { name: /Scry/ })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('checkbox', { name: /Madness/ }));
+    await user.clear(screen.getByRole('searchbox', { name: 'Cerca parola chiave' }));
+    await user.click(screen.getByRole('checkbox', { name: /Scry/ }));
+    expect(screen.getByRole('group', { name: 'Parole chiave (2 scelte)' })).toBeInTheDocument();
+
+    // "Tutte": nessun mazzo ha sia Madness sia Scry. "Almeno una": entrambi.
+    expect(screen.getByRole('button', { name: 'Tutte' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Mostra 0 mazzi' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Almeno una' }));
+    await user.click(screen.getByRole('button', { name: 'Mostra 2 mazzi' }));
+    expect(screen.getByRole('link', { name: /Rosso/ })).toHaveTextContent('Madness ×1');
+    expect(screen.getByRole('link', { name: /Blu/ })).toHaveTextContent('Scry ×1');
+
+    // Un chip per parola chiave, da togliere una alla volta.
+    await user.click(screen.getByRole('button', { name: 'Togli il filtro Parola chiave: Scry' }));
+    expect(screen.queryByRole('link', { name: /Blu/ })).not.toBeInTheDocument();
   });
 });

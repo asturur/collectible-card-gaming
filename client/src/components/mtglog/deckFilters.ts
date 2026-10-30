@@ -4,13 +4,17 @@ import type { ScryCard } from '../../services/scryfall';
 export interface DeckFilters {
   /** Parte del nome di una carta (es. "sol ring"). */
   card: string;
-  /** Una parola chiave di Scryfall, in inglese (es. "Madness"). */
-  keyword: string;
+  /** Parole chiave di Scryfall, in inglese (es. "Madness"). */
+  keywords: string[];
+  /** Con più parole chiave: il mazzo deve averle tutte, o almeno una. */
+  keywordMode: KeywordMode;
   /** Parte del testo delle regole, in inglese (es. "draw a card"). */
   text: string;
 }
 
-export const NO_DECK_FILTERS: DeckFilters = { card: '', keyword: '', text: '' };
+export type KeywordMode = 'all' | 'any';
+
+export const NO_DECK_FILTERS: DeckFilters = { card: '', keywords: [], keywordMode: 'all', text: '' };
 
 /** Carta di un mazzo salvato, quanto basta per filtrare. */
 export interface FilterCard {
@@ -22,10 +26,11 @@ export type CardLookup = (name: string, scryfallId?: string | null) => ScryCard 
 
 const norm = (s: string) => s.trim().toLowerCase();
 
-export const activeFilterCount = (f: DeckFilters) => [f.card, f.keyword, f.text].filter((v) => v.trim()).length;
+/** Un filtro per ogni chip in pagina: nome carta, ogni parola chiave, testo. */
+export const activeFilterCount = (f: DeckFilters) => [f.card, f.text].filter((v) => v.trim()).length + f.keywords.length;
 
 /** Parola chiave e testo servono i dati Scryfall delle carte; il nome carta no. */
-export const needsCardData = (f: DeckFilters) => Boolean(f.keyword.trim() || f.text.trim());
+export const needsCardData = (f: DeckFilters) => Boolean(f.keywords.length || f.text.trim());
 
 /** Una riga per carta, anche se il mazzo la elenca più volte (Main e Side, stampe diverse). */
 function uniqueCards(cards: FilterCard[]): FilterCard[] {
@@ -53,11 +58,15 @@ export function matchDeck(cards: FilterCard[], filters: DeckFilters, lookup: Car
     if (!hits.length) return { ok: false, notes: [] };
     notes.push(hits.length === 1 ? hits[0].name : `${hits[0].name} +${hits.length - 1}`);
   }
-  const keyword = norm(filters.keyword);
-  if (keyword) {
-    const n = list.filter((c) => lookup(c.name, c.scryfallId)?.keywords?.some((k) => norm(k) === keyword)).length;
-    if (!n) return { ok: false, notes: [] };
-    notes.push(`${filters.keyword.trim()} ×${n}`);
+  if (filters.keywords.length) {
+    const counts = filters.keywords.map((keyword) => ({
+      keyword,
+      n: list.filter((c) => lookup(c.name, c.scryfallId)?.keywords?.some((k) => norm(k) === norm(keyword))).length,
+    }));
+    const found = counts.filter((k) => k.n > 0);
+    const ok = filters.keywordMode === 'all' ? found.length === counts.length : found.length > 0;
+    if (!ok) return { ok: false, notes: [] };
+    notes.push(...found.map((k) => `${k.keyword} ×${k.n}`));
   }
   const text = norm(filters.text);
   if (text) {

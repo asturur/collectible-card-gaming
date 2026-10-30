@@ -7,12 +7,13 @@ import ColorFilter from './ColorFilter';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import Badge from '../ui/Badge';
-import { SelectField, TextField } from '../ui/Field';
+import { CheckboxListField, TextField } from '../ui/Field';
+import FilterTabs from '../ui/FilterTabs';
 import { getCard, isMissing } from '../../services/scryfall';
 import { useDeckImages } from './useDeckImages';
 import {
   activeFilterCount, allCardNames, cardDataProgress, keywordsInDecks, matchDeck, needsCardData,
-  NO_DECK_FILTERS, type DeckFilters,
+  NO_DECK_FILTERS, type DeckFilters, type KeywordMode,
 } from './deckFilters';
 import { cx, STICKY_BELOW_TITLE, TEXT_MINI, TEXT_MUTED } from '../ui/styles';
 import { Link } from 'react-router';
@@ -114,10 +115,14 @@ export default function DeckList({ onCreate, onImportFile }: DeckListProps) {
   const activeCount = activeFilterCount(filters) + (colorFilter.size > 0 ? 1 : 0);
   const filtersActive = activeCount > 0;
   const clearAll = () => { setFilters(NO_DECK_FILTERS); setColorFilter(new Set()); };
-  const setFilter = (key: keyof DeckFilters, value: string) => setFilters((prev) => ({ ...prev, [key]: value }));
-  const filterChips = ([
-    ['card', 'Carta'], ['keyword', 'Parola chiave'], ['text', 'Testo'],
-  ] as const).filter(([key]) => filters[key].trim());
+  const setFilter = (key: 'card' | 'text', value: string) => setFilters((prev) => ({ ...prev, [key]: value }));
+  const setKeywords = (keywords: string[]) => setFilters((prev) => ({ ...prev, keywords }));
+  // Un chip per filtro: nome carta, ogni parola chiave, testo.
+  const filterChips = [
+    ...(filters.card.trim() ? [{ id: 'card', label: 'Carta', value: filters.card, clear: () => setFilter('card', '') }] : []),
+    ...filters.keywords.map((k) => ({ id: 'kw-' + k, label: 'Parola chiave', value: k, clear: () => setKeywords(filters.keywords.filter((x) => x !== k)) })),
+    ...(filters.text.trim() ? [{ id: 'text', label: 'Testo', value: filters.text, clear: () => setFilter('text', '') }] : []),
+  ];
 
   return (
     <>
@@ -141,10 +146,10 @@ export default function DeckList({ onCreate, onImportFile }: DeckListProps) {
                     Colore <ManaIcons colors={[...colorFilter]} className="text-[15px]" /> ✕
                   </Button>
                 )}
-                {filterChips.map(([key, label]) => (
-                  <Button key={key} size="sm" variant="link" onClick={() => setFilter(key, '')}
-                    aria-label={`Togli il filtro ${label}: ${filters[key]}`} className="max-w-full">
-                    <span className="truncate">{filters[key]}</span> ✕
+                {filterChips.map((chip) => (
+                  <Button key={chip.id} size="sm" variant="link" onClick={chip.clear}
+                    aria-label={`Togli il filtro ${chip.label}: ${chip.value}`} className="max-w-full">
+                    <span className="truncate">{chip.value}</span> ✕
                   </Button>
                 ))}
               </div>
@@ -200,17 +205,26 @@ export default function DeckList({ onCreate, onImportFile }: DeckListProps) {
             suggestions={allCardNames(deckCards)}
             autoComplete="off"
           />
-          <SelectField
-            label="Parola chiave"
-            value={filters.keyword}
-            onChange={(e) => setFilter('keyword', e.target.value)}
+          <CheckboxListField
+            legend={filters.keywords.length ? `Parole chiave (${filters.keywords.length} scelte)` : 'Parole chiave'}
+            searchLabel="Cerca parola chiave"
+            values={filters.keywords}
+            onChange={setKeywords}
+            options={keywordsInDecks(deckCards, getCard).map((k) => ({
+              value: k.keyword, label: k.keyword, hint: `(${k.decks} ${k.decks === 1 ? 'mazzo' : 'mazzi'})`,
+            }))}
             hint={loadingCardData ? `Carico i dati delle carte (${progress.ready}/${progress.total})…` : 'Le parole chiave delle carte dei vostri mazzi, come su Scryfall.'}
-          >
-            <option value="">Qualsiasi</option>
-            {keywordsInDecks(deckCards, getCard).map((k) => (
-              <option key={k.keyword} value={k.keyword}>{k.keyword} ({k.decks} {k.decks === 1 ? 'mazzo' : 'mazzi'})</option>
-            ))}
-          </SelectField>
+            className="mb-2"
+          />
+          {/* Con più parole chiave si sceglie come combinarle. */}
+          {filters.keywords.length > 1 && (
+            <FilterTabs
+              className="mb-4"
+              value={filters.keywordMode}
+              onChange={(v) => setFilters((prev) => ({ ...prev, keywordMode: v as KeywordMode }))}
+              options={[{ value: 'all', label: 'Tutte' }, { value: 'any', label: 'Almeno una' }]}
+            />
+          )}
           <TextField
             label="Testo della carta"
             placeholder="es. draw a card"
