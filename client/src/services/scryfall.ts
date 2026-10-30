@@ -16,6 +16,9 @@ export interface ScryCard {
   produced: string[];
   /** Mana prodotto in una volta per colore (Sol Ring: C 2), dal testo della carta. Vedi `manaAmounts`. */
   manaAmounts?: Record<string, number>;
+  /** Parole chiave (inglese, da Scryfall) e testo delle regole di tutte le facce: per filtrare i mazzi. */
+  keywords?: string[];
+  oracle?: string;
   tokens: { id: string; name: string }[];
 }
 export interface ScryToken {
@@ -50,15 +53,19 @@ function loadStorage() {
         Array.isArray(card.faces) && card.faces[0]?.normal && Array.isArray(card.tokens) &&
         Array.isArray(card.colors) && Array.isArray(card.produced) && typeof card.typeLine === 'string' &&
         // Le carte salvate prima delle quantità di mana si richiedono di nuovo.
-        typeof card.manaAmounts === 'object' && card.manaAmounts !== null) {
+        typeof card.manaAmounts === 'object' && card.manaAmounts !== null &&
+        Array.isArray(card.keywords) && typeof card.oracle === 'string') {
         found.set(key, card); byId.set(card.scryfallId, card);
       }
     }
   } catch { /* A corrupt/blocked cache is replaceable. */ }
 }
 function saveStorage() {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify([...found.entries()].slice(-3000))); }
-  catch { /* Private/full storage does not prevent lookup. */ }
+  // Con i testi delle carte la cache pesa di più: se lo spazio non basta, tengo le più recenti.
+  for (const limit of [3000, 1500, 750]) {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify([...found.entries()].slice(-limit))); return; }
+    catch { /* Private/full storage does not prevent lookup. */ }
+  }
 }
 function toFaces(raw: RawCard): ScryFace[] {
   const images = raw.image_uris ? [raw.image_uris] : (raw.card_faces ?? []).map(f => f.image_uris);
@@ -97,6 +104,8 @@ function remember(raw: RawCard, requestedName?: string): ScryCard | undefined {
     cmc: raw.cmc ?? 0, manaCost: raw.mana_cost || front?.mana_cost || '',
     produced: raw.produced_mana ?? [...new Set((raw.card_faces ?? []).flatMap(f => f.produced_mana ?? []))],
     manaAmounts: {},
+    keywords: raw.keywords ?? [],
+    oracle: raw.oracle_text ?? (raw.card_faces ?? []).map(f => f.oracle_text ?? '').filter(Boolean).join('\n'),
     tokens: (raw.all_parts ?? []).filter(p => p.component === 'token').map(p => ({ id: p.id, name: p.name })),
   };
   card.manaAmounts = manaAmounts(raw.oracle_text ?? (raw.card_faces ?? []).map(f => f.oracle_text ?? '').join('\n'), card.produced);

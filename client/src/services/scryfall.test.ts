@@ -10,7 +10,7 @@ describe('Scryfall display and identity cache', () => {
     localStorage.setItem('mtg-scryfall-cache-v5', JSON.stringify([['island', { name: 'Island', faces: [{ normal: 'old' }] }]]));
     const api = await import('./scryfall'); expect(api.getCard('Island')).toBeUndefined();
   });
-  it('asks again for cached cards saved before mana amounts, and reads them from the card text', async () => {
+  it('asks again for cached cards saved before mana amounts and texts, and reads them from the card', async () => {
     const old = { name: 'Sol Ring', scryfallId: 'ring', exactMatch: true, faces: [{ normal: 'x' }], tokens: [], colors: [], produced: ['C'], typeLine: 'Artifact' };
     localStorage.setItem('mtg-scryfall-cache-v6', JSON.stringify([['sol ring', old]]));
     const fresh = { id: 'ring', oracle_id: 'o', name: 'Sol Ring', type_line: 'Artifact', cmc: 1, mana_cost: '{1}', produced_mana: ['C'],
@@ -20,6 +20,8 @@ describe('Scryfall display and identity cache', () => {
     expect(api.getCard('Sol Ring')).toBeUndefined();
     api.requestCards(['Sol Ring']); await vi.runAllTimersAsync();
     expect(api.getCard('Sol Ring')?.manaAmounts).toEqual({ C: 2 });
+    // Testo e parole chiave servono ai filtri della lista mazzi.
+    expect(api.getCard('Sol Ring')).toMatchObject({ oracle: '{T}: Add {C}{C}.', keywords: [] });
   });
   it('hydrates saved printings by ID and keeps faces, mana and tokens after discovery', async () => {
     const fetch = vi.fn().mockResolvedValueOnce(reply([raw('saved')])).mockResolvedValueOnce(reply([raw('later')])); vi.stubGlobal('fetch', fetch);

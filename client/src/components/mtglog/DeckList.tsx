@@ -6,6 +6,15 @@ import { ManaIcons } from './ManaIcon';
 import ColorFilter from './ColorFilter';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
+import Badge from '../ui/Badge';
+import { CheckboxListField, TextField } from '../ui/Field';
+import FilterTabs from '../ui/FilterTabs';
+import { getCard, isMissing } from '../../services/scryfall';
+import { useDeckImages } from './useDeckImages';
+import {
+  activeFilterCount, allCardNames, cardDataProgress, keywordsInDecks, matchDeck, needsCardData,
+  NO_DECK_FILTERS, type DeckFilters, type KeywordMode,
+} from './deckFilters';
 import { cx, STICKY_BELOW_TITLE, TEXT_MINI, TEXT_MUTED } from '../ui/styles';
 import { Link } from 'react-router';
 import { paths } from '../../router';
@@ -30,6 +39,9 @@ export default function DeckList({ onCreate, onImportFile }: DeckListProps) {
   const [pasteError, setPasteError] = useState('');
   const [pasteText, setPasteText] = useState('');
   const [colorFilter, setColorFilter] = useState<Set<string>>(new Set());
+  /** Nome carta, parola chiave e testo: si scelgono nel pannello "Filtri". */
+  const [filters, setFilters] = useState<DeckFilters>(NO_DECK_FILTERS);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   function handleFileChange(e: ChangeEvent<HTMLInputElement>) {
@@ -85,12 +97,32 @@ export default function DeckList({ onCreate, onImportFile }: DeckListProps) {
     });
   }
 
+  // Parola chiave e testo vengono da Scryfall: le carte si chiedono solo quando servono.
+  const deckCards = decks.map((d) => d.cardRows.map((c) => ({ name: c.name, scryfallId: c.scryfallId })));
+  const wantCardData = filtersOpen || needsCardData(filters);
+  useDeckImages(wantCardData ? deckCards.flat() : []);
+  const progress = wantCardData ? cardDataProgress(deckCards, getCard, isMissing) : { ready: 0, total: 0 };
+  const loadingCardData = wantCardData && progress.ready < progress.total;
+
   // Colori: il mazzo deve contenerli tutti quelli selezionati (può averne altri).
+  // Gli altri filtri devono valere tutti insieme.
+  const matches = new Map(decks.map((d, i) => [d.id, matchDeck(deckCards[i], filters, getCard)]));
   const visibleDecks = decks.filter(
     (d) =>
-      [...colorFilter].every((c) => d.colors.includes(c))
+      [...colorFilter].every((c) => d.colors.includes(c)) && matches.get(d.id)!.ok
   );
-  const filtersActive = colorFilter.size > 0;
+  // Colori, nome carta, parola chiave e testo: tutti nel pannello "Filtri".
+  const activeCount = activeFilterCount(filters) + (colorFilter.size > 0 ? 1 : 0);
+  const filtersActive = activeCount > 0;
+  const clearAll = () => { setFilters(NO_DECK_FILTERS); setColorFilter(new Set()); };
+  const setFilter = (key: 'card' | 'text', value: string) => setFilters((prev) => ({ ...prev, [key]: value }));
+  const setKeywords = (keywords: string[]) => setFilters((prev) => ({ ...prev, keywords }));
+  // Un chip per filtro: nome carta, ogni parola chiave, testo.
+  const filterChips = [
+    ...(filters.card.trim() ? [{ id: 'card', label: 'Carta', value: filters.card, clear: () => setFilter('card', '') }] : []),
+    ...filters.keywords.map((k) => ({ id: 'kw-' + k, label: 'Parola chiave', value: k, clear: () => setKeywords(filters.keywords.filter((x) => x !== k)) })),
+    ...(filters.text.trim() ? [{ id: 'text', label: 'Testo', value: filters.text, clear: () => setFilter('text', '') }] : []),
+  ];
 
   return (
     <>
@@ -101,13 +133,31 @@ export default function DeckList({ onCreate, onImportFile }: DeckListProps) {
           <p className="text-sm text-zaff-muted">Ancora nessun mazzo salvato.</p>
         ) : (
           <>
-            {/* Il filtro colore resta in cima mentre si scorre la lista. */}
+            {/* Tutti i filtri stanno nel pannello: in cima, fissi mentre si scorre, solo il pulsante
+                e i filtri attivi, da togliere con un tocco. */}
             <div className={cx(STICKY_BELOW_TITLE, 'sticky z-10 -mx-1 mb-2 rounded-lg border border-zaff-border bg-zaff-surface p-2.5 shadow-lg')}>
-              <ColorFilter colors={colorFilter} onToggle={toggleColorFilter} onClear={() => setColorFilter(new Set())} />
+              <div className="flex flex-wrap items-center gap-2">
+                <Button size="sm" variant={activeCount ? 'primary' : 'ghost'} onClick={() => setFiltersOpen(true)}>
+                  🔍 Filtri{activeCount > 0 && <Badge tone="count" size="xs">{activeCount}</Badge>}
+                </Button>
+                {colorFilter.size > 0 && (
+                  <Button size="sm" variant="link" onClick={() => setColorFilter(new Set())} aria-label="Togli il filtro Colore">
+                    {/* Anche a parole: i simboli da soli non dicono che filtro è. */}
+                    Colore <ManaIcons colors={[...colorFilter]} className="text-[15px]" /> ✕
+                  </Button>
+                )}
+                {filterChips.map((chip) => (
+                  <Button key={chip.id} size="sm" variant="link" onClick={chip.clear}
+                    aria-label={`Togli il filtro ${chip.label}: ${chip.value}`} className="max-w-full">
+                    <span className="truncate">{chip.value}</span> ✕
+                  </Button>
+                ))}
+              </div>
             </div>
             {filtersActive && (
               <p className={cx('mb-2', TEXT_MINI)}>
                 {visibleDecks.length} di {decks.length} mazzi
+                {needsCardData(filters) && loadingCardData && ` · risultati parziali: carico i dati delle carte (${progress.ready}/${progress.total})`}
               </p>
             )}
             {visibleDecks.length === 0 && <p className="text-sm text-zaff-muted">Nessun mazzo con questi filtri.</p>}
@@ -121,8 +171,16 @@ export default function DeckList({ onCreate, onImportFile }: DeckListProps) {
                   title={d.name}
                   className="mb-2 flex w-full items-center gap-1.5 overflow-hidden rounded-lg border border-zaff-border bg-zaff-bg py-3 pl-3.5 pr-2 text-left transition hover:border-zaff-primary active:border-zaff-primary"
                 >
-                  <span className="min-w-0 truncate text-[15px] text-zaff-text">{d.name}</span>
-                  <ManaIcons colors={d.colors} className="shrink-0 text-[17px]" />
+                  <span className="min-w-0">
+                    <span className="flex min-w-0 items-center gap-1.5">
+                      <span className="min-w-0 truncate text-[15px] text-zaff-text">{d.name}</span>
+                      <ManaIcons colors={d.colors} className="shrink-0 text-[17px]" />
+                    </span>
+                    {/* Perché il mazzo è tra i risultati dei filtri. */}
+                    {matches.get(d.id)!.notes.length > 0 && (
+                      <span className={cx('block truncate', TEXT_MINI)}>{matches.get(d.id)!.notes.join(' · ')}</span>
+                    )}
+                  </span>
                   <span className="ml-auto shrink-0 pl-2 text-2xl leading-none text-zaff-muted" aria-hidden="true">
                     ›
                   </span>
@@ -133,6 +191,62 @@ export default function DeckList({ onCreate, onImportFile }: DeckListProps) {
           </>
         )}
       </div>
+
+      {filtersOpen && (
+        <Modal
+          title="Filtra mazzi"
+          onClose={() => setFiltersOpen(false)}
+          // "Mostra N mazzi" sempre raggiungibile, anche su schermi bassi.
+          footer={(
+            <div className="flex gap-2">
+              <Button variant="ghost" onClick={clearAll} disabled={activeCount === 0}>Azzera</Button>
+              <Button className="flex-1" onClick={() => setFiltersOpen(false)}>
+                Mostra {visibleDecks.length} {visibleDecks.length === 1 ? 'mazzo' : 'mazzi'}
+              </Button>
+            </div>
+          )}
+        >
+          <div className="mb-4">
+            <ColorFilter colors={colorFilter} onToggle={toggleColorFilter} onClear={() => setColorFilter(new Set())} />
+          </div>
+          <TextField
+            label="Nome carta"
+            placeholder="es. Sol Ring"
+            value={filters.card}
+            onChange={(e) => setFilter('card', e.target.value)}
+            suggestions={allCardNames(deckCards)}
+            autoComplete="off"
+          />
+          <CheckboxListField
+            legend={filters.keywords.length ? `Parole chiave (${filters.keywords.length} scelte)` : 'Parole chiave'}
+            searchLabel="Cerca parola chiave"
+            values={filters.keywords}
+            onChange={setKeywords}
+            options={keywordsInDecks(deckCards, getCard).map((k) => ({
+              value: k.keyword, label: k.keyword, hint: `(${k.decks} ${k.decks === 1 ? 'mazzo' : 'mazzi'})`,
+            }))}
+            hint={loadingCardData ? `Carico i dati delle carte (${progress.ready}/${progress.total})…` : 'Le parole chiave delle carte dei vostri mazzi, come su Scryfall.'}
+            className="mb-2"
+          />
+          {/* Con più parole chiave si sceglie come combinarle. */}
+          {filters.keywords.length > 1 && (
+            <FilterTabs
+              className="mb-4"
+              value={filters.keywordMode}
+              onChange={(v) => setFilters((prev) => ({ ...prev, keywordMode: v as KeywordMode }))}
+              options={[{ value: 'all', label: 'Tutte' }, { value: 'any', label: 'Almeno una' }]}
+            />
+          )}
+          <TextField
+            label="Testo della carta"
+            placeholder="es. draw a card"
+            value={filters.text}
+            onChange={(e) => setFilter('text', e.target.value)}
+            hint="In inglese, come su Scryfall: draw, sacrifice, +1/+1 counter…"
+            autoComplete="off"
+          />
+        </Modal>
+      )}
 
       <input ref={fileInputRef} type="file" accept=".txt" hidden onChange={handleFileChange} />
 
