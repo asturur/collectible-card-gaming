@@ -171,8 +171,8 @@ export function CheckboxListField({ legend, options, values, onChange, searchLab
         <input type="search" className="input input-md w-full" placeholder={searchLabel} aria-label={searchLabel}
           value={query} onChange={(e) => setQuery(e.target.value)} />
       )}
-      {/* Una voce per riga: l'etichetta daisyUI è in linea, qui va a capo. */}
-      <div className="flex max-h-56 flex-col overflow-y-auto overscroll-contain rounded-field border border-base-content/20 px-3 py-1">
+      {/* Una voce per riga (l'etichetta daisyUI è in linea). Bassa: circa 4 voci, meno sugli schermi bassi. */}
+      <div className="flex max-h-[min(10rem,24vh)] flex-col overflow-y-auto overscroll-contain rounded-field border border-base-content/20 px-3 py-1">
         {visible.length === 0 && <p className="py-2 text-sm text-base-content/70">Nessuna voce.</p>}
         {visible.map((option) => (
           <label key={option.value} className="label flex w-full shrink-0 cursor-pointer items-start gap-3 whitespace-normal py-1.5 text-sm text-base-content">

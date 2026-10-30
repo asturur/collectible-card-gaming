@@ -335,7 +335,7 @@ Registro and ZAFF implementations. Some legacy controls still bypass it.
 | `Field` | daisyUI `TextField` (optional `suggestions` → native datalist), `SelectField`, `TextAreaField` (label + control + associated hint/error), `density="compact"` for dense forms; `ChoiceField` radio group with a hint per option; `CheckboxListField` multi-select list (scrolls, chosen first, optional search) |
 | `Panel` | `CenteredPanel` — the full-screen mask (ZAFF join, registro login, deck picker) |
 | `SectionPage` / `Breadcrumbs` | Shared routed page shell: mobile widths, heading, daisyUI breadcrumb hierarchy, safe-area padding |
-| `Modal` | Task overlay with ✕/Esc/backdrop close; `level={2}` stacks over another task |
+| `Modal` | Task overlay with ✕/Esc/backdrop close; `level={2}` stacks over another task; optional `footer` stays visible at the bottom (above the bottom navigation) while long content scrolls |
 | `CloseButton` | Shared square daisyUI button; default panel style or solid `surface="image"` contrast for card/token previews. Full label, title, and a decorative close icon. |
 | `Badge` | daisyUI badges for deck sources, format tags, and quantities; semantic tones and `xs`/`sm`/`md`/`lg`/`xl` sizes. |
 | `FilterTabs`, `NumberStepper` | Group/source filters, −/+ numeric input |

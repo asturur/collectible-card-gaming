@@ -193,7 +193,19 @@ export default function DeckList({ onCreate, onImportFile }: DeckListProps) {
       </div>
 
       {filtersOpen && (
-        <Modal title="Filtra mazzi" onClose={() => setFiltersOpen(false)}>
+        <Modal
+          title="Filtra mazzi"
+          onClose={() => setFiltersOpen(false)}
+          // "Mostra N mazzi" sempre raggiungibile, anche su schermi bassi.
+          footer={(
+            <div className="flex gap-2">
+              <Button variant="ghost" onClick={clearAll} disabled={activeCount === 0}>Azzera</Button>
+              <Button className="flex-1" onClick={() => setFiltersOpen(false)}>
+                Mostra {visibleDecks.length} {visibleDecks.length === 1 ? 'mazzo' : 'mazzi'}
+              </Button>
+            </div>
+          )}
+        >
           <div className="mb-4">
             <ColorFilter colors={colorFilter} onToggle={toggleColorFilter} onClear={() => setColorFilter(new Set())} />
           </div>
@@ -233,12 +245,6 @@ export default function DeckList({ onCreate, onImportFile }: DeckListProps) {
             hint="In inglese, come su Scryfall: draw, sacrifice, +1/+1 counter…"
             autoComplete="off"
           />
-          <div className="flex gap-2">
-            <Button variant="ghost" onClick={clearAll} disabled={activeCount === 0}>Azzera</Button>
-            <Button className="flex-1" onClick={() => setFiltersOpen(false)}>
-              Mostra {visibleDecks.length} {visibleDecks.length === 1 ? 'mazzo' : 'mazzi'}
-            </Button>
-          </div>
         </Modal>
       )}
 

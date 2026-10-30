@@ -15,6 +15,8 @@ interface ModalProps {
   xl?: boolean;
   /** Livello di sovrapposizione: i riquadri annidati stanno sopra ai loro genitori. */
   level?: 1 | 2;
+  /** Pulsanti finali: restano sempre in vista in fondo allo schermo, anche se il contenuto scorre. */
+  footer?: ReactNode;
   onClose: () => void;
   children: ReactNode;
 }
@@ -23,7 +25,7 @@ interface ModalProps {
  * Riquadro sovrapposto alla pagina, come i `.modal-overlay` dell'app HTML
  * originale: si chiude con la ✕, con Esc o toccando fuori dal riquadro.
  */
-export default function Modal({ title, subtitle, wide = false, xl = false, level = 1, onClose, children }: ModalProps) {
+export default function Modal({ title, subtitle, wide = false, xl = false, level = 1, footer, onClose, children }: ModalProps) {
   const token = useRef({});
   // `onClose` quasi sempre è una funzione creata di nuovo a ogni render del
   // genitore (es. `onClose={() => setOpenModal(null)}`): tenerla qui con un
@@ -62,8 +64,10 @@ export default function Modal({ title, subtitle, wide = false, xl = false, level
       }}
       // Livello 1: sotto c'è la barra di navigazione fissa (BottomNav), quindi
       // in fondo si lascia spazio perché non copra l'ultimo contenuto.
-      className={`fixed inset-0 flex items-start justify-center overflow-y-auto bg-black/70 px-3 pt-[calc(1rem+env(safe-area-inset-top))] sm:px-4 sm:py-10 ${
-        level === 2 ? 'z-30 pb-4' : 'z-20 pb-[calc(5.5rem+env(safe-area-inset-bottom))]'
+      className={`fixed inset-0 flex items-start justify-center overflow-y-auto bg-black/70 px-3 pt-[calc(1rem+env(safe-area-inset-top))] sm:px-4 sm:pt-10 ${
+        // Anche sugli schermi larghi il margine in fondo del livello 1 resta sopra la barra di navigazione.
+        // Il margine è alto quanto la barra (h-16 + bordo): i pulsanti fissi in fondo le si appoggiano sopra.
+        level === 2 ? 'z-30 pb-4 sm:pb-10' : 'z-20 pb-[calc(4rem+1px+env(safe-area-inset-bottom))]'
       }`}
     >
       <div
@@ -83,6 +87,12 @@ export default function Modal({ title, subtitle, wide = false, xl = false, level
         {subtitle && <p className={cx('-mt-1 mb-3', TEXT_MINI)}>{subtitle}</p>}
 
         {children}
+        {footer && (
+          // bottom-0 vale dentro il margine in fondo del velo, che al livello 1 lascia già spazio alla barra di navigazione.
+          <div className="sticky bottom-0 z-10 -mx-4 -mb-4 mt-4 rounded-b-xl border-t border-zaff-border bg-zaff-surface px-4 py-3 sm:-mx-6 sm:-mb-6 sm:px-6">
+            {footer}
+          </div>
+        )}
       </div>
     </div>
   );
