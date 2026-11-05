@@ -10,7 +10,7 @@ describe('locale routing and translations', () => {
   });
 
   it('provides the home action in both languages', () => {
-    expect(i18n.getFixedT('it')('home.newGame')).toBe('Nuova Partita');
-    expect(i18n.getFixedT('en')('home.newGame')).toBe('New Game');
+    expect(i18n.getFixedT('it')('nuova_partita')).toBe('Nuova Partita');
+    expect(i18n.getFixedT('en')('nuova_partita')).toBe('New Game');
   });
 });

@@ -41,6 +41,7 @@ existing `pnpm-lock.yaml` only describes root tooling, not the client workspace.
 ## Tech Stack
 
 - **Client**: React 19, Vite, Tailwind CSS v4, FabricJS, TypeScript
+- **Translations**: i18next + react-i18next; configuration in `client/src/i18n.ts`, Italian and English resources in `client/src/locales/it/translation.json` and `client/src/locales/en/translation.json`.
 - **UI**: daisyUI 5 + shared React kit in `client/src/components/ui/`.Buttons, basic fields, badges, and modal close controls are migrated; custom widgets and overlay behavior retain their existing implementations.
 - **Server**: Go, `coder/websocket`, built-in Cloudflare tunnel support
 - **Shared types**: TypeScript package `@zaff/shared`, consumed by client
@@ -203,6 +204,56 @@ Shared zones:
 ---
 
 ### Client Architecture
+
+#### Translations
+
+Use flat translation keys, with the same key in both language files. Derive each
+key from the Italian text: lowercase it, remove the articles `il`, `lo`, `la`,
+`i`, `gli`, and `le` and any other words shorter than two letters, then join the
+first five remaining words with underscores. For example, `Guarda lista mazzi`
+becomes `guarda_lista_mazzi`. If two texts produce the same key, reuse it when
+they share the same meaning and translation; otherwise add enough distinguishing
+words or context to make the keys different. Do not nest keys.
+
+The locale is selected by the `/it/` or `/en/` route prefix; unprefixed routes
+redirect to Italian. `router.ts` supplies the locale-aware base and share links.
+Italian is the fallback language. Only strings added to the locale files are
+translated so far.
+
+##### How to gather translations
+
+When the developer asks to translate the app, work through
+`unstranslated_components.md` one file at a time, starting with the first entry.
+Inspect the component for all user-visible text and displayed variables,
+including labels, accessibility text, feedback, and text assembled in code.
+Check existing keys before creating new ones and follow the key rules above.
+Before adding a string, search the existing translations by value as well as by
+key. Reuse an existing key when the text, meaning, and translation match. Check
+the proposed key for collisions; if it already represents a different message,
+choose a distinct key following the rules above.
+
+1. First prepare the strings that do not contain dates, times, or numbers.
+   Present a table with three columns: key, Italian value, and English value.
+   Ask the developer to confirm these translations before applying them.
+2. Then present strings requiring number, date, time, or currency formatting,
+   using the same three columns. Show the exact message syntax and variable
+   names in the values, and explain the intended locale-aware formatting. Obtain
+   the developer's confirmation before applying them.
+3. Handle messages requiring react-i18next's `Trans` component last. Present
+   their keys and Italian and English values, including the markup and variables,
+   for confirmation before applying them.
+
+Skip an empty category. Preserve user-provided data and existing behavior; use
+locale-aware formatting and appropriate plural forms where needed. Once the
+file has been fully reviewed, its confirmed translations applied, and relevant
+checks completed, remove its entry from the list. If it has no translatable
+content, report that finding and remove it after review. Ask the developer
+whether to proceed to the next file or stop; wait for their answer. Do not
+remove a partially translated or unconfirmed file.
+
+When working on a component, use the translation function for its user-visible
+text instead of adding hard-coded text. Use `Trans` where a message needs React
+elements, and leave user-provided data as data.
 
 #### Routes
 

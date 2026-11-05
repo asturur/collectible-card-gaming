@@ -105,7 +105,7 @@ export default function HomeOverview({
           +
         </span>
         <span className="min-w-0">
-          <span className="block text-xl font-bold leading-tight">{t('home.newGame')}</span>
+          <span className="block text-xl font-bold leading-tight">{t('nuova_partita')}</span>
           <span className="block text-sm font-medium opacity-80">Segna-punti e risultato</span>
         </span>
       </Link>
