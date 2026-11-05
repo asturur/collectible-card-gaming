@@ -2,6 +2,17 @@ import type { MouseEvent } from 'react';
 
 /** Paths are relative to the Vite base; React Router supplies the basename. */
 export const ROUTER_BASE = import.meta.env.BASE_URL.replace(/\/+$/, '') || '/';
+export type Locale = 'it' | 'en';
+export function localeFromPath(pathname: string): Locale | null {
+  const base = ROUTER_BASE === '/' ? '' : ROUTER_BASE;
+  if (!pathname.startsWith(`${base}/`)) return null;
+  const segment = pathname.slice(base.length + 1).split('/')[0];
+  return segment === 'it' || segment === 'en' ? segment : null;
+}
+
+export function localeBase(locale: Locale): string {
+  return `${ROUTER_BASE === '/' ? '' : ROUTER_BASE}/${locale}`;
+}
 export const paths = {
   home: '/',
   zaff: '/zaff',
@@ -56,7 +67,8 @@ export function hrefFor(route: 'home' | 'zaff'): string {
 }
 
 export function appHref(path: string): string {
-  return `${ROUTER_BASE === '/' ? '' : ROUTER_BASE}${path}`;
+  const locale = localeFromPath(window.location.pathname);
+  return `${locale ? localeBase(locale) : ROUTER_BASE === '/' ? '' : ROUTER_BASE}${path}`;
 }
 
 /**

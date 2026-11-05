@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { paths } from '../../router';
 import { ManaIcons } from './ManaIcon';
@@ -58,6 +59,7 @@ export default function HomeOverview({
   decks = [],
   newGames = 0,
 }: HomeOverviewProps) {
+  const { t } = useTranslation();
   // Dalla più recente: data, poi orario di inizio, poi id.
   const sorted = [...games].sort(
     (x, y) =>
@@ -103,7 +105,7 @@ export default function HomeOverview({
           +
         </span>
         <span className="min-w-0">
-          <span className="block text-xl font-bold leading-tight">Nuova Partita</span>
+          <span className="block text-xl font-bold leading-tight">{t('home.newGame')}</span>
           <span className="block text-sm font-medium opacity-80">Segna-punti e risultato</span>
         </span>
       </Link>
