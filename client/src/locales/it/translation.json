@@ -1,3 +1,13 @@
 {
-  "nuova_partita": "Nuova Partita"
+  "nuova_partita": "Nuova Partita",
+  "chi_ha_vinto": "Chi ha vinto?",
+  "tocca_vincitore_partita_si_salva": "Tocca il vincitore: la partita si salva e torni alla Home.",
+  "nessun_vincitore": "Nessun vincitore",
+  "senza_vincitore_partita_non_entra": "Senza vincitore la partita resta nell'elenco, ma non entra nelle statistiche.",
+  "torna_al_gioco": "Torna al Gioco",
+  "partita_salvata": "Partita salvata.",
+  "partita_non_salvata": "Partita non salvata",
+  "hai_una_partita_iniziata_date": "Hai una partita iniziata il {{date}} alle {{time}} e mai salvata ({{players}}). Vuoi riprenderla da dove eri rimasto?",
+  "riprendi": "Riprendi",
+  "scarta": "Scarta"
 }

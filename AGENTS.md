@@ -344,6 +344,13 @@ Score size follows the card (`scoreSize`: container units of the reading width/h
 digits plus the tap total and leaving room for the ⋯ button), clamped between 40 and 200 px.
 "Esci senza salvare" (last row of the options menu) always asks first in its own dialog; once
 confirmed, `GameForm`'s `onDiscard` leaves through `useLeaveGuard().leave` without a second prompt.
+"Fine Partita" of a NEW game saves it at once (`askWinner`): the winner is the only player left without
+KILL/MILL/lethal poison, otherwise the counter asks "Chi ha vinto?" (players, "Nessun vincitore", back to the game).
+A failed save stays in the editor with everything filled in. Editing a saved game keeps the manual save.
+Every save (automatic or manual) returns to Home, which confirms it ("Partita salvata.").
+A new game in progress is copied on this device (`mtglog/gameDraft.ts`, localStorage) from the first counter start;
+the copy goes on save or on a confirmed exit. If the app closes first, Home shows "Partita non salvata · Riprendi"
+and Nuova Partita (or a rematch) asks Riprendi/Scarta; resuming reopens the counter with the scores.
 Account deletion (`mtglog/AccountPanel.tsx`, `services/account.ts`, SQL `delete_my_account`): the user
 chooses to delete their decks or leave them to the group; games are never deleted (they involve other
 players). Everything left keeps `created_by = null` (editable by any account, like pre-account rows).

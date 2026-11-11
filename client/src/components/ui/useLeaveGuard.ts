@@ -25,10 +25,10 @@ export function useLeaveGuard(message?: string) {
 
   return {
     onPersistingChange: (value: boolean) => { busy.current = value; },
-    onSaved: (to: string) => {
+    onSaved: (to: string, state?: unknown) => {
       saved.current = true;
       busy.current = false;
-      void navigate(to, { replace: true });
+      void navigate(to, { replace: true, state });
     },
     /** Uscita già confermata dall'utente: niente seconda domanda. */
     leave: (to: string) => {
