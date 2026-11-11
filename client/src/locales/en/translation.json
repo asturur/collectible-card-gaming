@@ -1,3 +1,13 @@
 {
-  "nuova_partita": "New Game"
+  "nuova_partita": "New Game",
+  "chi_ha_vinto": "Who won?",
+  "tocca_vincitore_partita_si_salva": "Tap the winner: the game is saved and you go back Home.",
+  "nessun_vincitore": "No winner",
+  "senza_vincitore_partita_non_entra": "Without a winner the game stays in the list but is not counted in the statistics.",
+  "torna_al_gioco": "Back to Game",
+  "partita_salvata": "Game saved.",
+  "partita_non_salvata": "Unsaved game",
+  "hai_una_partita_iniziata_date": "You have a game started on {{date}} at {{time}} that was never saved ({{players}}). Resume where you left off?",
+  "riprendi": "Resume",
+  "scarta": "Discard"
 }

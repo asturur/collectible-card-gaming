@@ -530,7 +530,9 @@ describe('Registro routes', () => {
     await waitFor(() => expect(window.confirm).toHaveBeenCalledTimes(1));
     expect(router.state.location.pathname).toBe('/games/new');
     await user.click(screen.getByRole('button', { name: 'Salva partita' }));
-    expect(await screen.findByRole('heading', { name: 'Partite Salvate' })).toBeInTheDocument();
+    // Dopo il salvataggio si torna alla Home, che lo conferma.
+    expect(await screen.findByRole('status')).toHaveTextContent('Partita salvata.');
+    expect(router.state.location.pathname).toBe('/');
     expect(window.confirm).toHaveBeenCalledTimes(1);
   });
 
@@ -613,7 +615,7 @@ describe('Dati aggiornati e statistiche', () => {
     await screen.findByText('Form partita: nuova');
     mock.rows.push(newGame('g9', 'Zoe'));
     await user.click(screen.getByRole('button', { name: 'Salva partita' }));
-    expect(await screen.findByRole('heading', { name: 'Partite Salvate' })).toBeInTheDocument();
+    expect(await screen.findByRole('status')).toHaveTextContent('Partita salvata.');
     expect(await screen.findAllByText(/Zoe/)).not.toHaveLength(0);
   });
 

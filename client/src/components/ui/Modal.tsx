@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useId, useRef, type ReactNode } from 'react';
 import CloseButton from './CloseButton';
 import { cx, HEADING_SECTION, TEXT_MINI } from './styles';
 
@@ -26,6 +26,7 @@ interface ModalProps {
  * originale: si chiude con la ✕, con Esc o toccando fuori dal riquadro.
  */
 export default function Modal({ title, subtitle, wide = false, xl = false, level = 1, footer, onClose, children }: ModalProps) {
+  const titleId = useId();
   const token = useRef({});
   // `onClose` quasi sempre è una funzione creata di nuovo a ogni render del
   // genitore (es. `onClose={() => setOpenModal(null)}`): tenerla qui con un
@@ -73,6 +74,8 @@ export default function Modal({ title, subtitle, wide = false, xl = false, level
       <div
         role="dialog"
         aria-modal="true"
+        // Il titolo dà il nome al riquadro (lettori di schermo, test).
+        aria-labelledby={title ? titleId : undefined}
         className={`relative w-full rounded-xl border border-zaff-border bg-zaff-surface p-4 shadow-2xl sm:p-6 ${
           xl ? 'max-w-[900px]' : wide ? 'max-w-[680px]' : 'max-w-[560px]'
         }`}
@@ -80,7 +83,7 @@ export default function Modal({ title, subtitle, wide = false, xl = false, level
         <CloseButton onClick={onClose} className="absolute right-2.5 top-2.5" />
 
         {title && (
-          <h2 className={cx(HEADING_SECTION, 'mb-3 truncate border-b border-zaff-border pb-1.5 pr-14')} title={typeof title === 'string' ? title : undefined}>
+          <h2 id={titleId} className={cx(HEADING_SECTION, 'mb-3 truncate border-b border-zaff-border pb-1.5 pr-14')} title={typeof title === 'string' ? title : undefined}>
             {title}
           </h2>
         )}

@@ -8,6 +8,7 @@ import type { Game } from './GameList';
 import Badge from '../ui/Badge';
 import { cx } from '../ui/styles';
 import { makeDeckResolver, type DeckRef } from './deckRefs';
+import { draftPlayerNames, type GameDraft } from './gameDraft';
 
 interface HomeOverviewProps {
   games: Game[];
@@ -17,6 +18,10 @@ interface HomeOverviewProps {
   decks?: DeckRef[];
   /** Partite di altri non ancora viste nell'elenco Partite. */
   newGames?: number;
+  /** Si arriva qui subito dopo aver salvato una partita: lo si conferma. */
+  gameSaved?: boolean;
+  /** Partita nuova iniziata su questo dispositivo e mai salvata. */
+  draft?: GameDraft | null;
 }
 
 /** Quante voci mostrare nelle liste della pagina iniziale. */
@@ -58,8 +63,10 @@ export default function HomeOverview({
   deckCount,
   decks = [],
   newGames = 0,
+  gameSaved = false,
+  draft = null,
 }: HomeOverviewProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   // Dalla più recente: data, poi orario di inizio, poi id.
   const sorted = [...games].sort(
     (x, y) =>
@@ -109,6 +116,27 @@ export default function HomeOverview({
           <span className="block text-sm font-medium opacity-80">Segna-punti e risultato</span>
         </span>
       </Link>
+
+      {gameSaved && (
+        <p role="status" className="mt-3 text-sm font-semibold text-success">
+          ✓ {t('partita_salvata')}
+        </p>
+      )}
+
+      {draft && (
+        <Link
+          to={paths.newGame}
+          className="mt-3 flex w-full items-center gap-3 rounded-lg border border-warning bg-zaff-bg px-3.5 py-3 text-left transition active:scale-[0.98] md:w-fit"
+        >
+          <span className="min-w-0 flex-1">
+            <span className="block text-[15px] font-semibold text-warning">{t('partita_non_salvata')}</span>
+            <span className="block truncate text-sm text-zaff-muted">
+              {new Intl.ListFormat(i18n.language, { type: 'conjunction' }).format(draftPlayerNames(draft))}
+            </span>
+          </span>
+          <span className="shrink-0 text-[15px] font-semibold text-zaff-text">{t('riprendi')} ›</span>
+        </Link>
+      )}
 
       <div className="mt-4 grid grid-cols-3 gap-2.5">
         {stats.map((s) => (

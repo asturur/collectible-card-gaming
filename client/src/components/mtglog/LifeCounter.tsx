@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import Button from '../ui/Button';
 import { cx, HEADING_SECTION, NO_SCROLLBAR } from '../ui/styles';
 import type { LossCause } from './GameList';
@@ -26,7 +27,13 @@ interface LifeCounterProps {
   /** "Modifica Partita": torna all'editor portando con sé i punteggi raggiunti
    *  (per correggere un nome o un mazzo senza perdere il conteggio). */
   onEdit: LifeCounterResult;
+  /** "Fine Partita". Con `askWinner` riceve anche il vincitore scelto (null: nessuno). */
   onFinish: LifeCounterResult;
+  /** Partita nuova: "Fine Partita" decide il vincitore (da solo se resta un giocatore in gioco,
+   *  altrimenti chiedendo "Chi ha vinto?") e lo passa a `onFinish`, che salva. */
+  askWinner?: boolean;
+  /** A ogni cambio di punteggi o posti: lo stato attuale, per la copia della partita in corso. */
+  onProgress?: LifeCounterResult;
   /** "Esci senza salvare", dopo la conferma: lascia la partita senza registrare niente. */
   onQuit: () => void;
   /** Si sta modificando una partita già salvata (cambia il testo della conferma di uscita). */
@@ -40,8 +47,19 @@ type LifeCounterResult = (
   /** Solo i giocatori con il Comandante acceso. */
   commanders: Record<string, CommanderCount>,
   /** Nomi nell'ordine dei posti sullo schermo (dopo "Cambia posti"). */
-  seating: string[]
+  seating: string[],
+  /** Solo con `askWinner`: chi ha vinto (null: nessun vincitore). */
+  winner?: string | null
 ) => void;
+
+/** Lo stato passato a `onEdit`/`onFinish`/`onProgress`, senza il vincitore. */
+type Snapshot = [
+  lives: Record<string, number>,
+  causes: Record<string, LossCause[]>,
+  poisons: Record<string, number>,
+  commanders: Record<string, CommanderCount>,
+  seating: string[],
+];
 
 interface LcPlayer {
   name: string;
@@ -495,8 +513,9 @@ function LifeDelta({ burst }: { burst?: LifeBurst }) {
  * (180° di fronte, 90° ai lati lunghi), così legge dritto senza girare il telefono. High Roll (d20) per
  * decidere chi inizia.
  */
-export default function LifeCounter({ players, startLife, resume, onEdit, onFinish, onQuit, editingSaved = false }: LifeCounterProps) {
+export default function LifeCounter({ players, startLife, resume, onEdit, onFinish, askWinner = false, onProgress, onQuit, editingSaved = false }: LifeCounterProps) {
   useKeepScreenAwake();
+  const { t } = useTranslation();
 
   const [lives, setLives] = useState<LcPlayer[]>(
     players.map((name) => {
@@ -534,6 +553,8 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
   const [historyOpen, setHistoryOpen] = useState(false);
   /** Conferma di "Esci senza salvare": l'uscita avviene solo da qui. */
   const [quitOpen, setQuitOpen] = useState(false);
+  /** Domanda "Chi ha vinto?" di "Fine Partita", quando il vincitore non è chiaro. */
+  const [winnerOpen, setWinnerOpen] = useState(false);
   const nextEntryId = useRef(1);
   /** Totale dei tocchi ravvicinati sui punti vita, per giocatore (indice in `lives`). */
   const [bursts, setBursts] = useState<Record<number, LifeBurst>>({});
@@ -651,7 +672,7 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
   }
 
   /** Punteggi, cause di sconfitta, veleno e Comandante di ogni giocatore, per nome. */
-  function snapshot(): Parameters<LifeCounterResult> {
+  function snapshot(): Snapshot {
     return [
       Object.fromEntries(lives.map((p) => [p.name, p.life])),
       Object.fromEntries(lives.map((p) => [p.name, lossCauses(p)])),
@@ -659,6 +680,29 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
       Object.fromEntries(lives.filter((p) => p.cmdrOn).map((p) => [p.name, { tax: p.tax, damage: { ...p.cmdr } }])),
       seats.map((i) => lives[i].name),
     ];
+  }
+
+  // La copia della partita in corso segue ogni cambio (anche il primo stato, all'apertura).
+  const progressRef = useRef(onProgress);
+  progressRef.current = onProgress;
+  useEffect(() => {
+    progressRef.current?.(...snapshot());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lives, seats]);
+
+  /** "Fine Partita": con `askWinner` il vincitore è chi resta in gioco, se è uno solo; altrimenti si chiede. */
+  function finish() {
+    if (!askWinner) {
+      onFinish(...snapshot());
+      return;
+    }
+    const survivors = lives.filter((p) => lossCauses(p).length === 0);
+    if (survivors.length === 1) {
+      onFinish(...snapshot(), survivors[0].name);
+      return;
+    }
+    setMenuOpen(false);
+    setWinnerOpen(true);
   }
 
   const topRoll = rolls.length ? Math.max(...rolls.map((r) => r.roll)) : 0;
@@ -1017,7 +1061,7 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
             <Button variant="ghost" className="flex h-16 text-base" onClick={() => onEdit(...snapshot())}>
               Modifica Partita
             </Button>
-            <Button className="flex h-16 text-base" onClick={() => onFinish(...snapshot())}>
+            <Button className="flex h-16 text-base" onClick={finish}>
               Fine Partita
             </Button>
             {/* "Torna al Gioco" occupa tutta la riga quando i tasti sono dispari. */}
@@ -1061,6 +1105,36 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
                 Esci senza salvare
               </Button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {winnerOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4" onClick={() => setWinnerOpen(false)}>
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="lc-winner-title"
+            aria-describedby="lc-winner-text"
+            className="flex max-h-[85vh] w-full max-w-sm flex-col rounded-2xl border border-zaff-border bg-zaff-surface p-5 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 id="lc-winner-title" className={HEADING_SECTION}>{t('chi_ha_vinto')}</h2>
+            <p id="lc-winner-text" className="mb-4 text-sm text-zaff-muted">{t('tocca_vincitore_partita_si_salva')}</p>
+            <div className={cx('mb-3 grid min-h-0 gap-2 overflow-y-auto', NO_SCROLLBAR)}>
+              {seats.map((i) => (
+                <Button key={lives[i].name} size="lg" fullWidth onClick={() => onFinish(...snapshot(), lives[i].name)}>
+                  <span className="min-w-0 truncate">{lives[i].name}</span>
+                </Button>
+              ))}
+            </div>
+            <Button variant="ghost" size="lg" fullWidth onClick={() => onFinish(...snapshot(), null)}>
+              {t('nessun_vincitore')}
+            </Button>
+            <p className="mb-3 mt-1.5 text-xs text-zaff-muted">{t('senza_vincitore_partita_non_entra')}</p>
+            <Button variant="subtle" size="lg" fullWidth autoFocus onClick={() => setWinnerOpen(false)}>
+              {t('torna_al_gioco')}
+            </Button>
           </div>
         </div>
       )}

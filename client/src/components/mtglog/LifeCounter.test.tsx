@@ -296,4 +296,51 @@ describe('LifeCounter', () => {
     expect(onFinish.mock.calls[0][0]).toEqual({ Alice: 21, Bob: 20, Carla: 20 });
     expect(onFinish.mock.calls[0][4]).toEqual(['Carla', 'Bob', 'Alice']);
   });
+
+  describe('Fine Partita di una partita nuova (askWinner)', () => {
+    const dead = { life: 0, loss: ['kill' as const], poison: 0 };
+    const alive = { life: 7, loss: [], poison: 0 };
+
+    it('passes the only player still in the game as the winner, without asking', async () => {
+      const user = userEvent.setup();
+      const onFinish = vi.fn();
+      render(<LifeCounter players={['Alice', 'Bob']} startLife={20} resume={{ Alice: dead, Bob: alive }} askWinner onEdit={vi.fn()} onFinish={onFinish} onQuit={vi.fn()} />);
+      await user.click(screen.getByRole('button', { name: 'Opzioni di gioco' }));
+      await user.click(screen.getByRole('button', { name: 'Fine Partita' }));
+      expect(screen.queryByRole('dialog', { name: 'Chi ha vinto?' })).not.toBeInTheDocument();
+      expect(onFinish.mock.calls[0][5]).toBe('Bob');
+    });
+
+    it('asks who won when it is not clear, also allowing no winner or going back', async () => {
+      const user = userEvent.setup();
+      const onFinish = vi.fn();
+      render(<LifeCounter players={['Alice', 'Bob']} startLife={20} askWinner onEdit={vi.fn()} onFinish={onFinish} onQuit={vi.fn()} />);
+      await user.click(screen.getByRole('button', { name: 'Opzioni di gioco' }));
+      await user.click(screen.getByRole('button', { name: 'Fine Partita' }));
+      const dialog = within(screen.getByRole('dialog', { name: 'Chi ha vinto?' }));
+      await user.click(dialog.getByRole('button', { name: 'Torna al Gioco' }));
+      expect(screen.queryByRole('dialog', { name: 'Chi ha vinto?' })).not.toBeInTheDocument();
+      expect(onFinish).not.toHaveBeenCalled();
+
+      await user.click(screen.getByRole('button', { name: 'Opzioni di gioco' }));
+      await user.click(screen.getByRole('button', { name: 'Fine Partita' }));
+      await user.click(within(screen.getByRole('dialog', { name: 'Chi ha vinto?' })).getByRole('button', { name: 'Nessun vincitore' }));
+      expect(onFinish.mock.calls[0][5]).toBeNull();
+
+      await user.click(screen.getByRole('button', { name: 'Opzioni di gioco' }));
+      await user.click(screen.getByRole('button', { name: 'Fine Partita' }));
+      await user.click(within(screen.getByRole('dialog', { name: 'Chi ha vinto?' })).getByRole('button', { name: 'Alice' }));
+      expect(onFinish.mock.calls[1][0]).toEqual({ Alice: 20, Bob: 20 });
+      expect(onFinish.mock.calls[1][5]).toBe('Alice');
+    });
+
+    it('reports every change for the copy of the game in progress', async () => {
+      const user = userEvent.setup();
+      const onProgress = vi.fn();
+      render(<LifeCounter players={['Alice', 'Bob']} startLife={20} onProgress={onProgress} onEdit={vi.fn()} onFinish={vi.fn()} onQuit={vi.fn()} />);
+      expect(onProgress).toHaveBeenLastCalledWith({ Alice: 20, Bob: 20 }, { Alice: [], Bob: [] }, { Alice: 0, Bob: 0 }, {}, ['Alice', 'Bob']);
+      await user.click(screen.getByRole('button', { name: 'Bob: togli 1 punto vita' }));
+      expect(onProgress.mock.lastCall?.[0]).toEqual({ Alice: 20, Bob: 19 });
+    });
+  });
 });

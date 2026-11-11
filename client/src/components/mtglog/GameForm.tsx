@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   findCanonicalName,
   MAX_PLAYER_NAME_LENGTH,
@@ -23,6 +24,7 @@ import NumberStepper from '../ui/NumberStepper';
 import { TextAreaField } from '../ui/Field';
 import { cx, FIELD_CONTROL_SM, FIELD_LABEL, TEXT_MINI, TEXT_MUTED } from '../ui/styles';
 import CharCount from '../ui/CharCount';
+import { clearGameDraft, draftPlayerNames, readGameDraft, writeGameDraft, type DraftPlayer, type GameDraft } from './gameDraft';
 
 interface GameFormProps {
   editingGame?: Game | null;
@@ -147,6 +149,58 @@ function seatRows(rows: PlayerRow[], seating: string[]): PlayerRow[] {
   return [...rows].sort((a, b) => (seat.get(a.name.trim()) ?? seating.length) - (seat.get(b.name.trim()) ?? seating.length));
 }
 
+type CounterResult = [
+  lives: Record<string, number>,
+  causes: Record<string, LossCause[]>,
+  poisons: Record<string, number>,
+  commanders: Record<string, CommanderCount>,
+  seating: string[],
+];
+
+/** Righe dell'editor con i punteggi del segna-punti (vita, cause, veleno, Comandante e posti). */
+function withCounter(rows: PlayerRow[], [lives, causes, poisons, commanders, seating]: CounterResult): PlayerRow[] {
+  const rowByName = new Map(rows.map((r) => [r.name.trim(), r.rowId]));
+  return seatRows(rows, seating).map((p) => {
+    const key = p.name.trim();
+    if (!(key in lives)) return p;
+    const count = commanders[key];
+    return {
+      ...p,
+      life: String(lives[key]),
+      loss: causes[key] ?? [],
+      poison: poisons[key] ?? 0,
+      commander: count && rekeyCommander(count, rowByName),
+    };
+  });
+}
+
+/** Righe → copia della partita in corso (danni da comandante per nome, colori come elenco). */
+function toDraftPlayers(rows: PlayerRow[]): DraftPlayer[] {
+  const nameByRow = new Map(rows.filter((r) => r.name.trim()).map((r) => [r.rowId, r.name.trim()]));
+  return rows.map((r) => ({
+    name: r.name,
+    deckMode: r.deckMode,
+    deckSelect: r.deckSelect,
+    deckManual: r.deckManual,
+    desc: r.desc,
+    life: r.life,
+    winner: r.winner,
+    colors: [...r.colors],
+    loss: r.loss,
+    poison: r.poison,
+    ...(r.commander ? { commander: rekeyCommander(r.commander, nameByRow) } : {}),
+  }));
+}
+
+function fromDraftPlayers(players: DraftPlayer[]): PlayerRow[] {
+  const rows = players.map(({ commander: _commander, colors, ...p }) => ({ ...p, rowId: newRowId(), colors: new Set(colors) }));
+  const rowByName = new Map(rows.filter((r) => r.name.trim()).map((r) => [r.name.trim(), r.rowId]));
+  return rows.map((r, i) => {
+    const count = players[i].commander;
+    return count ? { ...r, commander: rekeyCommander(count, rowByName) } : r;
+  });
+}
+
 let lastRowId = 0;
 function newRowId(): string {
   lastRowId += 1;
@@ -173,6 +227,7 @@ function emptyPlayerRow(): PlayerRow {
  *  punti vita, vincitore, note. Salva (insert) o aggiorna (update) su `partite`.
  *  La pagina gestisce titolo, navigazione e protezione durante il salvataggio. */
 export default function GameForm({ editingGame, rematchFrom, onBack, onDiscard, onSaved, onSavingChange }: GameFormProps) {
+  const { t, i18n } = useTranslation();
   const [playerNames, setPlayerNames] = useState<string[]>([]);
   /** Nomi in elenco appena letti (lo stato si aggiorna solo al render dopo). */
   const loadedNames = useRef<string[]>([]);
@@ -199,6 +254,14 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onDiscard, 
   const [formatPickerOpen, setFormatPickerOpen] = useState(false);
   /** Filtro per colore nella scelta del mazzo (si azzera a ogni apertura). */
   const [deckColorFilter, setDeckColorFilter] = useState<Set<string>>(new Set());
+  /** Partita nuova rimasta senza salvataggio su questo dispositivo: si chiede se riprenderla. */
+  const [draftOffer, setDraftOffer] = useState<GameDraft | null>(null);
+  /** Rivincita in attesa della risposta su "Partita non salvata", prima di aprire il segna-punti. */
+  const rematchWaiting = useRef(false);
+  /** La copia della partita in corso è attiva (dopo l'avvio del segna-punti). Solo per partite nuove. */
+  const draftActive = useRef(false);
+  /** Ultimo stato del segna-punti aperto (null quando è chiuso: i punteggi sono già nelle righe). */
+  const counterState = useRef<CounterResult | null>(null);
 
   async function loadOptions(): Promise<DeckOption[]> {
     if (!supabase) return [];
@@ -277,7 +340,10 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onDiscard, 
         // Un solo tap: il segna-punti parte subito. Se lo si chiude resta il
         // modulo già compilato. Con un nome oltre il limite resta sul modulo,
         // che spiega dove accorciarlo.
-        if (rematchFrom.players.every((p) => p.name.trim().length <= MAX_PLAYER_NAME_LENGTH)) setLifeCounterOpen(true);
+        if (rematchFrom.players.every((p) => p.name.trim().length <= MAX_PLAYER_NAME_LENGTH)) {
+          if (readGameDraft()) rematchWaiting.current = true;
+          else startCounter(false);
+        }
       } else {
         // Partita nuova: riparto da formato, punti vita e giocatori dell'ultima
         // partita salvata (solo i giocatori ancora presenti in elenco).
@@ -292,6 +358,8 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onDiscard, 
           }
         }
       }
+      // Partita nuova: se l'ultima non è mai stata salvata, si chiede se riprenderla.
+      if (!editingGame) setDraftOffer(readGameDraft());
       setLoading(false);
     });
 
@@ -307,6 +375,30 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onDiscard, 
   }, []);
 
   useEffect(() => { setDeckColorFilter(new Set()); }, [deckPickerFor]);
+
+  /** Aggiorna la copia della partita in corso (solo partite nuove, dopo l'avvio del segna-punti). */
+  function persistDraft() {
+    if (!draftActive.current) return;
+    const rows = counterState.current ? withCounter(players, counterState.current) : players;
+    writeGameDraft({
+      savedAt: Date.now(),
+      startedAt,
+      format,
+      notes,
+      startLife,
+      players: toDraftPlayers(rows),
+      counterOpen: lifeCounterOpen,
+    });
+  }
+  const persistRef = useRef(persistDraft);
+  persistRef.current = persistDraft;
+  useEffect(() => { persistRef.current(); }, [players, startedAt, format, notes, startLife, lifeCounterOpen]);
+
+  // Uscire dalla pagina (dopo la conferma, o dopo il salvataggio) chiude la partita in corso:
+  // la copia serve solo se l'app si chiude senza passare da qui.
+  useEffect(() => () => {
+    if (draftActive.current) clearGameDraft();
+  }, []);
   const visibleDeckOptions = decks.filter((d) => [...deckColorFilter].every((c) => d.colors.includes(c)));
 
   function updatePlayer(index: number, patch: Partial<PlayerRow>) {
@@ -414,69 +506,65 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onDiscard, 
       setError('Scegli almeno un giocatore prima di avviare il conteggio.');
       return;
     }
+    startCounter(resume);
+  }
+
+  /** Apre il segna-punti; per una partita nuova da qui parte la copia della partita in corso. */
+  function startCounter(resume: boolean) {
+    setResumeCounter(resume);
+    counterState.current = null;
+    if (!editingGame) draftActive.current = true;
     setLifeCounterOpen(true);
   }
 
-  /** Comandante dal segna-punti (danni per nome) alla riga dell'editor (danni per `rowId`). */
-  function commanderForRow(rows: PlayerRow[], commanders: Record<string, CommanderCount>, key: string) {
-    const count = commanders[key];
-    return count && rekeyCommander(count, new Map(rows.map((r) => [r.name.trim(), r.rowId])));
+  /** "Riprendi" la partita non salvata: righe e impostazioni della copia, segna-punti riaperto se lo era. */
+  function resumeDraft(draft: GameDraft) {
+    setDraftOffer(null);
+    rematchWaiting.current = false;
+    setStartedAt(draft.startedAt);
+    setFormat(draft.format);
+    setNotes(draft.notes);
+    setStartLife(draft.startLife);
+    setPlayers(fromDraftPlayers(draft.players));
+    draftActive.current = true;
+    if (draft.counterOpen) startCounter(true);
   }
 
-  function handleLifeCounterFinish(
-    lives: Record<string, number>,
-    causes: Record<string, LossCause[]>,
-    poisons: Record<string, number>,
-    commanders: Record<string, CommanderCount>,
-    seating: string[]
-  ) {
-    // Se un solo giocatore non ha KILL, MILL né veleno letale, è lui il
-    // vincitore: lo preseleziono. Con più candidati non scelgo nessuno.
+  /** "Scarta": la partita non salvata sparisce; una rivincita in attesa parte ora. */
+  function discardDraft() {
+    clearGameDraft();
+    setDraftOffer(null);
+    if (rematchWaiting.current) {
+      rematchWaiting.current = false;
+      startCounter(false);
+    }
+  }
+
+  /** "Fine Partita". Partita nuova: il segna-punti ha già deciso il vincitore (`winner`, anche null)
+   *  e la partita si salva subito. Partita salvata: si torna all'editor, con il vincitore preselezionato
+   *  solo se è rimasto in gioco un solo giocatore (senza KILL, MILL né veleno letale). */
+  function handleLifeCounterFinish(...[lives, causes, poisons, commanders, seating, winner]: [...CounterResult, (string | null)?]) {
+    const counted = withCounter(players, [lives, causes, poisons, commanders, seating]);
     const survivors = Object.keys(lives).filter((k) => (causes[k] ?? []).length === 0);
-    setPlayers((prev) =>
-      seatRows(prev, seating).map((p) => {
-        const key = p.name.trim();
-        if (!(key in lives)) return p;
-        return {
-          ...p,
-          life: String(lives[key]),
-          loss: causes[key] ?? [],
-          poison: poisons[key] ?? 0,
-          commander: commanderForRow(prev, commanders, key),
-          winner: survivors.length === 1 ? survivors[0] === key : p.winner,
-        };
-      })
-    );
+    const decided = winner !== undefined ? winner : survivors.length === 1 ? survivors[0] : undefined;
+    const rows = counted.map((p) => (p.name.trim() in lives && decided !== undefined ? { ...p, winner: p.name.trim() === decided } : p));
+    counterState.current = null;
+    setPlayers(rows);
     setLifeCounterOpen(false);
+    if (winner !== undefined) void handleSaveClick(rows);
   }
 
   /** "Modifica Partita" dal segna-punti: riporta nell'editor i punteggi raggiunti
    *  (senza chiudere la partita né scegliere un vincitore), così si può correggere
    *  un nome o un mazzo e poi "Riprendi Partita" da dove si era. */
-  function handleLifeCounterBackToEdit(
-    lives: Record<string, number>,
-    causes: Record<string, LossCause[]>,
-    poisons: Record<string, number>,
-    commanders: Record<string, CommanderCount>,
-    seating: string[]
-  ) {
-    setPlayers((prev) =>
-      seatRows(prev, seating).map((p) => {
-        const key = p.name.trim();
-        if (!(key in lives)) return p;
-        return {
-          ...p,
-          life: String(lives[key]),
-          loss: causes[key] ?? [],
-          poison: poisons[key] ?? 0,
-          commander: commanderForRow(prev, commanders, key),
-        };
-      })
-    );
+  function handleLifeCounterBackToEdit(...result: CounterResult) {
+    counterState.current = null;
+    setPlayers(withCounter(players, result));
     setLifeCounterOpen(false);
   }
 
-  async function handleSaveClick() {
+  /** Salva la partita; `rows` quando le righe sono appena cambiate (lo stato non è ancora aggiornato). */
+  async function handleSaveClick(rows: PlayerRow[] = players) {
     setMessage('');
     setError('');
     if (!supabase) {
@@ -489,7 +577,7 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onDiscard, 
       return;
     }
 
-    const readPlayers = players
+    const readPlayers = rows
       .map((p, i) => {
         const deckVal = p.deckMode === 'manual' ? p.deckManual.trim() : p.deckSelect;
         // Mazzo scelto dai salvati: ne ricordo l'ID, così la partita resta collegata anche se lo rinomini.
@@ -568,6 +656,11 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onDiscard, 
       onSavingChange?.(false);
     }
     rememberStartLife(gameId, startLife);
+    // Salvata: la copia della partita in corso non serve più.
+    if (!editingGame) {
+      draftActive.current = false;
+      clearGameDraft();
+    }
     if (!editingGame) {
       rememberLastGame({
         format: format.trim(),
@@ -618,6 +711,11 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onDiscard, 
         resume={resumeCounter ? resumeData : undefined}
         onEdit={handleLifeCounterBackToEdit}
         onFinish={handleLifeCounterFinish}
+        askWinner={!editingGame}
+        onProgress={editingGame ? undefined : (...result) => {
+          counterState.current = [result[0], result[1], result[2], result[3], result[4]];
+          persistRef.current();
+        }}
         onQuit={onDiscard ?? onBack}
         editingSaved={Boolean(editingGame)}
       />
@@ -1052,7 +1150,7 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onDiscard, 
           )}
         </div>
         <div className="grid grid-cols-2 gap-2.5">
-          <Button fullWidth size="lg" onClick={handleSaveClick} disabled={saving}>
+          <Button fullWidth size="lg" onClick={() => { void handleSaveClick(); }} disabled={saving}>
             {editingGame ? 'Salva Modifiche' : 'Salva Partita'}
           </Button>
           <Button fullWidth size="lg" variant="ghost" onClick={onBack}>
@@ -1060,6 +1158,22 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onDiscard, 
           </Button>
         </div>
       </div>
+
+      {draftOffer && (
+        <Modal title={t('partita_non_salvata')} onClose={() => setDraftOffer(null)}>
+          <p className="mb-4 text-[15px] text-zaff-text">
+            {t('hai_una_partita_iniziata_date', {
+              date: new Date(draftOffer.startedAt).toLocaleDateString(i18n.language, { day: 'numeric', month: 'long' }),
+              time: new Date(draftOffer.startedAt).toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit' }),
+              players: new Intl.ListFormat(i18n.language, { type: 'conjunction' }).format(draftPlayerNames(draftOffer)),
+            })}
+          </p>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Button variant="ghost" size="lg" onClick={discardDraft}>{t('scarta')}</Button>
+            <Button size="lg" autoFocus onClick={() => resumeDraft(draftOffer)}>{t('riprendi')}</Button>
+          </div>
+        </Modal>
+      )}
     </>
   );
 }

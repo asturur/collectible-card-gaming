@@ -2,6 +2,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import GameForm from './GameForm';
+import { readGameDraft, writeGameDraft } from './gameDraft';
 
 const insert = vi.fn();
 
@@ -128,5 +129,62 @@ describe('GameForm', () => {
     await user.click(screen.getByRole('button', { name: /Riprendi Partita/ }));
     const seats = screen.getAllByRole('button', { name: /: opzioni$/ }).map((b) => b.getAttribute('aria-label'));
     expect(seats).toEqual(['Bea: opzioni', 'Andrea: opzioni']);
+  });
+
+  async function startGame(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(screen.getByRole('button', { name: /Scegli il giocatore 1/ }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Andrea' }));
+    await user.click(screen.getByRole('button', { name: /Scegli il giocatore 2/ }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Bea' }));
+    await user.click(screen.getByRole('button', { name: /Avvia Partita/ }));
+  }
+
+  it('saves a new game as soon as the winner is chosen in "Fine Partita"', async () => {
+    const user = userEvent.setup();
+    const onSaved = vi.fn();
+    render(<GameForm onBack={vi.fn()} onSaved={onSaved} />);
+    await screen.findByRole('button', { name: /Scegli il giocatore 1/ });
+    await startGame(user);
+    await user.click(screen.getByRole('button', { name: 'Bea: togli 1 punto vita' }));
+    expect(readGameDraft()?.players.map((p) => [p.name, p.life])).toEqual([['Andrea', '20'], ['Bea', '19']]);
+    expect(readGameDraft()?.counterOpen).toBe(true);
+
+    await user.click(screen.getByRole('button', { name: 'Opzioni di gioco' }));
+    await user.click(screen.getByRole('button', { name: 'Fine Partita' }));
+    await user.click(within(screen.getByRole('dialog', { name: 'Chi ha vinto?' })).getByRole('button', { name: 'Andrea' }));
+
+    await vi.waitFor(() => expect(onSaved).toHaveBeenCalled());
+    const row = insert.mock.calls[0][0] as { players: { name: string; life: number; winner: boolean }[] };
+    expect(row.players.map((p) => [p.name, p.life, p.winner])).toEqual([['Andrea', 20, true], ['Bea', 19, false]]);
+    expect(readGameDraft()).toBeNull();
+  });
+
+  it('offers to resume a game that was never saved, scores included', async () => {
+    writeGameDraft({
+      savedAt: Date.now(), startedAt: '2026-11-11T21:30', format: 'Commander', notes: '', startLife: 40, counterOpen: true,
+      players: [
+        { name: 'Andrea', deckMode: 'select', deckSelect: '', deckManual: '', desc: '', life: '33', winner: false, colors: [], loss: [], poison: 0 },
+        { name: 'Bea', deckMode: 'select', deckSelect: '', deckManual: '', desc: '', life: '12', winner: false, colors: [], loss: [], poison: 0 },
+      ],
+    });
+    const user = userEvent.setup();
+    render(<GameForm onBack={vi.fn()} />);
+    const offer = within(await screen.findByRole('dialog', { name: 'Partita non salvata' }));
+    expect(offer.getByText(/Andrea e Bea/)).toBeInTheDocument();
+    await user.click(offer.getByRole('button', { name: 'Riprendi' }));
+    expect(screen.getByText('33')).toBeInTheDocument();
+    expect(screen.getByText('12')).toBeInTheDocument();
+  });
+
+  it('forgets the unsaved game when it is discarded', async () => {
+    writeGameDraft({
+      savedAt: Date.now(), startedAt: '2026-11-11T21:30', format: '', notes: '', startLife: 20, counterOpen: false,
+      players: [{ name: 'Andrea', deckMode: 'select', deckSelect: '', deckManual: '', desc: '', life: '5', winner: false, colors: [], loss: [], poison: 0 }],
+    });
+    const user = userEvent.setup();
+    render(<GameForm onBack={vi.fn()} />);
+    await user.click(within(await screen.findByRole('dialog', { name: 'Partita non salvata' })).getByRole('button', { name: 'Scarta' }));
+    expect(readGameDraft()).toBeNull();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 });

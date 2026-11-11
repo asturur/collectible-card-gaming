@@ -11,6 +11,7 @@ import DeckStatsContents from './DeckStats';
 import { useSavedDeck } from './useSavedDeck';
 import { DeckActionsPanel, DeckExportDialog, DeckSummaryBar, DeckTabs, deckLink } from './DeckDetailActions';
 import GameForm from './GameForm';
+import { readGameDraft } from './gameDraft';
 import GameList, { type Game } from './GameList';
 import GameStats from './GameStats';
 import Standings, { PlayerStatsDetail } from './Standings';
@@ -49,13 +50,17 @@ function GameStatisticsData({ children }: { children: ReactNode }) {
 function RegistroHome() {
   const { userId, games, gamesLoading, deckCount, decks, gamesError } = useRegistro();
   const newGames = gamesLoading ? 0 : countNewGames(games, userId);
+  const location = useLocation();
+  const gameSaved = Boolean((location.state as { gameSaved?: boolean } | null)?.gameSaved);
+  // Letta all'apertura della Home: la partita in corso si aggiorna solo dentro la pagina della partita.
+  const [draft] = useState(readGameDraft);
   return (
     <main className="mx-auto w-full max-w-[1180px] px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-[calc(1.5rem+env(safe-area-inset-top))] sm:px-5 sm:pt-7">
       <header className="border-b-2 border-zaff-text pb-4 sm:pb-[18px]">
         <h1 className={HEADING_PAGE}>Registro partite di Magic</h1>
         <div className="mtg-sep" />
         {gamesError && <p role="alert">{gamesError}</p>}
-        <HomeOverview games={games} deckCount={deckCount} decks={decks} newGames={newGames} />
+        <HomeOverview games={games} deckCount={deckCount} decks={decks} newGames={newGames} gameSaved={gameSaved} draft={draft} />
       </header>
     </main>
   );
@@ -123,7 +128,8 @@ function GameEditorSession({ gameId, rematch }: { gameId?: string; rematch: bool
           // Il segna-punti ha già chiesto conferma: niente seconda domanda all'uscita.
           onDiscard={() => guard.leave(backTo)}
           // Rilegge subito l'elenco: la partita appena salvata compare senza aspettare il tempo reale.
-          onSaved={() => { void reloadGames(); guard.onSaved(paths.games); }}
+          // Dopo il salvataggio si torna sempre alla Home, che lo conferma.
+          onSaved={() => { void reloadGames(); guard.onSaved(paths.home, { gameSaved: true }); }}
         />
       )}
     </SectionPage>
