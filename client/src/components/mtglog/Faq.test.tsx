@@ -12,6 +12,14 @@ describe('FAQ Statistiche', () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
+  it('explains the mana charts of a saved deck, with the colourless switch', () => {
+    render(<MemoryRouter><Faq sectionId="deck" topicId="cost" /></MemoryRouter>);
+    const topics = within(screen.getByRole('navigation', { name: 'Argomenti di Grafici mazzo' }));
+    expect(topics.getByRole('link', { name: 'Costi di mana' })).toHaveAttribute('aria-current', 'page');
+    expect(topics.getByRole('link', { name: 'Produzione di mana' })).toBeInTheDocument();
+    expect(screen.getByText(/Conta il mana incolore/)).toBeInTheDocument();
+  });
+
   it('falls back to the first section and topic for an unknown address', () => {
     render(<MemoryRouter><Faq sectionId="nope" topicId="nope" /></MemoryRouter>);
     expect(screen.getByRole('heading', { name: 'Regole comuni', level: 2 })).toBeInTheDocument();
