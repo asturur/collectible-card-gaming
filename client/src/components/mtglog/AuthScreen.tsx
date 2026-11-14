@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { supabase } from '../../services/supabase';
 import { navLinkProps } from '../../router';
 import Button from '../ui/Button';
 import CenteredPanel from '../ui/Panel';
 import { TextField } from '../ui/Field';
 import { LOGIN_BACKGROUND } from '../ui/styles';
+import { APP_NAME } from '../../appName';
 
 type AuthMode = 'signin' | 'signup' | 'forgot';
 
@@ -25,12 +27,13 @@ interface AuthScreenProps {
 /** Login/registrazione con Supabase Auth (email + password): il riquadro
  *  centrato che nell'app originale copriva la pagina finché non entravi. */
 export default function AuthScreen({ onOpenZaff, recovery = false, linkExpired = false, onRecovered }: AuthScreenProps) {
+  const { t } = useTranslation();
   const [mode, setMode] = useState<AuthMode>(linkExpired ? 'forgot' : 'signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [password2, setPassword2] = useState('');
   const [error, setError] = useState(
-    linkExpired ? 'Il link è scaduto o è già stato usato. Inserisci l’email per riceverne uno nuovo.' : ''
+    linkExpired ? t('link_scaduto_gia_stato_usato') : ''
   );
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
@@ -39,7 +42,7 @@ export default function AuthScreen({ onOpenZaff, recovery = false, linkExpired =
   useEffect(() => {
     if (!linkExpired) return;
     setMode('forgot');
-    setError('Il link è scaduto o è già stato usato. Inserisci l’email per riceverne uno nuovo.');
+    setError(t('link_scaduto_gia_stato_usato'));
   }, [linkExpired]);
 
   function toggleMode() {
@@ -59,22 +62,22 @@ export default function AuthScreen({ onOpenZaff, recovery = false, linkExpired =
     setError('');
     setMessage('');
     if (password.length < MIN_PASSWORD_LENGTH) {
-      setError(`La password deve avere almeno ${MIN_PASSWORD_LENGTH} caratteri.`);
+      setError(t('password_deve_avere_almeno', { min: MIN_PASSWORD_LENGTH }));
       return;
     }
     if (password !== password2) {
-      setError('Le due password non coincidono.');
+      setError(t('due_password_non_coincidono'));
       return;
     }
     if (!supabase) {
-      setError('Supabase non configurato.');
+      setError(t('supabase_non_configurato'));
       return;
     }
     setLoading(true);
     const { error: updateError } = await supabase.auth.updateUser({ password });
     setLoading(false);
     if (updateError) {
-      setError('Non sono riuscito a cambiare la password: ' + updateError.message);
+      setError(t('non_sono_riuscito_cambiare_password', { error: updateError.message }));
       return;
     }
     setPassword('');
@@ -90,11 +93,11 @@ export default function AuthScreen({ onOpenZaff, recovery = false, linkExpired =
     setMessage('');
     const trimmedEmail = email.trim();
     if (!trimmedEmail) {
-      setError('Inserisci la tua email.');
+      setError(t('inserisci_tua_email'));
       return;
     }
     if (!supabase) {
-      setError('Supabase non configurato.');
+      setError(t('supabase_non_configurato'));
       return;
     }
     setLoading(true);
@@ -105,10 +108,10 @@ export default function AuthScreen({ onOpenZaff, recovery = false, linkExpired =
     });
     setLoading(false);
     if (resetError && /rate|too many|seconds/i.test(resetError.message)) {
-      setError('Troppe richieste ravvicinate: aspetta un minuto e riprova.');
+      setError(t('troppe_richieste_ravvicinate_aspetta_un'));
       return;
     }
-    setMessage('Se l\u2019indirizzo è registrato, riceverai a breve un\u2019email con il link per scegliere una nuova password. Controlla anche la cartella spam.');
+    setMessage(t('se_indirizzo_registrato_riceverai_breve'));
   }
 
   async function handleSubmit() {
@@ -119,11 +122,11 @@ export default function AuthScreen({ onOpenZaff, recovery = false, linkExpired =
 
     const trimmedEmail = email.trim();
     if (!trimmedEmail || !password) {
-      setError('Inserisci email e password.');
+      setError(t('inserisci_email_password'));
       return;
     }
     if (!supabase) {
-      setError('Supabase non configurato.');
+      setError(t('supabase_non_configurato'));
       return;
     }
 
@@ -134,7 +137,7 @@ export default function AuthScreen({ onOpenZaff, recovery = false, linkExpired =
         password,
       });
       setLoading(false);
-      if (signInError) setError('Accesso non riuscito: ' + signInError.message);
+      if (signInError) setError(t('accesso_non_riuscito', { error: signInError.message }));
     } else {
       const { data, error: signUpError } = await supabase.auth.signUp({
         email: trimmedEmail,
@@ -151,9 +154,9 @@ export default function AuthScreen({ onOpenZaff, recovery = false, linkExpired =
       });
       setLoading(false);
       if (signUpError) {
-        setError('Registrazione non riuscita: ' + signUpError.message);
+        setError(t('registrazione_non_riuscita', { error: signUpError.message }));
       } else if (!data.session) {
-        setMessage('Account creato. Controlla la tua email per confermarlo, poi accedi.');
+        setMessage(t('account_creato_controlla_tua_email'));
         setMode('signin');
       }
     }
@@ -163,15 +166,15 @@ export default function AuthScreen({ onOpenZaff, recovery = false, linkExpired =
     <CenteredPanel
       onSubmit={handleSubmit}
       background={LOGIN_BACKGROUND}
-      title={recovery ? 'Nuova password' : 'Registro partite'}
+      title={recovery ? t('nuova_password') : APP_NAME}
       subtitle={
         recovery
-          ? 'Scegli la nuova password per il tuo account'
+          ? t('scegli_nuova_password_per_tuo')
           : mode === 'signin'
-            ? 'Accedi con il tuo account per continuare'
+            ? t('accedi_con_tuo_account_per')
             : mode === 'signup'
-              ? 'Crea un account per iniziare'
-              : 'Ti mando un link per scegliere una nuova password'
+              ? t('crea_un_account_per_iniziare')
+              : t('ti_mando_un_link_per')
       }
     >
       {!recovery && (
@@ -183,10 +186,10 @@ export default function AuthScreen({ onOpenZaff, recovery = false, linkExpired =
           autoCapitalize="none"
           autoCorrect="off"
           spellCheck={false}
-          label="Email"
+          label={t('email')}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="nome@esempio.it"
+          placeholder={t('nome_esempio_it')}
           autoComplete="username"
           required
         />
@@ -200,10 +203,10 @@ export default function AuthScreen({ onOpenZaff, recovery = false, linkExpired =
           id="auth-password"
           name={mode === 'signin' && !recovery ? 'password' : 'new-password'}
           type="password"
-          label={recovery ? 'Nuova password' : 'Password'}
+          label={recovery ? t('nuova_password') : t('password')}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder={recovery ? `Almeno ${MIN_PASSWORD_LENGTH} caratteri` : 'La tua password'}
+          placeholder={recovery ? t('almeno_caratteri', { min: MIN_PASSWORD_LENGTH }) : t('tua_password')}
           autoComplete={mode === 'signin' && !recovery ? 'current-password' : 'new-password'}
           required
         />
@@ -214,10 +217,10 @@ export default function AuthScreen({ onOpenZaff, recovery = false, linkExpired =
           id="auth-password2"
           name="new-password-confirm"
           type="password"
-          label="Ripeti la nuova password"
+          label={t('ripeti_nuova_password')}
           value={password2}
           onChange={(e) => setPassword2(e.target.value)}
-          placeholder="Scrivila ancora una volta"
+          placeholder={t('scrivila_ancora_una_volta')}
           autoComplete="new-password"
           required
         />
@@ -225,12 +228,12 @@ export default function AuthScreen({ onOpenZaff, recovery = false, linkExpired =
 
       <Button type="submit" size="lg" fullWidth disabled={loading}>
         {recovery
-          ? 'Salva la nuova password'
+          ? t('salva_nuova_password')
           : mode === 'signin'
-            ? 'Accedi'
+            ? t('accedi')
             : mode === 'signup'
-              ? 'Crea account'
-              : 'Invia il link di recupero'}
+              ? t('crea_account')
+              : t('invia_link_di_recupero')}
       </Button>
 
       {!recovery && mode === 'signin' && (
@@ -241,19 +244,19 @@ export default function AuthScreen({ onOpenZaff, recovery = false, linkExpired =
           onClick={() => goTo('forgot')}
           className="mt-3"
         >
-          Password dimenticata?
+          {t('password_dimenticata')}
         </Button>
       )}
 
       {!recovery && mode !== 'forgot' && (
         <Button variant="ghost" size="lg" fullWidth className="mt-3" onClick={toggleMode}>
-          {mode === 'signin' ? 'Non hai un account? Registrati' : 'Hai già un account? Accedi'}
+          {mode === 'signin' ? t('non_hai_un_account_registrati') : t('hai_gia_un_account_accedi')}
         </Button>
       )}
 
       {!recovery && mode === 'forgot' && (
         <Button variant="ghost" size="lg" fullWidth className="mt-3" onClick={() => goTo('signin')}>
-          Torna all&apos;accesso
+          {t('torna_all_accesso')}
         </Button>
       )}
 
@@ -268,7 +271,7 @@ export default function AuthScreen({ onOpenZaff, recovery = false, linkExpired =
         {...navLinkProps('zaff', onOpenZaff)}
         className="mt-4 block w-full text-center text-sm text-zaff-muted transition-colors hover:text-zaff-primary"
       >
-        Vai a ZAFF, la piattaforma di gioco →
+        {t('vai_zaff_piattaforma_di_gioco')}
       </a>
     </CenteredPanel>
   );

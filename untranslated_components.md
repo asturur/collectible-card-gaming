@@ -2,9 +2,6 @@
 
 Review in order. Entries include partially translated files and files that may have no translatable text; remove each only after review is complete. Paths are relative to the repository root.
 
-- `client/src/components/mtglog/AuthScreen.tsx`
-- `client/src/components/mtglog/BottomNav.tsx`
-- `client/src/components/mtglog/CardPicker.tsx`
 - `client/src/components/mtglog/CardPrices.tsx`
 - `client/src/components/mtglog/CardStats.tsx`
 - `client/src/components/mtglog/ColorFilter.tsx`
