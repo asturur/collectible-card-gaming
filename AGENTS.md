@@ -259,6 +259,8 @@ elements, and leave user-provided data as data.
 
 - **Brand names are not translated**: "MTG Tracker" (the Registro, `APP_NAME`) and
   "ZAFF — Collectible Card Gaming" (`ZAFF_NAME`), both in `client/src/appName.ts`.
+  Every user-visible reference to the app is "MTG Tracker": texts that said "Registro"
+  (for the whole app) say "MTG Tracker" in both languages.
 - **ZAFF texts written in English** get a key and an Italian translation like every other
   text: Italian users see Italian, English users see English. Derive the key from the
   Italian translation, as for any other text.

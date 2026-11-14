@@ -2,14 +2,7 @@
 
 Review in order. Entries include partially translated files and files that may have no translatable text; remove each only after review is complete. Paths are relative to the repository root.
 
-- `client/src/canvas/GameCanvas.tsx`
-- `client/src/components/DeckPicker.tsx`
-- `client/src/components/DeckPreview.tsx`
-- `client/src/components/GameCanvas.tsx`
-- `client/src/components/GameView.tsx`
-- `client/src/components/JoinScreen.tsx`
 - `client/src/components/MtgLog.tsx`
-- `client/src/components/ZaffApp.tsx`
 - `client/src/components/mtglog/AccountPanel.tsx`
 - `client/src/components/mtglog/AuthScreen.tsx`
 - `client/src/components/mtglog/BottomNav.tsx`

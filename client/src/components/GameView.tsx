@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActionTypes } from '@zaff/shared';
 import { useSocket } from '../network/useSocket';
 import { expandPlayableDeck, type PlayableDeck } from '../services/playableDeck';
@@ -13,6 +14,7 @@ interface GameViewProps {
 }
 
 export default function GameView({ address, playerName, selectedDeck, onDisconnect }: GameViewProps) {
+  const { t } = useTranslation();
   const { status, playerId, gameState, sendAction, disconnect } = useSocket(address, playerName);
   const deckSentRef = useRef(false);
 
@@ -53,12 +55,12 @@ export default function GameView({ address, playerName, selectedDeck, onDisconne
 
   const statusText =
     status === 'connected'
-      ? 'Connected'
+      ? t('connesso')
       : status === 'connecting'
-        ? 'Connecting...'
+        ? t('connessione_in_corso')
         : status === 'error'
-          ? 'Error'
-          : 'Disconnected';
+          ? t('errore')
+          : t('disconnesso');
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-zaff-bg text-zaff-text">
@@ -75,7 +77,7 @@ export default function GameView({ address, playerName, selectedDeck, onDisconne
 
         {/* Center: player count */}
         <div className="text-sm font-medium">
-          {playerCount} {playerCount === 1 ? 'player' : 'players'} in room
+          {t('giocatori_nella_stanza', { count: playerCount })}
         </div>
 
         {/* Right: player names + disconnect */}
@@ -95,7 +97,7 @@ export default function GameView({ address, playerName, selectedDeck, onDisconne
             size="sm"
             onClick={handleDisconnect}
           >
-            Disconnect
+            {t('disconnetti')}
           </Button>
         </div>
       </header>
