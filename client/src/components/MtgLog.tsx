@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import i18n from '../i18n';
 import { Navigate, Outlet, useNavigate, useOutletContext, useSearchParams } from 'react-router';
 import type { Session } from '@supabase/supabase-js';
 import { isSupabaseConfigured, subscribeToTable, supabase, TABLE_DECKS, TABLE_GAMES } from '../services/supabase';
@@ -40,6 +42,7 @@ const LINK_ERROR_IN_URL =
 
 /** Authentication and shared data remain mounted while Registro pages change. */
 export default function MtgLog() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [session, setSession] = useState<Session | null | 'loading'>('loading');
@@ -91,7 +94,7 @@ export default function MtgLog() {
       if (!supabase) return;
       const { data, error } = await supabase.from(TABLE_GAMES).select('*');
       if (cancelled) return;
-      setGamesError(error ? 'Non riesco a leggere il registro condiviso: ' + error.message : '');
+      setGamesError(error ? i18n.t('non_riesco_leggere_partite_condivise', { error: error.message }) : '');
       if (!error) setGames((data ?? []).map(rowToGame));
       setGamesLoading(false);
     }
@@ -132,7 +135,7 @@ export default function MtgLog() {
       <div className="flex min-h-screen items-center justify-center bg-zaff-bg px-4">
         <div className={cx(PANEL, 'max-w-md text-center')}>
           <p className="text-red-400">
-            Supabase non configurato (variabili VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY mancanti).
+            {t('supabase_non_configurato_variabili_mancanti')}
           </p>
           <ButtonLink
             {...navLinkProps('zaff', onOpenZaff)}
@@ -141,7 +144,7 @@ export default function MtgLog() {
             fullWidth
             className="mt-6"
           >
-            Vai a ZAFF →
+            {t('vai_zaff')}
           </ButtonLink>
         </div>
       </div>
@@ -151,7 +154,7 @@ export default function MtgLog() {
   if (session === 'loading') {
     return (
       <div className="flex min-h-screen items-center justify-center bg-zaff-bg px-4">
-        <p className={TEXT_MUTED}>Caricamento…</p>
+        <p className={TEXT_MUTED}>{t('caricamento')}</p>
       </div>
     );
   }

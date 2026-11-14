@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import Button from '../ui/Button';
 import Modal from '../ui/Modal';
 import { ChoiceField, TextField } from '../ui/Field';
@@ -7,12 +8,8 @@ import { deleteMyAccount, signOut } from '../../services/account';
 import { useSavedDeckList } from './useSavedDeck';
 import type { Game } from './GameList';
 
-/** Parola da scrivere per confermare la cancellazione. */
-export const CONFIRM_WORD = 'ELIMINA';
 
 type DeckChoice = 'keep' | 'delete';
-
-const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
 /**
  * Pagina Account: con chi si è entrati, "Esci" e la cancellazione dell'account.
@@ -20,6 +17,9 @@ const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one :
  * perché coinvolgono anche gli altri giocatori.
  */
 export default function AccountPanel({ userId, email, games }: { userId: string; email: string | undefined; games: Game[] }) {
+  const { t } = useTranslation();
+  /** Parola da scrivere per confermare la cancellazione, nella lingua in uso (ELIMINA / DELETE). */
+  const confirmWord = t('parola_conferma');
   const { decks, loading: decksLoading } = useSavedDeckList();
   const myDecks = decks.filter((d) => d.createdBy === userId).length;
   const myGames = games.filter((g) => g.createdBy === userId).length;
@@ -29,7 +29,7 @@ export default function AccountPanel({ userId, email, games }: { userId: string;
   const [typed, setTyped] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState('');
-  const confirmed = typed.trim().toUpperCase() === CONFIRM_WORD;
+  const confirmed = typed.trim().toUpperCase() === confirmWord;
 
   function close() {
     // Mentre la cancellazione è in corso il riquadro resta aperto.
@@ -46,7 +46,7 @@ export default function AccountPanel({ userId, email, games }: { userId: string;
       // Se riesce, la sessione si chiude e l'app torna alla schermata di accesso.
       await deleteMyAccount({ deleteDecks: deckChoice === 'delete' });
     } catch (err) {
-      setError('Non sono riuscito a eliminare l’account: ' + (err as Error).message);
+      setError(t('non_sono_riuscito_eliminare_account', { error: (err as Error).message }));
       setDeleting(false);
     }
   }
@@ -54,46 +54,44 @@ export default function AccountPanel({ userId, email, games }: { userId: string;
   return (
     <>
       <section className={cx(SURFACE, 'mb-6 p-4')}>
-        <p className={TEXT_MUTED}>Accesso con</p>
+        <p className={TEXT_MUTED}>{t('accesso_con')}</p>
         <p className="mb-4 break-all text-base text-zaff-text">{email ?? '—'}</p>
-        <Button variant="ghost" onClick={() => { void signOut(); }}>Esci</Button>
+        <Button variant="ghost" onClick={() => { void signOut(); }}>{t('esci')}</Button>
       </section>
 
       <section className={cx(SURFACE, 'p-4')}>
-        <h2 className={cx(HEADING_SECTION, 'mb-2')}>Elimina account</h2>
+        <h2 className={cx(HEADING_SECTION, 'mb-2')}>{t('elimina_account')}</h2>
         <p className={cx('mb-4', TEXT_MUTED)}>
-          L’account e la sua email vengono cancellati per sempre. Le partite che hai salvato restano
-          nello storico del gruppo; per i tuoi mazzi puoi scegliere.
+          {t('account_sua_email_vengono_cancellati')}
         </p>
-        <Button variant="danger" onClick={() => setOpen(true)}>Elimina account…</Button>
+        <Button variant="danger" onClick={() => setOpen(true)}>{t('elimina_account_dialogo')}</Button>
       </section>
 
       {open && (
-        <Modal title="Eliminare l’account?" onClose={close}>
+        <Modal title={t('eliminare_account')} onClose={close}>
           <ChoiceField<DeckChoice>
-            legend={decksLoading ? 'I tuoi mazzi' : `I tuoi mazzi (${myDecks})`}
+            legend={decksLoading ? t('tuoi_mazzi') : t('tuoi_mazzi_count', { count: myDecks })}
             value={deckChoice}
             onChange={setDeckChoice}
             disabled={deleting}
             options={[
               {
                 value: 'keep',
-                label: 'Lasciali al gruppo',
-                hint: 'Restano nell’elenco e nelle statistiche, senza proprietario: chiunque abbia un account potrà modificarli.',
+                label: t('lasciali_al_gruppo'),
+                hint: t('restano_nell_elenco_nelle_statistiche'),
               },
               {
                 value: 'delete',
-                label: 'Eliminali',
-                hint: 'Spariscono dall’elenco e dalle statistiche delle carte di tutti. Le partite già giocate continuano a mostrarne il nome. Se vuoi conservarli, esportali prima dalla pagina di ogni mazzo.',
+                label: t('eliminali'),
+                hint: t('spariscono_dall_elenco_dalle_statistiche'),
               },
             ]}
           />
           <p className={cx('mb-4 rounded-lg border border-zaff-border px-3 py-2', TEXT_MINI)}>
-            Le partite che hai salvato ({plural(myGames, 'partita', 'partite')}) restano nello storico del gruppo,
-            senza proprietario. Restano anche il tuo nome giocatore e i gruppi che hai creato.
+            {t('partite_che_hai_salvato', { count: myGames })}
           </p>
           <TextField
-            label={`Per confermare scrivi ${CONFIRM_WORD}`}
+            label={t('per_confermare_scrivi', { word: confirmWord })}
             value={typed}
             onChange={(e) => setTyped(e.target.value)}
             autoCapitalize="characters"
@@ -102,9 +100,9 @@ export default function AccountPanel({ userId, email, games }: { userId: string;
             error={error}
           />
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-            <Button variant="ghost" onClick={close} disabled={deleting}>Annulla</Button>
+            <Button variant="ghost" onClick={close} disabled={deleting}>{t('annulla')}</Button>
             <Button variant="danger" onClick={() => { void confirmDelete(); }} disabled={!confirmed || deleting}>
-              {deleting ? 'Eliminazione…' : 'Elimina definitivamente'}
+              {deleting ? t('eliminazione') : t('elimina_definitivamente')}
             </Button>
           </div>
         </Modal>

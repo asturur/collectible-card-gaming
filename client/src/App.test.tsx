@@ -243,7 +243,7 @@ describe('Registro routes', () => {
   it.each(['/stats/players/Alice', '/stats/matchups/Alice/vs/Bob'])('shows shared-data failures at %s without a false empty state', async path => {
     mock.gamesError = { message: 'Riprova.' };
     openApp(path);
-    expect(await screen.findByRole('alert')).toHaveTextContent('Non riesco a leggere il registro condiviso: Riprova.');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Non riesco a leggere le partite condivise: Riprova.');
     expect(screen.queryByText(/Nessuna partita con vincitore registrata/)).not.toBeInTheDocument();
   });
 
