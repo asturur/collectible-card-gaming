@@ -1,4 +1,5 @@
 import { ManaPips } from './ManaIcon';
+import i18n from '../../i18n';
 import DeckCardsView from './DeckCards';
 import Badge from '../ui/Badge';
 import { TEXT_MINI } from '../ui/styles';
@@ -47,7 +48,7 @@ export default function DeckViewContents({
     <>
       <p className={`mb-2.5 flex items-center gap-2 ${TEXT_MINI}`}>
         {label && <Badge tone={source === 'brew' ? 'brew' : 'precon'}>{label}</Badge>}
-        {total(cards)} carte
+        {i18n.t('carte', { count: total(cards) })}
       </p>
 
       {colors.length > 0 && (

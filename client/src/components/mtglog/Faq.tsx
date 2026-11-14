@@ -1,4 +1,5 @@
 import { paths } from '../../router';
+import i18n from '../../i18n';
 import NavTabs from '../ui/NavTabs';
 import { ButtonRouteLink } from '../ui/Button';
 import { cx, HEADING_SECTION } from '../ui/styles';
@@ -15,14 +16,14 @@ export default function Faq({ sectionId, topicId }: { sectionId?: string; topicI
   return (
     <>
       <NavTabs
-        label="Sezioni"
+        label={i18n.t('sezioni')}
         value={section.id}
         options={FAQ_SECTIONS.map((s) => ({ value: s.id, label: s.label, to: paths.faqTopic(s.id) }))}
         className="mb-3"
       />
       {section.topics.length > 1 && (
         <NavTabs
-          label={`Argomenti di ${section.label}`}
+          label={i18n.t('argomenti_di', { section: section.label })}
           value={topic.id}
           options={section.topics.map((t) => ({ value: t.id, label: t.label, to: paths.faqTopic(section.id, t.id) }))}
           className="mb-3 border-t border-zaff-border pt-3"
@@ -42,7 +43,7 @@ export default function Faq({ sectionId, topicId }: { sectionId?: string; topicI
 export function HowItWorks({ to, className }: { to: string; className?: string }) {
   return (
     <ButtonRouteLink to={to} variant="text" size="sm" className={cx('-ml-3 mb-1', className)}>
-      ⓘ Come si calcola?
+      {i18n.t('come_si_calcola')}
     </ButtonRouteLink>
   );
 }

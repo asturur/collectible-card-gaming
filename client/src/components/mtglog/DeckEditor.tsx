@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import i18n from '../../i18n';
 import { canEdit, MAX_DECK_NAME_LENGTH, shortenName } from '../../services/supabase';
 import CharCount from '../ui/CharCount';
 import { saveSavedDeck, getSavedDeck, findDeckWithSameName, DeckConflictError, UnresolvedCardsError } from '../../services/savedDecks';
@@ -125,7 +126,7 @@ export default function DeckEditor({ deckId, userId, initialDraft, onBack, onSav
     }
     getSavedDeck(deckId).then(deck => {
       if (cancelled) return;
-      if (userId && !canEdit(deck.createdBy, userId)) throw new Error('Puoi modificare solo i mazzi che hai salvato.');
+      if (userId && !canEdit(deck.createdBy, userId)) throw new Error(i18n.t('puoi_modificare_solo_mazzi_che'));
       openedRevision.current = deck.revision;
       setName(deck.name); setSource(deck.source); setFormat(deck.format);
       setColors(new Set(deck.colors)); setDraft(deck.cards);
@@ -133,7 +134,7 @@ export default function DeckEditor({ deckId, userId, initialDraft, onBack, onSav
     }).catch(err => {
       if (!cancelled) {
         setLoadFailed(true);
-        setError('Non riesco a leggere il mazzo: ' + err.message);
+        setError(i18n.t('non_riesco_leggere_mazzo', { error: err.message }));
       }
     }).finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
@@ -162,7 +163,7 @@ export default function DeckEditor({ deckId, userId, initialDraft, onBack, onSav
 
   async function loadPreconData(): Promise<PreconDeck[] | null> {
     if (preconData) return preconData;
-    setPreconStatus('Carico l\u2019elenco dei mazzi precon (solo la prima volta)…');
+    setPreconStatus(i18n.t('carico_elenco_dei_mazzi_precon'));
     try {
       const cached = localStorage.getItem(PRECON_CACHE_KEY);
       if (cached) {
@@ -192,7 +193,7 @@ export default function DeckEditor({ deckId, userId, initialDraft, onBack, onSav
       setPreconStatus('');
       return filtered;
     } catch {
-      setPreconStatus('Non sono riuscito a scaricare l\u2019elenco dei precon. Riprova più tardi.');
+      setPreconStatus(i18n.t('non_sono_riuscito_scaricare_precon'));
       return null;
     }
   }
@@ -326,13 +327,13 @@ export default function DeckEditor({ deckId, userId, initialDraft, onBack, onSav
   async function handleSave(allowUnresolved = false) {
     const trimmedName = name.trim();
     setError(''); setUnresolved(false);
-    if (!trimmedName) { setError('Dai un nome al mazzo prima di salvarlo.'); return; }
+    if (!trimmedName) { setError(i18n.t('dai_un_nome_al_mazzo')); return; }
     if (trimmedName.length > MAX_DECK_NAME_LENGTH) {
-      setError(`Il nome del mazzo ha ${trimmedName.length} caratteri: il massimo è ${MAX_DECK_NAME_LENGTH}. Accorcialo prima di salvare.`);
+      setError(i18n.t('nome_del_mazzo_troppo_lungo', { length: trimmedName.length, max: MAX_DECK_NAME_LENGTH }));
       return;
     }
-    if (!draft.length) { setError('Aggiungi almeno una carta al mazzo.'); return; }
-    if (deckId && openedRevision.current === null) { setError('Riapri il mazzo prima di salvarlo.'); return; }
+    if (!draft.length) { setError(i18n.t('aggiungi_almeno_una_carta_al')); return; }
+    if (deckId && openedRevision.current === null) { setError(i18n.t('riapri_mazzo_prima_di_salvarlo')); return; }
     const controller = new AbortController();
     saveAbort.current = controller;
     setSaving(true);
@@ -347,7 +348,7 @@ export default function DeckEditor({ deckId, userId, initialDraft, onBack, onSav
       const sameNameDeck = await findDeckWithSameName(trimmedName, input.id);
       if (controller.signal.aborted) return;
       if (sameNameDeck) {
-        setError(`Esiste già un mazzo chiamato "${sameNameDeck}": scegli un nome diverso.`);
+        setError(i18n.t('esiste_gia_un_mazzo_chiamato', { name: sameNameDeck }));
         return;
       }
       try {
@@ -358,7 +359,7 @@ export default function DeckEditor({ deckId, userId, initialDraft, onBack, onSav
         setPersisting(false); onPersistingChange?.(false);
         const current = await getSavedDeck(input.id);
         controller.signal.throwIfAborted();
-        if (!window.confirm('Qualcun altro ha modificato questo mazzo.\n\nOK = sovrascrivi con le tue modifiche\nAnnulla = conserva la bozza e torna alla modifica')) {
+        if (!window.confirm(i18n.t('qualcun_altro_ha_modificato_mazzo'))) {
           setError(err.message); return;
         }
         await saveSavedDeck({ ...input, expectedRevision: current.revision }, {
@@ -368,7 +369,7 @@ export default function DeckEditor({ deckId, userId, initialDraft, onBack, onSav
       onSaved(input.id);
     } catch (err) {
       if (!controller.signal.aborted) {
-        setError('Salvataggio mazzo non riuscito: ' + (err instanceof Error ? err.message : String((err as { message?: string }).message ?? err)));
+        setError(i18n.t('salvataggio_mazzo_non_riuscito', { error: err instanceof Error ? err.message : String((err as { message?: string }).message ?? err) }));
         setUnresolved(err instanceof UnresolvedCardsError);
       }
     } finally {
@@ -384,7 +385,7 @@ export default function DeckEditor({ deckId, userId, initialDraft, onBack, onSav
   const section = useSectionInView(!loading && !loadFailed, draft);
 
   if (loading) {
-    return <p className={TEXT_MUTED}>Caricamento…</p>;
+    return <p className={TEXT_MUTED}>{i18n.t('caricamento')}</p>;
   }
   if (loadFailed) return <p role="alert" className="text-sm text-red-400">{error}</p>;
 
@@ -398,14 +399,14 @@ export default function DeckEditor({ deckId, userId, initialDraft, onBack, onSav
       <fieldset disabled={saving} className="min-w-0">
       {/* Totali sempre in vista mentre si scorre. */}
       <div className="sticky top-[env(safe-area-inset-top)] z-10 -mx-1 mb-3.5 rounded-lg border border-zaff-primary bg-zaff-surface px-3 py-2 text-sm font-semibold text-zaff-text shadow-lg">
-        <p className="mb-1 truncate text-base font-bold" title={name.trim() || 'Nuovo mazzo'}>
-          {name.trim() || 'Nuovo mazzo'}
+        <p className="mb-1 truncate text-base font-bold" title={name.trim() || i18n.t('nuovo_mazzo')}>
+          {name.trim() || i18n.t('nuovo_mazzo')}
         </p>
         <div className="flex items-center justify-between gap-2">
           <span aria-current={section === 'main' ? 'true' : undefined} className={sectionTone(section, 'main')}>Main Deck {mainTotal}</span>
           <span aria-current={section === 'side' ? 'true' : undefined} className={sectionTone(section, 'side')}>Sideboard {sideTotal}</span>
           <span className="bg-gradient-to-r from-zaff-primary to-zaff-accent bg-clip-text text-lg font-bold text-transparent">
-            Totale {total}
+            {i18n.t('totale_n', { n: total })}
           </span>
         </div>
       </div>
@@ -416,23 +417,23 @@ export default function DeckEditor({ deckId, userId, initialDraft, onBack, onSav
 
       <TextField
         id="deckName"
-        label="Nome mazzo"
+        label={i18n.t('nome_mazzo')}
         density="compact"
         value={name}
         onChange={(e) => setName(e.target.value)}
-        placeholder="es. Mono nero aggro by Ale"
+        placeholder={i18n.t('es_mono_nero_aggro')}
         maxLength={MAX_DECK_NAME_LENGTH}
         hint={<CharCount value={name} max={MAX_DECK_NAME_LENGTH} />}
       />
 
       <SelectField
         id="deckFormat"
-        label="Formato"
+        label={i18n.t('formato')}
         density="compact"
         value={format}
         onChange={(e) => setFormat(e.target.value)}
       >
-        <option value="">Non specificato</option>
+        <option value="">{i18n.t('non_specificato')}</option>
         {DECK_FORMATS.map((f) => (
           <option key={f} value={f}>
             {f}
@@ -442,26 +443,26 @@ export default function DeckEditor({ deckId, userId, initialDraft, onBack, onSav
 
       <SelectField
         id="deckSource"
-        label="Origine mazzo"
+        label={i18n.t('origine_mazzo')}
         density="compact"
         value={source}
         onChange={(e) => setSource(e.target.value)}
       >
-        <option value="">Non specificato</option>
-        <option value="brew">Homebrew (fatto in casa)</option>
-        <option value="precon">Precon (di fabbrica)</option>
+        <option value="">{i18n.t('non_specificato')}</option>
+        <option value="brew">{i18n.t('homebrew_fatto_in_casa')}</option>
+        <option value="precon">{i18n.t('precon_di_fabbrica')}</option>
       </SelectField>
 
       <div className="mb-4">
-        <span className={FIELD_LABEL}>Colori del mazzo</span>
+        <span className={FIELD_LABEL}>{i18n.t('colori_del_mazzo')}</span>
         <ManaPips colors={colors} onToggle={toggleColor} />
         <p className={cx('mt-1.5', TEXT_MINI)}>
-          Si accendono da soli quando aggiungi terre base; puoi correggerli a mano in ogni momento.
+          {i18n.t('si_accendono_da_soli_quando')}
         </p>
       </div>
 
       <Button variant="link" size="sm" onClick={togglePreconBox}>
-        Importa un mazzo precon Commander…
+        {i18n.t('importa_un_mazzo_precon_commander')}
       </Button>
 
       {preconOpen && (
@@ -471,7 +472,7 @@ export default function DeckEditor({ deckId, userId, initialDraft, onBack, onSav
             value={preconSearch}
             onChange={(e) => setPreconSearch(e.target.value)}
             autoComplete="off"
-            placeholder="Cerca il nome del precon (es. Elven Empire)…"
+            placeholder={i18n.t('cerca_nome_del_precon_es')}
             className={FIELD_CONTROL_SM}
           />
           {preconStatus && <p className={cx('mt-1.5', TEXT_MINI)}>{preconStatus}</p>}
@@ -495,13 +496,13 @@ export default function DeckEditor({ deckId, userId, initialDraft, onBack, onSav
 
       <div className="mt-3.5">
         <Button variant="ghost" size="lg" fullWidth className="py-3" onClick={() => setPicker({ mode: 'add' })}>
-          🔍 Cerca carte con le immagini
+          {i18n.t('cerca_carte_con_immagini')}
         </Button>
       </div>
 
       <div className="relative mt-3.5">
         <label className={FIELD_LABEL} htmlFor="cardSearch">
-          Cerca carta
+          {i18n.t('cerca_carta')}
         </label>
         <input
           id="cardSearch"
@@ -512,7 +513,7 @@ export default function DeckEditor({ deckId, userId, initialDraft, onBack, onSav
             setPickedCardName('');
           }}
           autoComplete="off"
-          placeholder="Scrivi il nome della carta…"
+          placeholder={i18n.t('scrivi_nome_della_carta')}
           className={FIELD_CONTROL_SM}
         />
         {suggestions.length > 0 && (
@@ -536,7 +537,7 @@ export default function DeckEditor({ deckId, userId, initialDraft, onBack, onSav
       </div>
 
       <div className="mt-3.5">
-        <span className={FIELD_LABEL}>Aggiungi a</span>
+        <span className={FIELD_LABEL}>{i18n.t('aggiungi_a')}</span>
         <div className="flex gap-1.5">
           <Button
             type="button"
@@ -560,7 +561,7 @@ export default function DeckEditor({ deckId, userId, initialDraft, onBack, onSav
       <div className="mb-2.5 mt-3 grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
         <TextField
           id="cardQty"
-          label="Copie"
+          label={i18n.t('copie')}
           density="compact"
           type="number"
           min={1}
@@ -573,12 +574,12 @@ export default function DeckEditor({ deckId, userId, initialDraft, onBack, onSav
           fieldClassName="mb-0"
         />
         <Button variant="ghost" onClick={handleAddCard}>
-          Aggiungi al Mazzo
+          {i18n.t('aggiungi_al_mazzo')}
         </Button>
       </div>
 
       {draft.length === 0 ? (
-        <p className={cx('mb-2.5', TEXT_MINI)}>Nessuna carta ancora aggiunta.</p>
+        <p className={cx('mb-2.5', TEXT_MINI)}>{i18n.t('nessuna_carta_ancora_aggiunta')}</p>
       ) : (
         <div className="mb-2.5">
           <DeckCardsView
@@ -600,27 +601,27 @@ export default function DeckEditor({ deckId, userId, initialDraft, onBack, onSav
       )}
 
       <p className={cx('mt-2.5', TEXT_MINI)}>
-        I nomi delle carte arrivano da{' '}
+        {i18n.t('nomi_delle_carte_arrivano_da')}{' '}
         <a href="https://scryfall.com" target="_blank" rel="noopener" className="underline hover:text-zaff-gold">
           Scryfall
         </a>
-        ; i mazzi precon da un archivio pubblico della community Magic.
+        {i18n.t('mazzi_precon_da_un_archivio')}
       </p>
 
       </fieldset>
       {unresolved && !saving && (
         <Button variant="ghost" fullWidth onClick={() => handleSave(true)}>
-          Salva solo per il registro (non ancora giocabile)
+          {i18n.t('salva_solo_per_mtg_tracker')}
         </Button>
       )}
       {/* Barra sempre in vista in fondo allo schermo: salvare senza scorrere. */}
       {/* Sta sopra la barra di navigazione fissa (alta 4rem più la zona sicura). */}
       <div className="sticky bottom-[calc(4rem+env(safe-area-inset-bottom))] z-10 -mx-4 mt-4 grid grid-cols-2 gap-2.5 border-t border-zaff-border bg-zaff-surface px-4 py-3 sm:-mx-6 sm:px-6">
         <Button size="lg" fullWidth onClick={() => handleSave()} disabled={saving}>
-          {saving ? (persisting ? 'Salvataggio…' : 'Verifico le carte…') : deckId ? 'Salva Modifiche' : 'Salva Mazzo'}
+          {saving ? (persisting ? i18n.t('salvataggio') : i18n.t('verifico_carte')) : deckId ? i18n.t('salva_modifiche') : i18n.t('salva_mazzo')}
         </Button>
         <Button size="lg" fullWidth variant="ghost" disabled={persisting} onClick={onBack}>
-          Annulla
+          {i18n.t('annulla')}
         </Button>
       </div>
       {picker && !saving && (
