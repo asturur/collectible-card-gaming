@@ -2,11 +2,6 @@
 
 Review in order. Entries include partially translated files and files that may have no translatable text; remove each only after review is complete. Paths are relative to the repository root.
 
-- `client/src/components/mtglog/CardPrices.tsx`
-- `client/src/components/mtglog/CardStats.tsx`
-- `client/src/components/mtglog/ColorFilter.tsx`
-- `client/src/components/mtglog/DeckCards.tsx`
-- `client/src/components/mtglog/DeckDetailActions.tsx`
 - `client/src/components/mtglog/DeckEditor.tsx`
 - `client/src/components/mtglog/DeckList.tsx`
 - `client/src/components/mtglog/DeckStats.tsx`
