@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import i18n from '../../i18n';
 import { getCard, isMissing, type ScryCard } from '../../services/scryfall';
 import { useDeckImages } from './useDeckImages';
 import { groupCards, type GroupedColor, type GroupMode } from './cardGroups';
@@ -44,7 +45,7 @@ function MoveLink({ card, editable, className }: { card: DeckCardsItem; editable
     <button
       type="button"
       onClick={() => editable.onMove(card)}
-      aria-label={`Sposta una copia di ${card.name} ${card.section === 'side' ? 'nel Main Deck' : 'in Sideboard'}`}
+      aria-label={i18n.t(card.section === 'side' ? 'sposta_copia_nel_main_deck' : 'sposta_copia_in_sideboard', { name: card.name })}
       className={cx('py-1 text-xs font-semibold text-zaff-accent active:opacity-70', className)}
     >
       → {moveLabel(card)}
@@ -177,7 +178,7 @@ export function CardViewer({
       </div>
 
       <div className="mt-3 flex items-center gap-4" onClick={(e) => e.stopPropagation()}>
-        <button type="button" className={navBtn} onClick={() => go(-1)} aria-label="Carta precedente">
+        <button type="button" className={navBtn} onClick={() => go(-1)} aria-label={i18n.t('carta_precedente')}>
           ‹
         </button>
         <div className="min-w-[8rem] text-center text-sm text-white">
@@ -190,7 +191,7 @@ export function CardViewer({
             {index + 1} / {items.length}
           </div>
         </div>
-        <button type="button" className={navBtn} onClick={() => go(1)} aria-label="Carta successiva">
+        <button type="button" className={navBtn} onClick={() => go(1)} aria-label={i18n.t('carta_successiva')}>
           ›
         </button>
       </div>
@@ -199,7 +200,7 @@ export function CardViewer({
         <CardPriceBox name={item.name} scryfallId={item.scryfallId} />
         {onMove && (
           <Button variant="ghost" size="sm" onClick={move} className="mx-auto mt-3 flex">
-            Sposta 1 copia {item.section === 'side' ? 'nel Main Deck' : 'in Sideboard'}
+            {i18n.t(item.section === 'side' ? 'sposta_1_copia_main_deck' : 'sposta_1_copia_sideboard')}
           </Button>
         )}
       </div>
@@ -213,7 +214,7 @@ export function CardViewer({
           }}
           className="mt-3 rounded-lg border-2 border-white/60 bg-black/50 px-5 py-2 text-sm font-semibold text-white active:scale-95"
         >
-          ↻ Gira la carta
+          {i18n.t('gira_carta')}
         </button>
       )}
     </div>
@@ -231,7 +232,7 @@ function QtyStepper({ card, editable, compact = false }: { card: DeckCardsItem; 
       <button
         type="button"
         onClick={() => editable.onChangeQty(card, -1)}
-        aria-label={card.qty <= 1 ? `Togli ${card.name}` : `Una copia in meno di ${card.name}`}
+        aria-label={card.qty <= 1 ? i18n.t('togli_nome', { name: card.name }) : i18n.t('una_copia_meno_di', { name: card.name })}
         className={cx(btn, card.qty <= 1 ? 'border-red-400 text-red-400' : 'border-zaff-border text-zaff-text')}
       >
         {card.qty <= 1 ? '×' : '−'}
@@ -240,7 +241,7 @@ function QtyStepper({ card, editable, compact = false }: { card: DeckCardsItem; 
       <button
         type="button"
         onClick={() => editable.onChangeQty(card, 1)}
-        aria-label={`Una copia in più di ${card.name}`}
+        aria-label={i18n.t('una_copia_piu_di', { name: card.name })}
         className={cx(btn, 'border-zaff-border text-zaff-text')}
       >
         +
@@ -254,8 +255,8 @@ function FixTile({ card, onFix, className }: { card: DeckCardsItem; onFix: (c: D
     <button
       type="button"
       onClick={() => onFix(card)}
-      title="Carta non riconosciuta: tocca per cercarla"
-      aria-label={`Carta non riconosciuta: ${card.name}. Tocca per cercarla`}
+      title={i18n.t('carta_non_riconosciuta_tocca_per')}
+      aria-label={i18n.t('carta_non_riconosciuta_nome', { name: card.name })}
       className={cx(
         'flex flex-col items-center justify-center gap-0.5 overflow-hidden rounded-md border-2 border-dashed border-zaff-gold bg-zaff-surface p-1 text-center text-[11px] leading-tight text-zaff-gold',
         className
@@ -406,9 +407,9 @@ function Section({
     <div className="mb-5">
       <h3 className="mb-3 flex items-baseline justify-between border-b-2 border-zaff-text pb-1.5 text-base font-bold text-zaff-text">
         <span>{title}</span>
-        <span>{total} carte</span>
+        <span>{i18n.t('carte', { count: total })}</span>
       </h3>
-      {groups.length === 0 && <p className="text-sm text-zaff-muted">Nessuna carta.</p>}
+      {groups.length === 0 && <p className="text-sm text-zaff-muted">{i18n.t('nessuna_carta')}</p>}
       {groups.map((g) => (
         <div key={g.id} className="mb-5 last:mb-0">
           <div
@@ -419,7 +420,7 @@ function Section({
               {g.label}
               {'WUBRG'.includes(g.id) && <ManaIcons colors={[g.id]} className="text-[15px]" />}
             </span>
-            <span className="text-sm font-semibold text-zaff-muted">{g.total} carte</span>
+            <span className="text-sm font-semibold text-zaff-muted">{i18n.t('carte', { count: g.total })}</span>
           </div>
           {g.types.map((t) => (
             <div key={t.id}>
@@ -507,7 +508,7 @@ export default function DeckCardsView({
     </button>
   );
 
-  if (cards.length === 0) return <p className="text-sm text-zaff-muted">Nessuna carta.</p>;
+  if (cards.length === 0) return <p className="text-sm text-zaff-muted">{i18n.t('nessuna_carta')}</p>;
 
   const mainTotal = total(main);
   const sideTotal = total(side);
@@ -515,12 +516,12 @@ export default function DeckCardsView({
   return (
     <>
       <div className="mb-2.5 grid grid-cols-2 gap-2.5">
-        {toggleBtn('grid', 'Griglia')}
-        {toggleBtn('list', 'Lista')}
+        {toggleBtn('grid', i18n.t('griglia'))}
+        {toggleBtn('list', i18n.t('lista'))}
       </div>
       <div className="mb-4 grid grid-cols-2 gap-2.5">
-        {groupBtn('color', 'Colore')}
-        {groupBtn('type', 'Tipo')}
+        {groupBtn('color', i18n.t('colore'))}
+        {groupBtn('type', i18n.t('tipo'))}
       </div>
 
       <Section title="Main Deck" groups={mainGroups} total={mainTotal} mode={mode} onOpen={open} editable={editable} />

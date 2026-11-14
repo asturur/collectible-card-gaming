@@ -1,4 +1,5 @@
 import { useEffect, useReducer } from 'react';
+import i18n from '../../i18n';
 import { getPrice, isPriceFailed, requestPrices, subscribePrices } from '../../services/cardPrices';
 import { getCard } from '../../services/scryfall';
 import { ButtonLink } from '../ui/Button';
@@ -50,10 +51,10 @@ export function CardPriceBox({ name, scryfallId }: { name: string; scryfallId?: 
   // Senza stampa riconosciuta non c'è un prezzo da cercare (il visore mostra già la carta "in attesa").
   if (!id) return null;
   if (!price) {
-    return <p className={note}>{isPriceFailed(id) ? 'Prezzo non disponibile ora: riprova più tardi.' : 'Carico il prezzo…'}</p>;
+    return <p className={note}>{isPriceFailed(id) ? i18n.t('prezzo_non_disponibile_ora_riprova') : i18n.t('carico_prezzo')}</p>;
   }
   if (price.eur === null && price.usd === null) {
-    return <p className={note}>Nessun prezzo su Scryfall per questa stampa.</p>;
+    return <p className={note}>{i18n.t('nessun_prezzo_su_scryfall_per')}</p>;
   }
   return (
     <div className="mt-3 flex flex-col items-center">
@@ -66,7 +67,7 @@ export function CardPriceBox({ name, scryfallId }: { name: string; scryfallId?: 
           </ButtonLink>
         )}
       </div>
-      <p className={note}>Prezzo di una copia · Scryfall, {formatPriceDate(price.at)}</p>
+      <p className={note}>{i18n.t('prezzo_di_una_copia_scryfall', { date: formatPriceDate(price.at) })}</p>
     </div>
   );
 }

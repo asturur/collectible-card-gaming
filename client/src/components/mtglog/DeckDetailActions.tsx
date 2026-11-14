@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react';
+import i18n from '../../i18n';
 import Button, { ButtonRouteLink } from '../ui/Button';
 import Modal from '../ui/Modal';
 import { BarsIcon, CardsIcon, DotsIcon } from '../ui/NavIcons';
@@ -45,8 +46,8 @@ export function DeckTabs({ active, deckTo, statsTo, actionsOpen, onShowPage, onT
     );
   return (
     <div className="grid grid-cols-3 gap-2">
-      {tab('deck', deckTo, <CardsIcon className={TAB_ICON} />, 'Deck')}
-      {tab('stats', statsTo, <BarsIcon className={TAB_ICON} />, 'Stats')}
+      {tab('deck', deckTo, <CardsIcon className={TAB_ICON} />, i18n.t('scheda_deck'))}
+      {tab('stats', statsTo, <BarsIcon className={TAB_ICON} />, i18n.t('scheda_stats'))}
       <Button
         variant={actionsOpen ? 'primary' : 'ghost'}
         className={TAB_CLASS}
@@ -54,7 +55,7 @@ export function DeckTabs({ active, deckTo, statsTo, actionsOpen, onShowPage, onT
         onClick={onToggleActions}
       >
         <DotsIcon className={TAB_ICON} />
-        Azioni
+        {i18n.t('azioni')}
       </Button>
     </div>
   );
@@ -83,7 +84,7 @@ export function DeckSummaryBar({ main, side, highlight }: DeckSummaryBarProps) {
       <div className="flex items-center justify-between gap-2">
         <span aria-current={highlight === 'main' ? 'true' : undefined} className={tone('main')}>Main Deck {main}</span>
         <span aria-current={highlight === 'side' ? 'true' : undefined} className={tone('side')}>Sideboard {side}</span>
-        <span className="text-zaff-muted">Totale {main + side}</span>
+        <span className="text-zaff-muted">{i18n.t('totale_n', { n: main + side })}</span>
       </div>
     </div>
   );
@@ -106,22 +107,22 @@ export function DeckActionsPanel({ editTo, deleting, onDelete, onShare, onExport
         {editTo &&
           (deleting ? (
             <Button variant="ghost" fullWidth disabled>
-              ✏️ Modifica
+              {i18n.t('modifica_icona')}
             </Button>
           ) : (
             <ButtonRouteLink to={editTo} variant="ghost" fullWidth>
-              ✏️ Modifica
+              {i18n.t('modifica_icona')}
             </ButtonRouteLink>
           ))}
         <Button variant="ghost" fullWidth onClick={onShare}>
-          🔗 Condividi
+          {i18n.t('condividi_icona')}
         </Button>
         <Button variant="ghost" fullWidth onClick={onExport}>
-          ⬇️ Esporta
+          {i18n.t('esporta_icona')}
         </Button>
         {editTo && (
           <Button variant="danger" fullWidth disabled={deleting} onClick={onDelete}>
-            {deleting ? 'Cancellazione…' : '🗑️ Cancella'}
+            {deleting ? i18n.t('cancellazione') : i18n.t('cancella_icona')}
           </Button>
         )}
       </div>
@@ -156,29 +157,29 @@ export function DeckExportDialog({ deckName, cards, onClose }: DeckExportDialogP
     link.click();
     link.remove();
     setTimeout(() => URL.revokeObjectURL(url), 10_000);
-    setNotice('File preparato: ' + deckFileName(deckName));
+    setNotice(i18n.t('file_preparato', { name: deckFileName(deckName) }));
     setManualCopy(false);
   }
 
   async function handleCopy() {
     try {
       await navigator.clipboard.writeText(text);
-      setNotice('Elenco copiato negli appunti: ora puoi incollarlo in un’altra app.');
+      setNotice(i18n.t('elenco_copiato_negli_appunti_ora'));
       setManualCopy(false);
     } catch {
-      setNotice('Non riesco a usare gli appunti: copia il testo qui sotto.');
+      setNotice(i18n.t('non_riesco_usare_appunti_copia'));
       setManualCopy(true);
     }
   }
 
   return (
-    <Modal level={2} title="Esporta mazzo" subtitle={deckName} onClose={onClose}>
+    <Modal level={2} title={i18n.t('esporta_mazzo')} subtitle={deckName} onClose={onClose}>
       <div className="flex flex-col gap-2.5">
         <Button size="lg" fullWidth className="py-3.5" onClick={handleDownload}>
-          📄 Scarica file di testo (.txt)
+          {i18n.t('scarica_file_di_testo_txt')}
         </Button>
         <Button variant="ghost" size="lg" fullWidth className="py-3.5" onClick={handleCopy}>
-          📋 Copia negli appunti
+          {i18n.t('copia_negli_appunti')}
         </Button>
       </div>
       {notice && (
@@ -191,7 +192,7 @@ export function DeckExportDialog({ deckName, cards, onClose }: DeckExportDialogP
           readOnly
           value={text}
           rows={8}
-          aria-label="Elenco del mazzo"
+          aria-label={i18n.t('elenco_del_mazzo')}
           onFocus={(e) => e.currentTarget.select()}
           className={cx(FIELD_CONTROL_SM, 'mt-2 w-full')}
         />

@@ -1,4 +1,5 @@
 import { ManaPips } from './ManaIcon';
+import i18n from '../../i18n';
 import { cx, TEXT_MINI } from '../ui/styles';
 
 interface ColorFilterProps {
@@ -11,7 +12,7 @@ interface ColorFilterProps {
 export default function ColorFilter({ colors, onToggle, onClear }: ColorFilterProps) {
   return (
     <>
-      <span className={cx('mb-1.5 block', TEXT_MINI)}>Colore</span>
+      <span className={cx('mb-1.5 block', TEXT_MINI)}>{i18n.t('colore')}</span>
       <div className="flex flex-wrap items-center gap-2">
         <ManaPips colors={colors} onToggle={onToggle} />
         <button
@@ -25,7 +26,7 @@ export default function ColorFilter({ colors, onToggle, onClear }: ColorFilterPr
               : 'border-zaff-border bg-zaff-surface text-zaff-muted hover:text-zaff-text'
           )}
         >
-          Nessun filtro
+          {i18n.t('nessun_filtro')}
         </button>
       </div>
     </>
