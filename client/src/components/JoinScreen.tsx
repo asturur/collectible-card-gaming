@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { navLinkProps } from "../router";
 import Button, { ButtonLink } from "./ui/Button";
 import { APP_NAME } from "../appName";
+import LanguageSwitch from "./ui/LanguageSwitch";
 import CenteredPanel from "./ui/Panel";
 import { TextField } from "./ui/Field";
 import { LOGIN_BACKGROUND } from "./ui/styles";
@@ -102,6 +103,7 @@ export default function JoinScreen({ onJoin, onOpenMtgLog }: JoinScreenProps) {
           </span>
         }
         subtitle="Collectible Card Gaming Platform"
+        corner={<LanguageSwitch />}
       >
         <TextField
           id="server-address"

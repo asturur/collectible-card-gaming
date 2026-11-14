@@ -13,6 +13,11 @@ export function localeFromPath(pathname: string): Locale | null {
 export function localeBase(locale: Locale): string {
   return `${ROUTER_BASE === '/' ? '' : ROUTER_BASE}/${locale}`;
 }
+
+/** Indirizzo completo della stessa pagina in un'altra lingua (`path` relativo al router, con ?query e #hash). */
+export function localeHref(locale: Locale, path: string): string {
+  return `${localeBase(locale)}${path.startsWith('/') ? path : `/${path}`}`;
+}
 export const paths = {
   home: '/',
   zaff: '/zaff',

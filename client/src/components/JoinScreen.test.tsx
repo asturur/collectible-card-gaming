@@ -1,29 +1,30 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router';
 import JoinScreen from './JoinScreen';
 
 describe('JoinScreen', () => {
   it('renders the ZAFF title', () => {
-    render(<JoinScreen onJoin={() => {}} />);
+    render(<MemoryRouter initialEntries={['/zaff']}><JoinScreen onJoin={() => {}} /></MemoryRouter>);
     expect(screen.getByText('ZAFF')).toBeInTheDocument();
   });
 
   it('renders the server address input, player name input, and join button', () => {
-    render(<JoinScreen onJoin={() => {}} />);
+    render(<MemoryRouter initialEntries={['/zaff']}><JoinScreen onJoin={() => {}} /></MemoryRouter>);
     expect(screen.getByLabelText('Indirizzo del server')).toBeInTheDocument();
     expect(screen.getByLabelText('Nome del giocatore')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /entra nel server/i })).toBeInTheDocument();
   });
 
   it('defaults server address to localhost:8080', () => {
-    render(<JoinScreen onJoin={() => {}} />);
+    render(<MemoryRouter initialEntries={['/zaff']}><JoinScreen onJoin={() => {}} /></MemoryRouter>);
     expect(screen.getByLabelText('Indirizzo del server')).toHaveValue('localhost:8080');
   });
 
   it('shows validation error for empty address', async () => {
     const user = userEvent.setup();
-    render(<JoinScreen onJoin={() => {}} />);
+    render(<MemoryRouter initialEntries={['/zaff']}><JoinScreen onJoin={() => {}} /></MemoryRouter>);
 
     // Clear the default address
     const addressInput = screen.getByLabelText('Indirizzo del server');
@@ -39,7 +40,7 @@ describe('JoinScreen', () => {
 
   it('shows validation error for empty player name', async () => {
     const user = userEvent.setup();
-    render(<JoinScreen onJoin={() => {}} />);
+    render(<MemoryRouter initialEntries={['/zaff']}><JoinScreen onJoin={() => {}} /></MemoryRouter>);
 
     await user.click(screen.getByRole('button', { name: /entra nel server/i }));
 
@@ -49,7 +50,7 @@ describe('JoinScreen', () => {
 
   it('shows both validation errors when both fields are empty', async () => {
     const user = userEvent.setup();
-    render(<JoinScreen onJoin={() => {}} />);
+    render(<MemoryRouter initialEntries={['/zaff']}><JoinScreen onJoin={() => {}} /></MemoryRouter>);
 
     // Clear the default address
     const addressInput = screen.getByLabelText('Indirizzo del server');
@@ -64,7 +65,7 @@ describe('JoinScreen', () => {
   it('calls onJoin with address and player name on valid submit', async () => {
     const user = userEvent.setup();
     const onJoin = vi.fn();
-    render(<JoinScreen onJoin={onJoin} />);
+    render(<MemoryRouter initialEntries={['/zaff']}><JoinScreen onJoin={onJoin} /></MemoryRouter>);
 
     const addressInput = screen.getByLabelText('Indirizzo del server');
     await user.clear(addressInput);
@@ -78,7 +79,7 @@ describe('JoinScreen', () => {
   it('trims whitespace from both fields before calling onJoin', async () => {
     const user = userEvent.setup();
     const onJoin = vi.fn();
-    render(<JoinScreen onJoin={onJoin} />);
+    render(<MemoryRouter initialEntries={['/zaff']}><JoinScreen onJoin={onJoin} /></MemoryRouter>);
 
     const addressInput = screen.getByLabelText('Indirizzo del server');
     await user.clear(addressInput);
@@ -91,7 +92,7 @@ describe('JoinScreen', () => {
 
   it('clears address error when user starts typing in address field', async () => {
     const user = userEvent.setup();
-    render(<JoinScreen onJoin={() => {}} />);
+    render(<MemoryRouter initialEntries={['/zaff']}><JoinScreen onJoin={() => {}} /></MemoryRouter>);
 
     // Clear the default address and submit to trigger errors
     const addressInput = screen.getByLabelText('Indirizzo del server');
@@ -109,7 +110,7 @@ describe('JoinScreen', () => {
 
   it('clears name error when user starts typing in name field', async () => {
     const user = userEvent.setup();
-    render(<JoinScreen onJoin={() => {}} />);
+    render(<MemoryRouter initialEntries={['/zaff']}><JoinScreen onJoin={() => {}} /></MemoryRouter>);
 
     // Submit to trigger name error
     await user.click(screen.getByRole('button', { name: /entra nel server/i }));
@@ -122,8 +123,15 @@ describe('JoinScreen', () => {
   });
 
   it('offers MTG Tracker as a real link styled as a button', () => {
-    render(<JoinScreen onJoin={vi.fn()} />);
+    render(<MemoryRouter initialEntries={['/zaff']}><JoinScreen onJoin={vi.fn()} /></MemoryRouter>);
     expect(screen.getByRole('link', { name: 'MTG Tracker' })).toHaveAttribute('href');
     expect(screen.getByText('Oppure passa a')).toBeInTheDocument();
+  });
+
+  it('switches language with links to the same page in the other language', () => {
+    render(<MemoryRouter initialEntries={['/zaff']}><JoinScreen onJoin={vi.fn()} /></MemoryRouter>);
+    const switcher = within(screen.getByRole('group', { name: 'Lingua' }));
+    expect(switcher.getByRole('link', { name: 'Italiano' })).toHaveAttribute('aria-current', 'true');
+    expect(switcher.getByRole('link', { name: 'English' })).toHaveAttribute('href', expect.stringMatching(/\/en\/zaff$/));
   });
 });

@@ -11,6 +11,8 @@ interface CenteredPanelProps {
   /** Il riquadro è un modulo: il contenuto viene avvolto in un `<form>`. */
   onSubmit?: () => void;
   className?: string;
+  /** Piccolo controllo nell'angolo in alto a destra del riquadro (es. il selettore della lingua). */
+  corner?: ReactNode;
   children: ReactNode;
 }
 
@@ -38,10 +40,12 @@ export default function CenteredPanel({
   width = 'md',
   onSubmit,
   className,
+  corner,
   children,
 }: CenteredPanelProps) {
   const inner = (
     <>
+      {corner && <div className="absolute right-3 top-3">{corner}</div>}
       {title && <h1 className={cx(HEADING_PANEL, 'mb-2 text-center')}>{title}</h1>}
       {subtitle && <p className={cx('mb-8 text-center', TEXT_MUTED)}>{subtitle}</p>}
       {children}
