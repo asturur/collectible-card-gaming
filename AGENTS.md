@@ -223,7 +223,7 @@ translated so far.
 ##### How to gather translations
 
 When the developer asks to translate the app, work through
-`unstranslated_components.md` one file at a time, starting with the first entry.
+`untranslated_components.md` one file at a time, starting with the first entry.
 Inspect the component for all user-visible text and displayed variables,
 including labels, accessibility text, feedback, and text assembled in code.
 Check existing keys before creating new ones and follow the key rules above.
@@ -254,6 +254,48 @@ remove a partially translated or unconfirmed file.
 When working on a component, use the translation function for its user-visible
 text instead of adding hard-coded text. Use `Trans` where a message needs React
 elements, and leave user-provided data as data.
+
+##### Agreed rules (Alessandro and Andrea, November 2026)
+
+- **Brand names are not translated**: "MTG Tracker" (the Registro, `APP_NAME`) and
+  "ZAFF — Collectible Card Gaming" (`ZAFF_NAME`), both in `client/src/appName.ts`.
+- **ZAFF texts written in English** get a key and an Italian translation like every other
+  text: Italian users see Italian, English users see English. Derive the key from the
+  Italian translation, as for any other text.
+- **The FAQ is translated as a separate English copy** of `mtglog/faqContent.tsx`
+  (same sections, topic ids and code constants), not as keys: its long texts with
+  formulas and markup are easier to translate and to keep aligned as a whole. A change
+  to an FAQ text updates both copies.
+- The list also covers logic and service files (labels, assembled sentences, error
+  messages) and locale-specific formatting: replace hard-coded `'it-IT'` with the
+  current language.
+- **MTG glossary**: use the official English Magic terms and keep them consistent.
+
+  | Italiano | English |
+  |----------|---------|
+  | Partita / Partite | Game / Games |
+  | Mazzo / Mazzi salvati | Deck / Saved decks |
+  | Giocatore | Player |
+  | Vincitore | Winner |
+  | Segna-punti | Life counter |
+  | Punti vita (PV) | Life (life total) |
+  | Main Deck / Sideboard | Main Deck / Sideboard |
+  | Terra / Terre | Land / Lands |
+  | Creatura, Istantaneo, Stregoneria, Incantesimo, Artefatto | Creature, Instant, Sorcery, Enchantment, Artifact |
+  | Valore di mana | Mana value |
+  | Costo di mana | Mana cost |
+  | Mana incolore / generico | Colorless / generic mana |
+  | Bianco, Blu, Nero, Rosso, Verde | White, Blue, Black, Red, Green |
+  | Multicolore / Incolore | Multicolor / Colorless |
+  | Veleno | Poison |
+  | Danno da comandante / Tassa del comandante | Commander damage / Commander tax |
+  | KILL, MILL | KILL, MILL (game terms, unchanged) |
+  | Rivincita | Rematch |
+  | Sfida (formazione di giocatori) | Matchup |
+  | Carte maledette | Cursed cards |
+  | Firma (carta-firma) | Signature card |
+  | Di base (carte presenti in molti mazzi) | Staples |
+  | Precon / Homebrew | Precon / Homebrew |
 
 #### Routes
 

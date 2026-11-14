@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { toCanvas } from 'html-to-image';
+import { APP_NAME } from '../../appName';
 import { canEdit, supabase, TABLE_GAMES } from '../../services/supabase';
 import { ManaIcons } from './ManaIcon';
 import { dateLabel, durationLabel, timeLabel } from './stats';
@@ -126,7 +127,7 @@ interface ShareCardBodyProps {
 function ShareCardBody({ game, orderedPlayerIndices, playerTags, playerEmojis, hasWinner, ManaDisplay }: ShareCardBodyProps) {
   return (
     <div className="px-0.5 py-1.5">
-      <p className="mb-0.5 text-[11px] uppercase tracking-[0.06em] text-zaff-muted">Registro partite di Magic</p>
+      <p className="mb-0.5 text-[11px] uppercase tracking-[0.06em] text-zaff-muted">{APP_NAME}</p>
       <h2 className={HEADING_SECTION}>{dateLabel(game.date)}</h2>
       <p className={`mb-3 ${TEXT_MINI}`}>
         {game.format || 'formato non indicato'} · {game.players.length} giocatori

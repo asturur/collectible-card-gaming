@@ -1,6 +1,6 @@
 {
-  "name": "Registro partite di Magic",
-  "short_name": "Registro MTG",
+  "name": "MTG Tracker",
+  "short_name": "MTG Tracker",
   "description": "Chi gioca, con che mazzo, come è finita: il registro delle partite di Magic del gruppo.",
   "lang": "it",
   "start_url": "./",
