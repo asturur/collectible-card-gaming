@@ -34,5 +34,22 @@
   "mazzo": "Mazzo",
   "terre": "Terre",
   "carte_totali_diverse_one": "{{count}} carta ({{unique}} diversa)",
-  "carte_totali_diverse_other": "{{count}} carte ({{unique}} diverse)"
+  "carte_totali_diverse_other": "{{count}} carte ({{unique}} diverse)",
+  "connesso": "Connesso",
+  "connessione_in_corso": "Connessione in corso…",
+  "errore": "Errore",
+  "disconnesso": "Disconnesso",
+  "disconnetti": "Disconnetti",
+  "giocatori_nella_stanza_one": "{{count}} giocatore nella stanza",
+  "giocatori_nella_stanza_other": "{{count}} giocatori nella stanza",
+  "indirizzo_del_server": "Indirizzo del server",
+  "indirizzo_del_server_obbligatorio": "L'indirizzo del server è obbligatorio",
+  "nome_del_giocatore": "Nome del giocatore",
+  "nome_del_giocatore_obbligatorio": "Il nome del giocatore è obbligatorio",
+  "scrivi_tuo_nome": "Scrivi il tuo nome",
+  "entra_nel_server": "Entra nel server",
+  "scarica_server_da_qui": "Scarica il server da qui",
+  "fai_un_fork_su_github": "Fai un fork su GitHub",
+  "passa_a": "Oppure passa a",
+  "questo_mazzo_cambiato_mentre_stavi": "Questo mazzo è cambiato mentre lo stavi guardando. Controlla le carte aggiornate e conferma di nuovo."
 }

@@ -1,6 +1,8 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { navLinkProps } from "../router";
-import Button from "./ui/Button";
+import Button, { ButtonLink } from "./ui/Button";
+import { APP_NAME } from "../appName";
 import CenteredPanel from "./ui/Panel";
 import { TextField } from "./ui/Field";
 import { LOGIN_BACKGROUND } from "./ui/styles";
@@ -29,6 +31,7 @@ function GitHubIcon({ className }: { className?: string }) {
 }
 
 export default function JoinScreen({ onJoin, onOpenMtgLog }: JoinScreenProps) {
+  const { t } = useTranslation();
   const [address, setAddress] = useState("localhost:8080");
   const [playerName, setPlayerName] = useState("");
   const [addressError, setAddressError] = useState("");
@@ -40,13 +43,13 @@ export default function JoinScreen({ onJoin, onOpenMtgLog }: JoinScreenProps) {
 
     let hasError = false;
     if (!trimmedAddress) {
-      setAddressError("Server address is required");
+      setAddressError(t("indirizzo_del_server_obbligatorio"));
       hasError = true;
     } else {
       setAddressError("");
     }
     if (!trimmedName) {
-      setNameError("Player name is required");
+      setNameError(t("nome_del_giocatore_obbligatorio"));
       hasError = true;
     } else {
       setNameError("");
@@ -64,8 +67,8 @@ export default function JoinScreen({ onJoin, onOpenMtgLog }: JoinScreenProps) {
         target="_blank"
         rel="noopener noreferrer"
         className="github-corner fixed right-0 top-0 z-50 text-white"
-        aria-label="Fork me on GitHub"
-        title="Fork me on GitHub"
+        aria-label={t("fai_un_fork_su_github")}
+        title={t("fai_un_fork_su_github")}
       >
         <svg
           width="80"
@@ -100,11 +103,9 @@ export default function JoinScreen({ onJoin, onOpenMtgLog }: JoinScreenProps) {
         }
         subtitle="Collectible Card Gaming Platform"
       >
-        <p className="mb-8 text-center text-zaff-text">CIAO</p>
-
         <TextField
           id="server-address"
-          label="Server Address"
+          label={t("indirizzo_del_server")}
           value={address}
           onChange={(e) => {
             setAddress(e.target.value);
@@ -117,19 +118,19 @@ export default function JoinScreen({ onJoin, onOpenMtgLog }: JoinScreenProps) {
 
         <TextField
           id="player-name"
-          label="Player Name"
+          label={t("nome_del_giocatore")}
           value={playerName}
           onChange={(e) => {
             setPlayerName(e.target.value);
             if (nameError) setNameError("");
           }}
-          placeholder="Enter your name"
+          placeholder={t("scrivi_tuo_nome")}
           autoComplete="off"
           error={nameError}
         />
 
         <Button type="submit" size="lg" fullWidth>
-          Join Server
+          {t("entra_nel_server")}
         </Button>
 
         <a
@@ -139,15 +140,16 @@ export default function JoinScreen({ onJoin, onOpenMtgLog }: JoinScreenProps) {
           className="mt-4 flex items-center justify-center gap-2 text-sm text-zaff-muted transition-colors hover:text-zaff-primary"
         >
           <GitHubIcon className="h-4 w-4" />
-          Download server from here
+          {t("scarica_server_da_qui")}
         </a>
 
-        <a
-          {...navLinkProps("home", () => onOpenMtgLog?.())}
-          className="mt-2 block w-full text-center text-sm text-zaff-muted transition-colors hover:text-zaff-primary"
-        >
-          ← Registro Partite MTG
-        </a>
+        {/* L'altra metà dell'app: un vero tasto (secondario), separato dal modulo per entrare al tavolo. */}
+        <div className="mt-6 border-t border-zaff-border pt-5 text-center">
+          <p className="mb-2 text-sm text-zaff-muted">{t("passa_a")}</p>
+          <ButtonLink {...navLinkProps("home", () => onOpenMtgLog?.())} variant="ghost" size="lg" fullWidth>
+            {APP_NAME}
+          </ButtonLink>
+        </div>
       </CenteredPanel>
     </>
   );

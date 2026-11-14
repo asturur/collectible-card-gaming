@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import i18n from '../i18n';
 import { useNavigate } from 'react-router';
 import JoinScreen from './JoinScreen';
 import DeckPicker from './DeckPicker';
@@ -43,7 +44,7 @@ export default function ZaffApp() {
       const fresh = fromSavedDeck(await getSavedDeck(selectedDeck.source.id));
       if (fresh.source.kind === 'saved' && fresh.source.revision !== selectedDeck.source.revision) {
         setSelectedDeck(fresh);
-        throw new Error('This deck changed while you were reviewing it. Review the updated cards and confirm again.');
+        throw new Error(i18n.t('questo_mazzo_cambiato_mentre_stavi'));
       }
       expandPlayableDeck(fresh);
       setSelectedDeck(fresh);

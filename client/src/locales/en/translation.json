@@ -34,5 +34,22 @@
   "mazzo": "Deck",
   "terre": "Lands",
   "carte_totali_diverse_one": "{{count}} card ({{unique}} unique)",
-  "carte_totali_diverse_other": "{{count}} cards ({{unique}} unique)"
+  "carte_totali_diverse_other": "{{count}} cards ({{unique}} unique)",
+  "connesso": "Connected",
+  "connessione_in_corso": "Connecting…",
+  "errore": "Error",
+  "disconnesso": "Disconnected",
+  "disconnetti": "Disconnect",
+  "giocatori_nella_stanza_one": "{{count}} player in room",
+  "giocatori_nella_stanza_other": "{{count}} players in room",
+  "indirizzo_del_server": "Server Address",
+  "indirizzo_del_server_obbligatorio": "Server address is required",
+  "nome_del_giocatore": "Player Name",
+  "nome_del_giocatore_obbligatorio": "Player name is required",
+  "scrivi_tuo_nome": "Enter your name",
+  "entra_nel_server": "Join Server",
+  "scarica_server_da_qui": "Download server from here",
+  "fai_un_fork_su_github": "Fork me on GitHub",
+  "passa_a": "Or switch to",
+  "questo_mazzo_cambiato_mentre_stavi": "This deck changed while you were reviewing it. Review the updated cards and confirm again."
 }
