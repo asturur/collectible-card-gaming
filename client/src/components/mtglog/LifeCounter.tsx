@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import i18n from '../../i18n';
 import { useTranslation } from 'react-i18next';
 import Button from '../ui/Button';
 import { cx, HEADING_SECTION, NO_SCROLLBAR } from '../ui/styles';
@@ -132,10 +133,10 @@ interface LifeBurst {
 
 function historyLabel(e: HistoryEntry): string {
   const range = `${e.from} → ${e.to}`;
-  if (e.field === 'life') return `Vita ${range}`;
-  if (e.field === 'poison') return `Veleno ${range}`;
-  if (e.field === 'tax') return `Tassa comandante ${range}`;
-  return `Danno da comandante di ${e.source}: ${range}`;
+  if (e.field === 'life') return i18n.t('storia_vita', { range });
+  if (e.field === 'poison') return i18n.t('storia_veleno', { range });
+  if (e.field === 'tax') return i18n.t('storia_tassa', { range });
+  return i18n.t('storia_danno_comandante', { name: e.source, range });
 }
 
 /**
@@ -250,7 +251,7 @@ const LAYOUT_OPTIONS: Record<number, LayoutSpec[]> = {
   3: [
     {
       // Due riquadri affiancati in alto, ruotati verso i lati lunghi, e uno a tutta larghezza in basso.
-      label: 'Due in alto, uno in basso',
+      label: 'layout_due_alto_uno_basso',
       columns: '1fr 1fr',
       rows: '1.35fr 1fr',
       places: [at('1 / span 2', 2, 0), at(1, 1, 90), at(2, 1, -90)],
@@ -261,14 +262,14 @@ const LAYOUT_OPTIONS: Record<number, LayoutSpec[]> = {
   4: [
     {
       // Due sul lato lungo sinistro e due su quello destro, in senso orario dal basso a sinistra.
-      label: 'Due per lato',
+      label: 'layout_due_per_lato',
       columns: '1fr 1fr',
       rows: '1fr 1fr',
       places: [at(1, 2, 90), at(1, 1, 90), at(2, 1, -90), at(2, 2, -90)],
     },
     {
       // In senso orario dal basso.
-      label: 'A croce',
+      label: 'layout_a_croce',
       columns: '1fr 1fr',
       rows: '1fr 1.35fr 1fr',
       places: [at('1 / span 2', 3, 0), at(1, 2, 90), at('1 / span 2', 1, 180), at(2, 2, -90)],
@@ -278,7 +279,7 @@ const LAYOUT_OPTIONS: Record<number, LayoutSpec[]> = {
     {
       // Tre sul lato lungo sinistro e due su quello destro (ogni riquadro a destra occupa tre sesti dell'altezza).
       // In senso orario dal basso a sinistra.
-      label: 'Tre e due per lato',
+      label: 'layout_tre_due_per_lato',
       columns: '1fr 1fr',
       rows: 'repeat(6, 1fr)',
       places: [at(1, '5 / span 2', 90), at(1, '3 / span 2', 90), at(1, '1 / span 2', 90), at(2, '1 / span 3', -90), at(2, '4 / span 3', -90)],
@@ -286,7 +287,7 @@ const LAYOUT_OPTIONS: Record<number, LayoutSpec[]> = {
     {
       // Due per lato lungo e uno a capotavola, in basso a tutta larghezza.
       // In senso orario dal capotavola.
-      label: 'Due per lato, uno a capotavola',
+      label: 'layout_due_lato_uno_capotavola',
       columns: '1fr 1fr',
       rows: '1fr 1fr 0.8fr',
       places: [at('1 / span 2', 3, 0), at(1, 2, 90), at(1, 1, 90), at(2, 1, -90), at(2, 2, -90)],
@@ -298,7 +299,7 @@ const LAYOUT_OPTIONS: Record<number, LayoutSpec[]> = {
     {
       // Tre sul lato lungo sinistro e tre su quello destro: ogni riquadro è largo quasi metà schermo.
       // In senso orario dal basso a sinistra.
-      label: 'Tre per lato',
+      label: 'layout_tre_per_lato',
       columns: '1fr 1fr',
       rows: 'repeat(3, 1fr)',
       places: [at(1, 3, 90), at(1, 2, 90), at(1, 1, 90), at(2, 1, -90), at(2, 2, -90), at(2, 3, -90)],
@@ -306,7 +307,7 @@ const LAYOUT_OPTIONS: Record<number, LayoutSpec[]> = {
     {
       // Come a 5: due per lato lungo e uno a ogni capotavola, a tutta larghezza
       // (niente colonne strette e alte). In senso orario dal capotavola in basso.
-      label: 'Due per lato e i capotavola',
+      label: 'layout_due_lato_capotavola',
       columns: '1fr 1fr',
       rows: '0.8fr 1fr 1fr 0.8fr',
       places: [at('1 / span 2', 4, 0), at(1, 3, 90), at(1, 2, 90), at('1 / span 2', 1, 180), at(2, 2, -90), at(2, 3, -90)],
@@ -740,7 +741,7 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
                   type="button"
                   onClick={() => pickSeat(seat)}
                   style={TAP_HIGHLIGHT_OFF}
-                  aria-label={swapFirst === null ? `Scegli ${p.name}` : swapFirst === seat ? `Annulla la scelta di ${p.name}` : `Scambia con ${p.name}`}
+                  aria-label={swapFirst === null ? t('scegli_nome', { name: p.name }) : swapFirst === seat ? t('annulla_scelta_di', { name: p.name }) : t('scambia_con', { name: p.name })}
                   aria-pressed={swapFirst === seat}
                   className={cx(
                     'absolute inset-0 z-40 flex items-start justify-center rounded-2xl pt-[6%] text-[clamp(13px,2.8vw,17px)] font-semibold text-white',
@@ -748,7 +749,7 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
                   )}
                 >
                   <span className="rounded-full bg-black/55 px-3 py-1">
-                    {swapFirst === null ? 'Tocca il primo giocatore' : swapFirst === seat ? 'Scelto: tocca con chi scambiarlo' : 'Tocca per scambiare'}
+                    {swapFirst === null ? t('tocca_primo_giocatore') : swapFirst === seat ? t('scelto_tocca_con_chi_scambiarlo') : t('tocca_per_scambiare')}
                   </span>
                 </button>
               )}
@@ -759,7 +760,7 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
                   type="button"
                   onClick={() => adjust(i, -1)}
                   style={TAP_HIGHLIGHT_OFF}
-                  aria-label={`${p.name}: togli 1 punto vita`}
+                  aria-label={t('togli_punto_vita', { name: p.name })}
                   className={tapClass('flex-1 justify-start pl-[8%] text-[clamp(28px,6vw,44px)] font-light')}
                 >
                   −
@@ -768,7 +769,7 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
                   type="button"
                   onClick={() => adjust(i, 1)}
                   style={TAP_HIGHLIGHT_OFF}
-                  aria-label={`${p.name}: aggiungi 1 punto vita`}
+                  aria-label={t('aggiungi_punto_vita', { name: p.name })}
                   className={tapClass('flex-1 justify-end pr-[8%] text-[clamp(28px,6vw,44px)] font-light')}
                 >
                   +
@@ -782,7 +783,7 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
                 type="button"
                 onClick={() => setOptionsFor(i)}
                 style={TAP_HIGHLIGHT_OFF}
-                aria-label={`${p.name}: opzioni`}
+                aria-label={t('opzioni_giocatore', { name: p.name })}
                 className="absolute bottom-2 left-1/2 z-10 flex h-[54px] w-[54px] -translate-x-1/2 select-none items-center justify-center rounded-full bg-black/15 text-[25px] leading-none text-black/80 active:bg-black/30"
               >
                 ⋯
@@ -868,7 +869,7 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
                         <button
                           type="button"
                           onClick={() => change(i, 'poison', -1)}
-                          aria-label={`${p.name}: togli 1 segnalino veleno`}
+                          aria-label={t('togli_segnalino_veleno', { name: p.name })}
                           className="h-10 w-10 rounded-lg border border-white/30 text-xl active:bg-white/20"
                         >
                           −
@@ -879,7 +880,7 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
                         <button
                           type="button"
                           onClick={() => change(i, 'poison', 1)}
-                          aria-label={`${p.name}: aggiungi 1 segnalino veleno`}
+                          aria-label={t('aggiungi_segnalino_veleno', { name: p.name })}
                           className="h-10 w-10 rounded-lg border border-white/30 text-xl active:bg-white/20"
                         >
                           +
@@ -902,21 +903,21 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
                   {p.cmdrOn && (
                     <>
                       <div className="flex items-center justify-between gap-2">
-                        <span className="min-w-0 text-xs font-bold uppercase leading-tight tracking-wider">Tassa</span>
+                        <span className="min-w-0 text-xs font-bold uppercase leading-tight tracking-wider">{t('tassa')}</span>
                         <span className="flex shrink-0 items-center gap-2">
                           <button
                             type="button"
                             onClick={() => change(i, 'tax', -TAX_STEP)}
-                            aria-label={`${p.name}: togli 2 alla tassa del comandante`}
+                            aria-label={t('togli_tassa', { name: p.name })}
                             className="h-10 w-10 rounded-lg border border-white/30 text-xl active:bg-white/20"
                           >
                             −
                           </button>
-                          <span className="w-10 text-center text-sm font-bold tabular-nums" aria-label="Tassa del comandante">+{p.tax}</span>
+                          <span className="w-10 text-center text-sm font-bold tabular-nums" aria-label={t('tassa_del_comandante')}>+{p.tax}</span>
                           <button
                             type="button"
                             onClick={() => change(i, 'tax', TAX_STEP)}
-                            aria-label={`${p.name}: aggiungi 2 alla tassa del comandante`}
+                            aria-label={t('aggiungi_tassa', { name: p.name })}
                             className="h-10 w-10 rounded-lg border border-white/30 text-xl active:bg-white/20"
                           >
                             +
@@ -927,14 +928,14 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
                         si === i ? null : (
                           <div key={src.name + si} className="flex items-center justify-between gap-2">
                             <span className="min-w-0 text-xs leading-tight">
-                              <span className="block">Danno da</span>
+                              <span className="block">{t('danno_da')}</span>
                               <span className="block truncate font-bold">{src.name}</span>
                             </span>
                             <span className="flex shrink-0 items-center gap-2">
                               <button
                                 type="button"
                                 onClick={() => change(i, 'cmdr', -1, src.name)}
-                                aria-label={`${p.name}: togli 1 danno da comandante di ${src.name}`}
+                                aria-label={t('togli_danno_comandante', { name: p.name, source: src.name })}
                                 className="h-10 w-10 rounded-lg border border-white/30 text-xl active:bg-white/20"
                               >
                                 −
@@ -945,7 +946,7 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
                               <button
                                 type="button"
                                 onClick={() => change(i, 'cmdr', 1, src.name)}
-                                aria-label={`${p.name}: aggiungi 1 danno da comandante di ${src.name}`}
+                                aria-label={t('aggiungi_danno_comandante', { name: p.name, source: src.name })}
                                 className="h-10 w-10 rounded-lg border border-white/30 text-xl active:bg-white/20"
                               >
                                 +
@@ -965,7 +966,7 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
                     onClick={() => setOptionsFor(null)}
                     className="mt-2"
                   >
-                    Chiudi
+                    {t('chiudi')}
                   </Button>
                 </div>
               )}
@@ -985,7 +986,7 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
           style={{ ...TAP_HIGHLIGHT_OFF, ...hubStyle }}
           className="absolute left-1/2 top-1/2 z-50 flex h-[76px] w-[76px] -translate-x-1/2 -translate-y-1/2 select-none items-center justify-center rounded-full border-2 border-white bg-black/85 text-base font-bold text-white shadow-lg active:bg-black"
         >
-          Fatto
+          {t('fatto')}
         </button>
       )}
       <button
@@ -993,7 +994,7 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
         onClick={() => setMenuOpen(true)}
         hidden={swapping}
         style={lives.length === 1 ? TAP_HIGHLIGHT_OFF : { ...TAP_HIGHLIGHT_OFF, ...hubStyle }}
-        aria-label="Opzioni di gioco"
+        aria-label={t('opzioni_di_gioco')}
         className={`absolute z-30 flex h-[76px] w-[76px] select-none items-center justify-center rounded-full border border-white/30 bg-black/75 text-[40px] shadow-lg active:bg-black ${
           lives.length === 1
             ? 'bottom-3 left-1/2 -translate-x-1/2'
@@ -1034,13 +1035,13 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
               }}
             >
               <span className="text-2xl leading-none">🪙</span>
-              Moneta
+              {t('moneta')}
             </Button>
             <Button variant="ghost" className="flex h-16 text-base" onClick={() => { setMenuOpen(false); setHistoryOpen(true); }}>
-              Cronologia
+              {t('cronologia')}
             </Button>
             <Button variant="ghost" className="flex h-16 text-base" disabled={history.length === 0} onClick={() => { undoLast(); setMenuOpen(false); }}>
-              Annulla Ultimo
+              {t('annulla_ultimo')}
             </Button>
             {options && options.length > 1 && (
               <Button
@@ -1048,21 +1049,21 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
                 className="flex h-16 flex-col gap-0 text-base"
                 onClick={() => { nextLayout(); setMenuOpen(false); }}
               >
-                Disposizione
+                {t('disposizione')}
                 {/* Cosa succede premendo: passa all'altra disposizione (quella attuale si vede già). */}
-                <span className="text-xs font-normal opacity-70">passa a {options[(layoutIndex + 1) % options.length].label}</span>
+                <span className="text-xs font-normal opacity-70">{t('passa_a_layout', { name: t(options[(layoutIndex + 1) % options.length].label) })}</span>
               </Button>
             )}
             {lives.length > 1 && (
               <Button variant="ghost" className="flex h-16 text-base" onClick={() => { setMenuOpen(false); setOptionsFor(null); setSwapping(true); }}>
-                Cambia posti
+                {t('cambia_posti')}
               </Button>
             )}
             <Button variant="ghost" className="flex h-16 text-base" onClick={() => onEdit(...snapshot())}>
-              Modifica Partita
+              {t('modifica_partita')}
             </Button>
             <Button className="flex h-16 text-base" onClick={finish}>
-              Fine Partita
+              {t('fine_partita')}
             </Button>
             {/* "Torna al Gioco" occupa tutta la riga quando i tasti sono dispari. */}
             <Button
@@ -1070,11 +1071,11 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
               className={cx('flex h-16 text-base', (7 + (options && options.length > 1 ? 1 : 0) + (lives.length > 1 ? 1 : 0)) % 2 === 1 && 'col-span-2')}
               onClick={() => setMenuOpen(false)}
             >
-              Torna al Gioco
+              {t('torna_al_gioco')}
             </Button>
             {/* Ultima riga, separata da "Fine Partita": chiede sempre conferma prima di uscire. */}
             <Button variant="danger" className="col-span-2 flex h-14 text-base" onClick={() => { setMenuOpen(false); setQuitOpen(true); }}>
-              Esci senza salvare
+              {t('esci_senza_salvare')}
             </Button>
           </div>
         </div>
@@ -1090,19 +1091,19 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
             className="w-full max-w-sm rounded-2xl border border-zaff-border bg-zaff-surface p-5 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 id="lc-quit-title" className={HEADING_SECTION}>Uscire senza salvare?</h2>
+            <h2 id="lc-quit-title" className={HEADING_SECTION}>{t('uscire_senza_salvare')}</h2>
             <p id="lc-quit-text" className="mb-4 text-sm text-zaff-muted">
               {editingSaved
-                ? 'Le modifiche non verranno salvate: la partita salvata resta com\'era.'
-                : 'I punteggi di questa partita andranno persi.'}
+                ? t('modifiche_non_verranno_salvate')
+                : t('punteggi_partita_andranno_persi')}
             </p>
             <div className="flex flex-col gap-2">
               {/* Il tasto più evidente (e già selezionato) resta nella partita. */}
               <Button size="lg" autoFocus onClick={() => setQuitOpen(false)}>
-                Torna al gioco
+                {t('torna_al_gioco')}
               </Button>
               <Button variant="danger" size="lg" onClick={onQuit}>
-                Esci senza salvare
+                {t('esci_senza_salvare')}
               </Button>
             </div>
           </div>
@@ -1142,16 +1143,16 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
       {historyOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
           <div className="flex max-h-[85vh] w-full max-w-sm flex-col rounded-2xl border border-zaff-border bg-zaff-surface p-5 shadow-xl">
-            <h2 className={HEADING_SECTION}>Cronologia</h2>
-            <p className="mb-3 text-xs text-zaff-muted">Solo durante questa partita: non viene salvata.</p>
+            <h2 className={HEADING_SECTION}>{t('cronologia')}</h2>
+            <p className="mb-3 text-xs text-zaff-muted">{t('solo_durante_questa_partita')}</p>
             {history.length === 0 ? (
-              <p className="mb-4 text-sm text-zaff-muted">Ancora nessun cambio.</p>
+              <p className="mb-4 text-sm text-zaff-muted">{t('ancora_nessun_cambio')}</p>
             ) : (
               <ul className="mb-4 min-h-0 flex-1 space-y-1.5 overflow-y-auto">
                 {[...history].reverse().map((e) => (
                   <li key={e.id} className="text-sm text-zaff-text">
                     <span className="text-zaff-muted">
-                      {new Date(e.t).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                      {new Date(e.t).toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                     </span>{' '}
                     <b>{e.name}</b> · {historyLabel(e)}
                   </li>
@@ -1160,10 +1161,10 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
             )}
             <div className="flex gap-2">
               <Button variant="ghost" className="flex-1" disabled={history.length === 0} onClick={undoLast}>
-                Annulla Ultimo
+                {t('annulla_ultimo')}
               </Button>
               <Button className="flex-1" onClick={() => setHistoryOpen(false)}>
-                Chiudi
+                {t('chiudi')}
               </Button>
             </div>
           </div>
@@ -1173,17 +1174,17 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
       {coin && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
           <div className="w-full max-w-xs rounded-2xl border border-zaff-border bg-zaff-surface p-6 text-center shadow-xl">
-            <h2 className={HEADING_SECTION}>🪙 Moneta</h2>
+            <h2 className={HEADING_SECTION}>🪙 {t('moneta')}</h2>
             <p className="my-5" role="status">
-              <span className="sr-only">{coin.result}</span>
-              <MatrixText key={coin.id} text={coin.result} uppercase className="flex justify-center gap-1.5 font-mono text-5xl font-bold" />
+              <span className="sr-only">{t(coin.result === 'Testa' ? 'testa' : 'croce')}</span>
+              <MatrixText key={coin.id} text={t(coin.result === 'Testa' ? 'testa' : 'croce')} uppercase className="flex justify-center gap-1.5 font-mono text-5xl font-bold" />
             </p>
             <div className="flex gap-2">
               <Button variant="ghost" className="flex-1" onClick={flipCoin}>
-                Lancia di Nuovo
+                {t('lancia_di_nuovo')}
               </Button>
               <Button className="flex-1" onClick={() => setCoin(null)}>
-                Chiudi
+                {t('chiudi')}
               </Button>
             </div>
           </div>
@@ -1194,7 +1195,7 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
           <div className="w-full max-w-sm rounded-2xl border border-zaff-border bg-zaff-surface p-6 shadow-xl">
             <h2 className={HEADING_SECTION}>🎲 High Roll</h2>
-            <p className="mb-3 text-xs text-zaff-muted">Tiro 1–20: il numero più alto inizia.</p>
+            <p className="mb-3 text-xs text-zaff-muted">{t('tiro_numero_piu_alto_inizia')}</p>
             <ul className="mb-4 space-y-1">
               {rolls.map((r) => (
                 <li key={`${rollId}-${r.name}`} className="flex items-center justify-between gap-2 text-base text-zaff-text">
@@ -1209,10 +1210,10 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
             </ul>
             <div className="flex gap-2">
               <Button variant="ghost" className="flex-1" onClick={() => { setRolls(rollHighRoll(lives.map((p) => p.name))); setRollId((id) => id + 1); }}>
-                Tira di Nuovo
+                {t('tira_di_nuovo')}
               </Button>
               <Button className="flex-1" onClick={() => setHighRollOpen(false)}>
-                Chiudi
+                {t('chiudi')}
               </Button>
             </div>
           </div>

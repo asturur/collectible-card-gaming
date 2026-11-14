@@ -40,11 +40,11 @@ describe('LifeCounter', () => {
     await user.click(screen.getByRole('button', { name: 'Esci senza salvare' }));
     const dialog = screen.getByRole('alertdialog', { name: 'Uscire senza salvare?' });
     expect(dialog).toHaveTextContent('I punteggi di questa partita andranno persi.');
-    expect(within(dialog).getByRole('button', { name: 'Torna al gioco' })).toHaveFocus();
+    expect(within(dialog).getByRole('button', { name: 'Torna al Gioco' })).toHaveFocus();
     expect(onQuit).not.toHaveBeenCalled();
 
     // "Torna al gioco": la partita continua com'era.
-    await user.click(within(dialog).getByRole('button', { name: 'Torna al gioco' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Torna al Gioco' }));
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
     expect(screen.getByText('21')).toBeInTheDocument();
     expect(onQuit).not.toHaveBeenCalled();
