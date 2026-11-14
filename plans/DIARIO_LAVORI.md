@@ -62,7 +62,9 @@ qui c'è il "perché" e la cronologia. Va aggiornato a ogni blocco di lavoro.
 | — | Andrea (su `main`): i18next + react-i18next, lingua nell'indirizzo (`/it/`, `/en/`), metodo di traduzione in AGENTS.md, elenco `unstranslated_components.md` (poi rinominato `untranslated_components.md`) |
 | #15 | "Fine Partita" salva da solo (con "Chi ha vinto?" se non è chiaro) e torna alla Home; copia della partita in corso sul telefono ("Partita non salvata · Riprendi") |
 | #16 | FAQ: sezione "Grafici mazzo" (Costi di mana, Produzione di mana) con link dai grafici del mazzo; "Mazzo preferito": a parità, ordine alfabetico |
-| (questa patch) | Nome dell'app "MTG Tracker" ovunque; traduzione: elenco rinominato `untranslated_components.md` e completato, regole concordate e glossario in AGENTS.md |
+| #17 | Nome dell'app "MTG Tracker" ovunque; traduzione: elenco rinominato `untranslated_components.md` e completato, regole concordate e glossario in AGENTS.md |
+| #18 | Traduzione di tutta ZAFF (DeckPicker, DeckPreview, GameView, JoinScreen, ZaffApp); tasto "MTG Tracker" nella schermata d'ingresso; tolto "CIAO" |
+| (questa patch) | Selettore della lingua "IT · EN" (`ui/LanguageSwitch`) nell'angolo della mascherina ZAFF |
 
 ## Scelte prese (e perché)
 
@@ -91,6 +93,10 @@ qui c'è il "perché" e la cronologia. Va aggiornato a ogni blocco di lavoro.
 - **Traduzione (decisioni di Alessandro, da comunicare ad Andrea):** i testi ZAFF in inglese
   ricevono anche l'italiano; le FAQ si traducono come copia inglese separata; l'elenco comprende
   anche file di calcolo e servizi; glossario MTG in AGENTS.md.
+- **Selettore della lingua:** sigle "IT · EN" (non bandiere: su Windows le bandiere-emoji non si
+  vedono, e una bandiera indica un paese, non una lingua). Subito in ZAFF (tutta tradotta); in MTG
+  Tracker (pagina Account) solo a traduzione finita. Senza lingua nell'indirizzo si resta in italiano;
+  ricordare la scelta sul dispositivo si potrà aggiungere in seguito senza problemi.
 - **Testi nuovi** nelle schermate: già con `t()` e chiavi in `locales/it` e `locales/en` (regola di Andrea).
 - **Conferme di sistema (`window.confirm`)** da trasformare in riquadri dell'app: proposto in
   due passi (1: componente comune + 3 cancellazioni + esci senza salvare; 2: uscita dalla

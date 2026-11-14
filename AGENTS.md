@@ -216,7 +216,7 @@ they share the same meaning and translation; otherwise add enough distinguishing
 words or context to make the keys different. Do not nest keys.
 
 The locale is selected by the `/it/` or `/en/` route prefix; unprefixed routes
-redirect to Italian. `router.ts` supplies the locale-aware base and share links.
+redirect to Italian (no remembered preference yet: adding one later only changes that redirect). `router.ts` supplies the locale-aware base and share links.
 Italian is the fallback language. Only strings added to the locale files are
 translated so far.
 
@@ -445,6 +445,7 @@ Registro and ZAFF implementations. Some legacy controls still bypass it.
 | `FilterTabs`, `NumberStepper` | Group/source filters, −/+ numeric input |
 | `ChipRow` | Layout shared by `FilterTabs`/`NavTabs`: up to 4 options that fit → equal-width selector; otherwise one horizontally scrolling row (edge fade, active option kept in view, pans only sideways: `touch-pan-x`, no vertical scroll). No wrapping rows of chips. |
 | `NavTabs` | Rows of sub-page router links with the `FilterTabs` look (`aria-current`, history replace), e.g. FAQ sections |
+| `LanguageSwitch` | "IT · EN" language links (same page under `/it/` or `/en/`, `router.localeHref`); in the ZAFF join panel corner (`CenteredPanel corner`). MTG Tracker gets it (Account page) only when its translation is complete |
 | `Tile` | `GridTile` and the existing navigation illustrations |
 | `styles.ts` | `PANEL`, `FIELD_*`, `HEADING_*`, `TEXT_*`, `cx()` |
 
