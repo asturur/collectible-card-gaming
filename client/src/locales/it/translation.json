@@ -27,5 +27,12 @@
   "carte_one": "{{count}} carta",
   "carte_other": "{{count}} carte",
   "carte_non_riconosciute_sistemale_in_one": "{{count}} carta non riconosciuta: sistemala in MTG Tracker prima di giocare.",
-  "carte_non_riconosciute_sistemale_in_other": "{{count}} carte non riconosciute: sistemale in MTG Tracker prima di giocare."
+  "carte_non_riconosciute_sistemale_in_other": "{{count}} carte non riconosciute: sistemale in MTG Tracker prima di giocare.",
+  "indietro": "Indietro",
+  "verifica_del_mazzo": "Verifica del mazzo…",
+  "conferma_mazzo": "Conferma il mazzo",
+  "mazzo": "Mazzo",
+  "terre": "Terre",
+  "carte_totali_diverse_one": "{{count}} carta ({{unique}} diversa)",
+  "carte_totali_diverse_other": "{{count}} carte ({{unique}} diverse)"
 }

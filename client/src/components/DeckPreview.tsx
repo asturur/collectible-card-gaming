@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { dedupePlayableCards, expandPlayableDeck, type PlayableDeck, type PlayableCard } from '../services/playableDeck';
 import Button from './ui/Button';
 import Badge from './ui/Badge';
@@ -47,7 +49,7 @@ interface DeckSection {
   cards: PlayableCard[];
 }
 
-function buildSections(deck: PlayableDeck): DeckSection[] {
+function buildSections(deck: PlayableDeck, t: TFunction): DeckSection[] {
   const sections: DeckSection[] = [];
 
   // Commander
@@ -66,13 +68,13 @@ function buildSections(deck: PlayableDeck): DeckSection[] {
 
     if (spells.length > 0) {
       sections.push({
-        title: 'Deck',
+        title: t('mazzo'),
         cards: spells,
       });
     }
     if (lands.length > 0) {
       sections.push({
-        title: 'Lands',
+        title: t('terre'),
         cards: lands,
       });
     }
@@ -102,6 +104,7 @@ function countTotal(sections: DeckSection[]): { total: number; unique: number } 
 }
 
 export default function DeckPreview({ deck, onGoBack, onConfirm }: DeckPreviewProps) {
+  const { t } = useTranslation();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   let validationError = '';
@@ -111,7 +114,7 @@ export default function DeckPreview({ deck, onGoBack, onConfirm }: DeckPreviewPr
     try { await onConfirm(); } catch (err) { setError((err as Error).message); }
     finally { setBusy(false); }
   }
-  const sections = useMemo(() => buildSections(deck), [deck]);
+  const sections = useMemo(() => buildSections(deck, t), [deck, t]);
   const { total, unique } = useMemo(() => countTotal(sections), [sections]);
 
   return (
@@ -120,7 +123,7 @@ export default function DeckPreview({ deck, onGoBack, onConfirm }: DeckPreviewPr
       <header className="border-b border-zaff-border bg-zaff-surface px-6 py-4">
         <h2 className={HEADING_PANEL}>{deck.name}</h2>
         <p className="mt-1 text-sm text-zaff-muted">
-          {deck.type} &middot; {total} cards ({unique} unique)
+          {deck.type} &middot; {t('carte_totali_diverse', { count: total, unique })}
         </p>
       </header>
 
@@ -131,7 +134,7 @@ export default function DeckPreview({ deck, onGoBack, onConfirm }: DeckPreviewPr
             <h3 className={cx(HEADING_SECTION, 'mb-4')}>
               {section.title}
               <span className="ml-2 text-base font-normal text-zaff-muted">
-                ({section.cards.reduce((sum, c) => sum + c.count, 0)} cards)
+                ({t('carte', { count: section.cards.reduce((sum, c) => sum + c.count, 0) })})
               </span>
             </h3>
             <div className="flex flex-wrap gap-4">
@@ -150,10 +153,10 @@ export default function DeckPreview({ deck, onGoBack, onConfirm }: DeckPreviewPr
       {/* Bottom action bar */}
       <footer className="flex items-center justify-between border-t border-zaff-border bg-zaff-surface px-6 py-4">
         <Button variant="ghost" size="lg" onClick={onGoBack} disabled={busy}>
-          Go Back
+          {t('indietro')}
         </Button>
         <Button size="lg" onClick={confirm} disabled={busy || !!validationError}>
-          {busy ? 'Checking deck…' : 'Confirm Deck'}
+          {busy ? t('verifica_del_mazzo') : t('conferma_mazzo')}
         </Button>
       </footer>
     </div>

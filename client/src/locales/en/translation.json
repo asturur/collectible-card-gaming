@@ -27,5 +27,12 @@
   "carte_one": "{{count}} card",
   "carte_other": "{{count}} cards",
   "carte_non_riconosciute_sistemale_in_one": "{{count}} unresolved card: fix it in MTG Tracker before playing.",
-  "carte_non_riconosciute_sistemale_in_other": "{{count}} unresolved cards: fix them in MTG Tracker before playing."
+  "carte_non_riconosciute_sistemale_in_other": "{{count}} unresolved cards: fix them in MTG Tracker before playing.",
+  "indietro": "Go Back",
+  "verifica_del_mazzo": "Checking deck…",
+  "conferma_mazzo": "Confirm Deck",
+  "mazzo": "Deck",
+  "terre": "Lands",
+  "carte_totali_diverse_one": "{{count}} card ({{unique}} unique)",
+  "carte_totali_diverse_other": "{{count}} cards ({{unique}} unique)"
 }
