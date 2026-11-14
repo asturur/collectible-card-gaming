@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import i18n from '../../i18n';
 import { toCanvas } from 'html-to-image';
 import { APP_NAME } from '../../appName';
 import { canEdit, supabase, TABLE_GAMES } from '../../services/supabase';
@@ -130,7 +131,7 @@ function ShareCardBody({ game, orderedPlayerIndices, playerTags, playerEmojis, h
       <p className="mb-0.5 text-[11px] uppercase tracking-[0.06em] text-zaff-muted">{APP_NAME}</p>
       <h2 className={HEADING_SECTION}>{dateLabel(game.date)}</h2>
       <p className={`mb-3 ${TEXT_MINI}`}>
-        {game.format || 'formato non indicato'} · {game.players.length} giocatori
+        {game.format || i18n.t('formato_non_indicato')} · {i18n.t('giocatori_count', { count: game.players.length })}
         {(() => {
           const start = timeLabel(game.startedAt);
           const end = timeLabel(game.endedAt);
@@ -139,9 +140,9 @@ function ShareCardBody({ game, orderedPlayerIndices, playerTags, playerEmojis, h
           return (
             <>
               {' · '}
-              {start && <>Inizio {start}</>}
-              {end && <>{start && ' · '}Fine {end}</>}
-              {duration && <> · Durata {duration}</>}
+              {start && <>{i18n.t('inizio_ora', { time: start })}</>}
+              {end && <>{start && ' · '}{i18n.t('fine_ora', { time: end })}</>}
+              {duration && <> · {i18n.t('durata', { time: duration })}</>}
             </>
           );
         })()}
@@ -151,9 +152,9 @@ function ShareCardBody({ game, orderedPlayerIndices, playerTags, playerEmojis, h
         {/* 3 colonne di uguale larghezza (grid, non flex con pesi diversi),
             ciascuna con intestazione e contenuto centrati al suo interno. */}
         <div className="grid grid-cols-3 pb-1">
-          <div className="text-center text-[10px] uppercase tracking-wide text-zaff-muted">Giocatore</div>
-          <div className="text-center text-[10px] uppercase tracking-wide text-zaff-muted">Mazzo</div>
-          <div className="text-center text-[10px] uppercase tracking-wide text-zaff-muted">PV rimasti</div>
+          <div className="text-center text-[10px] uppercase tracking-wide text-zaff-muted">{i18n.t('giocatore')}</div>
+          <div className="text-center text-[10px] uppercase tracking-wide text-zaff-muted">{i18n.t('mazzo')}</div>
+          <div className="text-center text-[10px] uppercase tracking-wide text-zaff-muted">{i18n.t('pv_rimasti')}</div>
         </div>
         {orderedPlayerIndices.map((i) => {
           const p = game.players[i];
@@ -188,7 +189,7 @@ function ShareCardBody({ game, orderedPlayerIndices, playerTags, playerEmojis, h
                 )}
                 {playerTags[i] && (
                   <span className={`mt-0.5 text-xs ${p.winner ? 'text-zaff-gold' : 'text-zaff-muted opacity-75'}`}>
-                    {p.winner ? 'vincitore — ' : ''}
+                    {p.winner ? `${i18n.t('vincitore_minuscolo')} — ` : ''}
                     {playerTags[i]}
                   </span>
                 )}
@@ -379,10 +380,10 @@ export default function GameList({ userId, games: sharedGames, loading, loadErro
 
   async function handleDelete(id: string) {
     if (!supabase) return;
-    if (!confirm('Cancellare questa partita dal registro? La vedranno cancellata anche gli altri.')) return;
+    if (!confirm(i18n.t('cancellare_questa_partita'))) return;
     const { error: deleteError } = await supabase.from(TABLE_GAMES).delete().eq('id', id);
     if (deleteError) {
-      setActionError('Cancellazione non riuscita: ' + deleteError.message);
+      setActionError(i18n.t('cancellazione_non_riuscita', { error: deleteError.message }));
       return;
     }
     await reloadGames();
@@ -408,11 +409,11 @@ export default function GameList({ userId, games: sharedGames, loading, loadErro
       canvas.toBlob(
         (blob) => {
           if (!blob) {
-            setActionError("Non sono riuscito a generare l'immagine: riprova.");
+            setActionError(i18n.t('non_sono_riuscito_generare_immagine'));
             return;
           }
           const time = idTimeSuffix(g.id);
-          const fileName = `partita_${g.date || 'magic'}${time ? '_' + time : ''}.jpg`;
+          const fileName = `${i18n.t('file_partita')}_${g.date || 'magic'}${time ? '_' + time : ''}.jpg`;
           const file = new File([blob], fileName, { type: 'image/jpeg' });
 
           // La condivisione nativa è comoda quando funziona, ma su iPhone può
@@ -421,7 +422,7 @@ export default function GameList({ userId, games: sharedGames, loading, loadErro
           // questo non ci basiamo solo su di lei, proviamo e basta.
           if (navigator.canShare && navigator.canShare({ files: [file] })) {
             navigator
-              .share({ files: [file], title: 'Partita di Magic', text: 'Risultato della partita del ' + dateLabel(g.date) })
+              .share({ files: [file], title: i18n.t('partita_di_magic'), text: i18n.t('risultato_partita_del', { date: dateLabel(g.date) }) })
               .catch(() => {});
           }
 
@@ -439,21 +440,21 @@ export default function GameList({ userId, games: sharedGames, loading, loadErro
     } catch {
       // Es. una classe colore non supportata da html2canvas: prima d'ora
       // falliva qui in silenzio e il tasto sembrava non fare nulla.
-      setActionError("Non sono riuscito a generare l'immagine: riprova.");
+      setActionError(i18n.t('non_sono_riuscito_generare_immagine'));
     } finally {
       setExporting(false);
     }
   }
 
   if (loading) {
-    return <p className={TEXT_MUTED}>Caricamento…</p>;
+    return <p className={TEXT_MUTED}>{i18n.t('caricamento')}</p>;
   }
 
   return (
     <>
       {!selectedId && (games.length === 0 ? (
         <div className="rounded-lg border border-dashed border-zaff-border p-6 text-center text-sm text-zaff-muted">
-          Nessuna partita qui: usa il tasto + nella barra in basso per crearne una.
+          {i18n.t('nessuna_partita_qui')}
         </div>
       ) : (
         <>
@@ -462,22 +463,22 @@ export default function GameList({ userId, games: sharedGames, loading, loadErro
           <SearchField
             value={query}
             onChange={setQuery}
-            placeholder="Cerca giocatore, mazzo, appunti…"
-            label="Cerca nelle partite"
+            placeholder={i18n.t('cerca_giocatore_mazzo_appunti')}
+            label={i18n.t('cerca_nelle_partite')}
             className="mb-2.5"
           />
           <FilterTabs
             value={periodFilter}
             onChange={(v) => setPeriodFilter(v as 'all' | '30' | 'year')}
             options={[
-              { value: 'all', label: 'Tutte' },
-              { value: '30', label: '30 giorni' },
-              { value: 'year', label: "Quest'anno" },
+              { value: 'all', label: i18n.t('tutte') },
+              { value: '30', label: i18n.t('trenta_giorni') },
+              { value: 'year', label: i18n.t('quest_anno') },
             ]}
           />
           </div>
           <p className={`mb-2 ${TEXT_MINI}`}>
-            {filtersActive ? `${visibleGames.length} di ${games.length} partite` : `${games.length} partite`}
+            {filtersActive ? i18n.t('partite_di_totale', { shown: visibleGames.length, count: games.length }) : i18n.t('partite_count', { count: games.length })}
             {filtersActive && (
               <>
                 {' · '}
@@ -489,14 +490,14 @@ export default function GameList({ userId, games: sharedGames, loading, loadErro
                     setPeriodFilter('all');
                   }}
                 >
-                  Azzera filtri
+                  {i18n.t('azzera_filtri')}
                 </button>
               </>
             )}
           </p>
           {visibleGames.length === 0 && (
             <div className="rounded-lg border border-dashed border-zaff-border p-6 text-center text-sm text-zaff-muted">
-              Nessuna partita corrisponde alla ricerca.
+              {i18n.t('nessuna_partita_corrisponde_alla_ricerca')}
             </div>
           )}
           <ul>
@@ -540,7 +541,7 @@ export default function GameList({ userId, games: sharedGames, loading, loadErro
         </>
       ))}
 
-      {selectedId && !selectedGame && !error && <p role="alert">Partita non trovata.</p>}
+      {selectedId && !selectedGame && !error && <p role="alert">{i18n.t('partita_non_trovata')}</p>}
       {error && (
         <p className="mt-3 text-sm text-red-400" role="alert">
           {error}
@@ -583,24 +584,24 @@ export default function GameList({ userId, games: sharedGames, loading, loadErro
               Esporta e Link stanno nella barra fissa in fondo (vedi `ShareBar`). */}
           <div className="mt-4">
             <Button fullWidth onClick={() => onRematch(selectedGame)}>
-              🔄 Rivincita
+              {i18n.t('rivincita_icona')}
             </Button>
           </div>
 
           {canEdit(selectedGame.createdBy, userId) && (
             <div className="mt-4 grid grid-cols-2 gap-2">
               <Button variant="ghost" fullWidth onClick={() => onEdit(selectedGame)}>
-                ✏️ Modifica
+                {i18n.t('modifica_icona')}
               </Button>
               <Button variant="danger" fullWidth onClick={() => handleDelete(selectedGame.id)}>
-                🗑️ Cancella
+                {i18n.t('cancella_icona')}
               </Button>
             </div>
           )}
 
-          <ExportedImage image={exportedImage} error="" alt="Risultato della partita, da salvare" />
+          <ExportedImage image={exportedImage} error="" alt={i18n.t('risultato_partita_da_salvare')} />
 
-          <ShareBar exporting={exporting} onExport={() => handleExport(selectedGame)} shareTitle="Partita di Magic" shareText={'Partita del ' + dateLabel(selectedGame.date)} />
+          <ShareBar exporting={exporting} onExport={() => handleExport(selectedGame)} shareTitle={i18n.t('partita_di_magic')} shareText={i18n.t('partita_del', { date: dateLabel(selectedGame.date) })} />
         </div>
       )}
     </>

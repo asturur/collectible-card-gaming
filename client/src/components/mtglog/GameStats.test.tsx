@@ -77,7 +77,7 @@ describe('Deck statistics ranking', () => {
     render(<MemoryRouter><GameStats /></MemoryRouter>);
     await screen.findByRole('link', { name: /Elfi/ });
     expect(screen.queryByText('Partita interrotta')).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Elfi/ })).toHaveTextContent('6 partite · 1 vittorie · 17%');
+    expect(screen.getByRole('link', { name: /Elfi/ })).toHaveTextContent('6 partite · 1 vittoria · 17%');
     await user.click(screen.getByRole('button', { name: '% di vittoria' }));
     const note = screen.getAllByText(/^Meno di 5 partite: fuori dalla classifica/)[0];
     const order = [screen.getByRole('link', { name: /Goblin Rinominati/ }), screen.getByRole('link', { name: /Elfi/ }), note, screen.getAllByText('Mazzo cancellato')[0]];

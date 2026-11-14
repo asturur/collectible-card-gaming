@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import i18n from '../../i18n';
 import { subscribeToTable, supabase, TABLE_GAMES } from '../../services/supabase';
 import { listSavedDecks, subscribeSavedDecks, type SavedDeck } from '../../services/savedDecks';
 import type { Game } from './GameList';
@@ -63,8 +64,8 @@ function computeDeckStats(games: Game[], decks: DeckSourceRow[]): DeckStatRow[] 
 type DeckSort = 'winrate' | 'games';
 
 const SORT_OPTIONS: { value: DeckSort; label: string }[] = [
-  { value: 'winrate', label: '% di vittoria' },
-  { value: 'games', label: 'Partite giocate' },
+  { value: 'winrate', label: 'perc_di_vittoria' },
+  { value: 'games', label: 'partite_giocate' },
 ];
 
 /** Barra della percentuale di vittoria: sfumatura rosso → verde che copre
@@ -108,10 +109,10 @@ function DeckRow({ r, interactive }: { r: DeckStatRow; interactive: boolean }) {
       <div className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[13px] text-zaff-muted">
         {r.source && <Badge tone={r.source === 'brew' ? 'brew' : 'precon'}>{r.source === 'brew' ? 'Homebrew' : 'Precon'}</Badge>}
         <span>
-          {r.g} partite · {r.w} vittorie · {r.pct}%
+          {i18n.t('partite_count', { count: r.g })} · {i18n.t('vittorie_count', { count: r.w })} · {r.pct}%
         </span>
       </div>
-      {interactive && !r.deckId && <p className={cx('mt-1', TEXT_MINI)}>Lista carte non disponibile: mazzo non salvato o cancellato.</p>}
+      {interactive && !r.deckId && <p className={cx('mt-1', TEXT_MINI)}>{i18n.t('lista_carte_non_disponibile_mazzo')}</p>}
       <div className="mt-2">
         <WinRateBar pct={r.pct} />
       </div>
@@ -134,7 +135,7 @@ function DeckRow({ r, interactive }: { r: DeckStatRow; interactive: boolean }) {
  *  Ordinando per percentuale, i mazzi con meno di `MIN_GAMES` partite stanno in
  *  fondo, fuori classifica: una sola partita vinta non vale un 100% in testa. */
 function DeckStatsList({ rows, sort, interactive = false }: { rows: DeckStatRow[]; sort: DeckSort; interactive?: boolean }) {
-  if (rows.length === 0) return <p className={TEXT_MINI}>Nessun mazzo con partite registrate.</p>;
+  if (rows.length === 0) return <p className={TEXT_MINI}>{i18n.t('nessun_mazzo_con_partite_registrate')}</p>;
   const ranked = sort === 'winrate' ? rows.filter((r) => r.g >= MIN_GAMES) : rows;
   const unranked = sort === 'winrate' ? rows.filter((r) => r.g < MIN_GAMES) : [];
   return (
@@ -145,7 +146,7 @@ function DeckStatsList({ rows, sort, interactive = false }: { rows: DeckStatRow[
       {unranked.length > 0 && (
         <>
           <p className={cx('mb-2', ranked.length > 0 && 'mt-5', TEXT_MINI)}>
-            Meno di {MIN_GAMES} partite: fuori dalla classifica per percentuale, in ordine di partite giocate.
+            {i18n.t('meno_di_partite_fuori_dalla', { min: MIN_GAMES })}
           </p>
           {unranked.map((r) => (
             <DeckRow key={r.deckId ?? r.deck} r={r} interactive={interactive} />
@@ -181,7 +182,7 @@ export default function GameStats() {
       setGames(decidedGames((games.data ?? []).map(rowToGame)));
       setDecks(deckRows);
       setError('');
-    } catch (err) { setError('Non riesco a leggere le statistiche: ' + (err as Error).message); }
+    } catch (err) { setError(i18n.t('non_riesco_leggere_statistiche', { error: (err as Error).message })); }
   }
 
   useEffect(() => {
@@ -215,7 +216,7 @@ export default function GameStats() {
   const shownRows = rows.filter((r) => matchesSearch(r.deck, query));
 
   if (loading) {
-    return <p className={TEXT_MUTED}>Caricamento…</p>;
+    return <p className={TEXT_MUTED}>{i18n.t('caricamento')}</p>;
   }
 
   const sortLabel = SORT_OPTIONS.find((o) => o.value === sort)?.label ?? '';
@@ -226,7 +227,7 @@ export default function GameStats() {
       {/* Ricerca e ordinamento restano in cima, sotto il titolo, mentre si scorre l'elenco. */}
       <div className={cx(STICKY_BELOW_TITLE, 'sticky z-10 -mx-1 mb-3 bg-zaff-surface px-1 pb-1 pt-1')}>
         {deckStats.length > 0 && (
-          <SearchField value={query} onChange={setQuery} placeholder="Cerca mazzo…" label="Cerca nelle statistiche dei mazzi" className="mb-2.5" />
+          <SearchField value={query} onChange={setQuery} placeholder={i18n.t('cerca_mazzo')} label={i18n.t('cerca_nelle_statistiche_dei_mazzi')} className="mb-2.5" />
         )}
         <div className="grid grid-cols-2 gap-2.5">
         {SORT_OPTIONS.map((o) => (
@@ -242,35 +243,35 @@ export default function GameStats() {
                 : 'border-zaff-border bg-transparent text-zaff-muted active:border-zaff-muted active:text-zaff-text'
             )}
           >
-            {o.label}
+            {i18n.t(o.label)}
           </button>
         ))}
         </div>
       </div>
 
       {rows.length > 0 && shownRows.length === 0 ? (
-        <p className={TEXT_MUTED}>Nessun mazzo corrisponde alla ricerca.</p>
+        <p className={TEXT_MUTED}>{i18n.t('nessun_mazzo_corrisponde_alla_ricerca')}</p>
       ) : (
         <DeckStatsList rows={shownRows} sort={sort} interactive />
       )}
 
-      <ExportedImage image={exporter.image} error={exporter.error} alt="Statistiche mazzi, da salvare" />
+      <ExportedImage image={exporter.image} error={exporter.error} alt={i18n.t('statistiche_mazzi_da_salvare')} />
       <ShareBar
         exporting={exporter.exporting}
-        shareTitle={'Statistiche Mazzi'}
+        shareTitle={i18n.t('statistiche_mazzi')}
         onExport={() =>
           exporter.exportImage({
-            fileName: `statistiche_mazzi_${todayIso()}.jpg`,
-            shareTitle: 'Statistiche Mazzi',
-            shareText: 'Statistiche mazzi del registro partite di Magic',
+            fileName: `${i18n.t('file_statistiche_mazzi')}_${todayIso()}.jpg`,
+            shareTitle: i18n.t('statistiche_mazzi'),
+            shareText: i18n.t('statistiche_mazzi_di_mtg_tracker'),
           })
         }
       />
 
       <ExportCardHost cardRef={exporter.cardRef}>
         <ExportHeader
-          title="Statistiche Mazzi"
-          subtitle={`Percentuale di vittoria di ogni mazzo · ordinati per ${sortLabel.toLowerCase()} · aggiornato al ${todayLabel()}`}
+          title={i18n.t('statistiche_mazzi')}
+          subtitle={`${i18n.t('percentuale_vittoria_ogni_mazzo_ordinati', { sort: i18n.t(sortLabel).toLowerCase() })} · ${i18n.t('aggiornato_al', { date: todayLabel() })}`}
         />
         <DeckStatsList rows={rows} sort={sort} />
       </ExportCardHost>
