@@ -3,9 +3,6 @@
 Review in order. Entries include partially translated files and files that may have no translatable text; remove each only after review is complete. Paths are relative to the repository root.
 
 - `client/src/components/mtglog/GameForm.tsx`
-- `client/src/components/mtglog/GameList.tsx`
-- `client/src/components/mtglog/GameStats.tsx`
-- `client/src/components/mtglog/HomeOverview.tsx`
 - `client/src/components/mtglog/ImageExport.tsx`
 - `client/src/components/mtglog/LifeCounter.tsx`
 - `client/src/components/mtglog/ManaIcon.tsx`

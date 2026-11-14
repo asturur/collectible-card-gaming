@@ -97,9 +97,9 @@ export default function HomeOverview({
   const medals = ['🥇', '🥈', '🥉'];
 
   const stats: { label: string; value: number }[] = [
-    { label: 'Partite totali', value: games.length },
-    { label: 'Questo mese', value: thisMonth },
-    { label: 'Mazzi salvati', value: deckCount },
+    { label: t('partite_totali'), value: games.length },
+    { label: t('questo_mese'), value: thisMonth },
+    { label: t('mazzi_salvati'), value: deckCount },
   ];
 
   return (
@@ -113,7 +113,7 @@ export default function HomeOverview({
         </span>
         <span className="min-w-0">
           <span className="block text-xl font-bold leading-tight">{t('nuova_partita')}</span>
-          <span className="block text-sm font-medium opacity-80">Segna-punti e risultato</span>
+          <span className="block text-sm font-medium opacity-80">{t('segna_punti_risultato')}</span>
         </span>
       </Link>
 
@@ -150,12 +150,12 @@ export default function HomeOverview({
       </div>
 
       <Section
-        title="Ultime partite"
+        title={t('ultime_partite')}
         to={paths.games}
-        badge={newGames > 0 ? <Badge tone="warning">{newGames === 1 ? '1 nuova' : `${newGames} nuove`}</Badge> : undefined}
+        badge={newGames > 0 ? <Badge tone="warning">{t('nuove_count', { count: newGames })}</Badge> : undefined}
       >
         {latest.length === 0 ? (
-          <Empty>Ancora nessuna partita: tocca &quot;Nuova Partita&quot; per iniziare.</Empty>
+          <Empty>{t('ancora_nessuna_partita_tocca_nuova')}</Empty>
         ) : (
           latest.map((g) => (
             <span key={g.id} className="flex items-center gap-3">
@@ -178,9 +178,9 @@ export default function HomeOverview({
         )}
       </Section>
 
-      <Section title="Mazzi giocati di recente" to={paths.decks}>
+      <Section title={t('mazzi_giocati_di_recente')} to={paths.decks}>
         {recentDecks.length === 0 ? (
-          <Empty>Qui compariranno i mazzi usati nelle ultime partite.</Empty>
+          <Empty>{t('qui_compariranno_mazzi_usati_nelle')}</Empty>
         ) : (
           recentDecks.map((d) => (
             <span key={d.key} className="flex items-center gap-2 text-sm text-zaff-text">
@@ -191,9 +191,9 @@ export default function HomeOverview({
         )}
       </Section>
 
-      <Section title="Classifica" to={paths.playerStats}>
+      <Section title={t('classifica')} to={paths.playerStats}>
         {top.length === 0 ? (
-          <Empty>La classifica compare dopo la prima partita.</Empty>
+          <Empty>{t('classifica_compare_dopo_prima_partita')}</Empty>
         ) : (
           top.map((r, i) => (
             <span key={r.name} className="flex items-center gap-2 text-sm">
@@ -202,7 +202,7 @@ export default function HomeOverview({
               </span>
               <span className="min-w-0 flex-1 truncate text-zaff-text">{r.name}</span>
               <span className="shrink-0 whitespace-nowrap text-zaff-muted">
-                {r.w} vittorie · {r.g > 0 ? Math.round((r.w / r.g) * 100) : 0}%
+                {t('vittorie_count', { count: r.w })} · {r.g > 0 ? Math.round((r.w / r.g) * 100) : 0}%
               </span>
             </span>
           ))
