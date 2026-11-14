@@ -2,6 +2,7 @@ import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AccountPanel from './AccountPanel';
+import i18n from '../../i18n';
 import type { Game } from './GameList';
 
 const deleteMyAccount = vi.fn();
@@ -61,5 +62,19 @@ describe('AccountPanel', () => {
     expect(await screen.findByText(/Non sono riuscito a eliminare l’account: rete assente/)).toBeInTheDocument();
     expect(screen.getByLabelText('Per confermare scrivi ELIMINA')).toHaveValue('ELIMINA');
     expect(deleteMyAccount).toHaveBeenCalledWith({ deleteDecks: false });
+  });
+
+  it('asks for the confirmation word of the language in use (DELETE in English)', async () => {
+    await act(async () => { await i18n.changeLanguage('en'); });
+    try {
+      const user = userEvent.setup();
+      render(<AccountPanel userId="me" email="io@example.com" games={[game('me')]} />);
+      await user.click(screen.getByRole('button', { name: 'Delete account…' }));
+      expect(screen.getByText(/\(1 game\)/)).toBeInTheDocument();
+      await user.type(screen.getByLabelText('To confirm, type DELETE'), 'delete');
+      expect(screen.getByRole('button', { name: 'Delete permanently' })).toBeEnabled();
+    } finally {
+      await act(async () => { await i18n.changeLanguage('it'); });
+    }
   });
 });

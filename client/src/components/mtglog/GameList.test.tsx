@@ -38,7 +38,7 @@ describe('GameList', () => {
     render(
       <MemoryRouter initialEntries={['/games']}>
         <Routes>
-          <Route path="/games" element={<GameList userId="u" games={[]} loading={false} loadError="Non riesco a leggere il registro condiviso: offline" reloadGames={vi.fn()} onEdit={vi.fn()} onRematch={vi.fn()} />} />
+          <Route path="/games" element={<GameList userId="u" games={[]} loading={false} loadError="Non riesco a leggere le partite condivise: offline" reloadGames={vi.fn()} onEdit={vi.fn()} onRematch={vi.fn()} />} />
         </Routes>
       </MemoryRouter>
     );

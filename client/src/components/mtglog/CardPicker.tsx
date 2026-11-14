@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { searchScryfall, type ScryCard } from '../../services/scryfall';
 import Button from '../ui/Button';
 import Badge from '../ui/Badge';
@@ -37,6 +38,7 @@ function Preview({
   onChoose: () => void;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const [face, setFace] = useState(0);
   const [flash, setFlash] = useState(0);
   const flashTimer = useRef<number | undefined>(undefined);
@@ -60,11 +62,11 @@ function Preview({
       role="dialog"
       aria-label={card.name}
     >
-      <CloseButton onClick={onClose} label="Chiudi senza scegliere" surface="image"
+      <CloseButton onClick={onClose} label={t('chiudi_senza_scegliere')} surface="image"
         className="absolute right-3 top-[calc(0.75rem+env(safe-area-inset-top))]" />
 
       <div className="relative flex min-h-0 w-full flex-1 items-center justify-center" onClick={(e) => e.stopPropagation()}>
-        <button type="button" onClick={choose} className="relative max-h-full max-w-full" aria-label={`Aggiungi ${card.name}`}>
+        <button type="button" onClick={choose} className="relative max-h-full max-w-full" aria-label={t('aggiungi_nome', { name: card.name })}>
           <img
             src={image.normal}
             alt={card.name}
@@ -86,8 +88,8 @@ function Preview({
         <div className="text-sm font-semibold">{card.name}</div>
         <div className="text-xs text-white/70">
           {mode === 'add'
-            ? `Nel mazzo: ${count} · tocca la carta per aggiungerne una`
-            : 'Tocca la carta per usarla al posto di quella non riconosciuta'}
+            ? t('nel_mazzo_tocca_carta', { count })
+            : t('tocca_carta_per_usarla_al')}
         </div>
         {card.faces.length > 1 && (
           <button
@@ -95,15 +97,15 @@ function Preview({
             onClick={() => setFace((f) => (f + 1) % card.faces.length)}
             className="mt-2 rounded-lg border-2 border-white/60 bg-black/50 px-4 py-1.5 text-sm font-semibold text-white"
           >
-            ↻ Gira la carta
+            {t('gira_carta')}
           </button>
         )}
         <div className="mt-3 grid grid-cols-2 gap-2.5">
           <Button size="lg" fullWidth onClick={choose}>
-            {mode === 'add' ? '+1 Aggiungi' : 'Usa questa'}
+            {mode === 'add' ? t('aggiungi_uno') : t('usa_questa')}
           </Button>
           <Button variant="ghost" size="lg" fullWidth onClick={onClose}>
-            Non è questa
+            {t('non_questa')}
           </Button>
         </div>
       </div>
@@ -123,6 +125,7 @@ export default function CardPicker({
   onPick,
   onClose,
 }: CardPickerProps) {
+  const { t } = useTranslation();
   const [query, setQuery] = useState(initialQuery);
   const [results, setResults] = useState<ScryCard[]>([]);
   const [searching, setSearching] = useState(false);
@@ -179,10 +182,10 @@ export default function CardPicker({
     <div className="fixed inset-0 z-50 flex flex-col bg-zaff-bg text-zaff-text">
       <div className="flex items-center justify-between gap-3 border-b border-zaff-border px-4 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top))]">
         <div className="min-w-0">
-          <h2 className="text-lg font-semibold">{mode === 'add' ? 'Aggiungi carte' : 'Trova la carta giusta'}</h2>
+          <h2 className="text-lg font-semibold">{mode === 'add' ? t('aggiungi_carte') : t('trova_carta_giusta')}</h2>
           {totals && (
             <p className="text-sm font-semibold text-zaff-muted">
-              Main {totals.main} · Side {totals.side} · Totale {totals.main + totals.side}
+              {t('main_side_totale', { main: totals.main, side: totals.side, total: totals.main + totals.side })}
             </p>
           )}
         </div>
@@ -196,7 +199,7 @@ export default function CardPicker({
           onChange={(e) => setQuery(e.target.value)}
           autoComplete="off"
           autoFocus
-          placeholder="Scrivi il nome della carta (in inglese)…"
+          placeholder={t('scrivi_nome_della_carta_in')}
           className="w-full rounded-lg border border-zaff-border bg-zaff-surface px-3 py-3 text-base text-zaff-text placeholder:text-zaff-muted"
         />
         {mode === 'add' && (
@@ -207,14 +210,14 @@ export default function CardPicker({
         )}
         <p className={cx('mt-2', TEXT_MINI)}>
           {searching
-            ? 'Cerco…'
+            ? t('cerco')
             : failed
-              ? 'Ricerca non riuscita: controlla la connessione e riprova.'
+              ? t('ricerca_non_riuscita_controlla_connessione')
               : query.trim().length < 2
-                ? 'Scrivi almeno 2 lettere. Tocca una carta per vederla grande.'
+                ? t('scrivi_almeno_lettere_tocca_una')
                 : results.length === 0
-                  ? 'Nessuna carta trovata con questo nome.'
-                  : `${results.length} carte trovate${results.length >= 60 ? ' (mostro le prime 60: affina il nome)' : ''}`}
+                  ? t('nessuna_carta_trovata_con_questo')
+                  : `${t('carte_trovate', { count: results.length })}${results.length >= 60 ? ` ${t('mostro_prime_affina_nome', { max: 60 })}` : ''}`}
         </p>
       </div>
 
