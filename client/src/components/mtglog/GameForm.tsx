@@ -448,7 +448,7 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onDiscard, 
     return players.some((_, i) => duplicateRowOf(i) !== -1);
   }
 
-  const DUPLICATE_PLAYER_ERROR = 'Lo stesso giocatore compare due volte: cambia uno dei due nomi.';
+  const DUPLICATE_PLAYER_ERROR = t('stesso_giocatore_compare_due_volte');
 
   /** Spiegazione per un nome oltre il limite, o null. Un nome lungo salvato prima del limite
    *  non si taglia qui (diventerebbe un altro giocatore nelle statistiche): si accorcia una
@@ -457,14 +457,14 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onDiscard, 
     const trimmed = name.trim();
     if (trimmed.length <= MAX_PLAYER_NAME_LENGTH) return null;
     return findCanonicalName(playerNames, trimmed)
-      ? `"${trimmed}" supera i ${MAX_PLAYER_NAME_LENGTH} caratteri: accorcialo in Gestisci Giocatori (vale anche per le partite già salvate).`
-      : `Il nome "${trimmed}" è troppo lungo: al massimo ${MAX_PLAYER_NAME_LENGTH} caratteri.`;
+      ? t('supera_caratteri_accorcialo_in_gestisci', { name: trimmed, max: MAX_PLAYER_NAME_LENGTH })
+      : t('nome_troppo_lungo', { name: trimmed, max: MAX_PLAYER_NAME_LENGTH });
   }
 
   function checkNames(action: 'procedere' | 'salvare'): string | null {
     // Prima i doppioni: finché un giocatore è ripetuto, la domanda sul nome non compare.
     if (hasDuplicatePlayer()) return DUPLICATE_PLAYER_ERROR;
-    if (hasUnresolvedNameConflict()) return `Rispondi alla domanda sul nome del giocatore prima di ${action}.`;
+    if (hasUnresolvedNameConflict()) return t(action === 'salvare' ? 'rispondi_domanda_nome_prima_salvare' : 'rispondi_domanda_nome_prima_procedere');
     for (const p of players) {
       const message = tooLongNameMessage(p.name);
       if (message) return message;
@@ -503,7 +503,7 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onDiscard, 
     }
     const names = players.map((p) => p.name.trim()).filter(Boolean);
     if (!names.length) {
-      setError('Scegli almeno un giocatore prima di avviare il conteggio.');
+      setError(t('scegli_almeno_un_giocatore_prima'));
       return;
     }
     startCounter(resume);
@@ -568,7 +568,7 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onDiscard, 
     setMessage('');
     setError('');
     if (!supabase) {
-      setError('Supabase non configurato.');
+      setError(t('supabase_non_configurato'));
       return;
     }
     const nameProblem = checkNames('salvare');
@@ -628,13 +628,13 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onDiscard, 
     if (editingGame) {
       const { data: currentRow } = await supabase.from(TABLE_GAMES).select('*').eq('id', gameId).maybeSingle();
       if (!currentRow) {
-        setError('Questa partita non esiste più: è stata cancellata da qualcun altro.');
+        setError(t('questa_partita_non_esiste_piu'));
         return;
       }
       if (
         gameFingerprint(rowToGame(currentRow)) !== gameFingerprint(editingGame) &&
         !window.confirm(
-          'Qualcun altro ha modificato questa partita mentre la stavi modificando.\n\nOK = sovrascrivi con le tue modifiche\nAnnulla = torna indietro (poi chiudi e riapri la partita per vedere la versione aggiornata)'
+          t('qualcun_altro_ha_modificato_partita')
         )
       ) {
         return;
@@ -649,7 +649,7 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onDiscard, 
         : await supabase.from(TABLE_GAMES).insert({ id: gameId, ...row });
       if (saveError) throw saveError;
     } catch (err) {
-      setError('Salvataggio partita non riuscito: ' + (err as { message: string }).message);
+      setError(t('salvataggio_partita_non_riuscito', { error: (err as { message: string }).message }));
       return;
     } finally {
       setSaving(false);
@@ -674,7 +674,7 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onDiscard, 
       return;
     }
 
-    setMessage('Partita salvata.');
+    setMessage(t('partita_salvata'));
     setStartedAt(toLocalDateTimeValue(new Date()));
     setFormat('');
     setNotes('');
@@ -682,7 +682,7 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onDiscard, 
   }
 
   if (loading) {
-    return <p className={TEXT_MUTED}>Caricamento…</p>;
+    return <p className={TEXT_MUTED}>{t('caricamento')}</p>;
   }
 
   /** Punteggi già salvati di ogni giocatore (solo quelli con una vita registrata). */
@@ -727,7 +727,7 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onDiscard, 
       <div className="grid grid-cols-1 gap-3">
         <div className="mb-4">
           <label className={FIELD_LABEL} htmlFor="fmt">
-            Formato
+            {t('formato')}
           </label>
           <button
             id="fmt"
@@ -736,14 +736,14 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onDiscard, 
             className={cx(FIELD_CONTROL_SM, 'flex w-full items-center justify-between gap-2 text-left')}
           >
             <span className={cx('min-w-0 truncate', format ? undefined : 'text-zaff-muted')}>
-              {format || 'Scegli il formato'}
+              {format || t('scegli_formato')}
             </span>
             <span className="shrink-0 text-xl leading-none text-zaff-muted" aria-hidden="true">
               ›
             </span>
           </button>
           {formatPickerOpen && (
-            <Modal level={2} title="Formato" onClose={() => setFormatPickerOpen(false)}>
+            <Modal level={2} title={t('formato')} onClose={() => setFormatPickerOpen(false)}>
               <div className="grid grid-cols-2 gap-2.5">
                 {(format && !FORMATS.includes(format) ? [format, ...FORMATS] : FORMATS).map((f) => (
                   <Button
@@ -773,7 +773,7 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onDiscard, 
                       setFormatPickerOpen(false);
                     }}
                   >
-                    Nessun formato
+                    {t('nessun_formato')}
                   </Button>
                 </div>
               )}
@@ -782,7 +782,7 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onDiscard, 
         </div>
       </div>
 
-      <span className={FIELD_LABEL}>Giocatori</span>
+      <span className={FIELD_LABEL}>{t('giocatori')}</span>
       <div>
         {players.map((p, i) => (
           <div
@@ -797,7 +797,7 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onDiscard, 
                       type="text"
                       value={p.name}
                       onChange={(e) => updatePlayer(i, { name: e.target.value, nameTyping: true })}
-                      placeholder={`Nome del giocatore ${i + 1}`}
+                      placeholder={t('nome_del_giocatore_n', { n: i + 1 })}
                       maxLength={MAX_PLAYER_NAME_LENGTH}
                       autoComplete="off"
                       aria-describedby={`player-name-count-${i}`}
@@ -810,7 +810,7 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onDiscard, 
                         onClick={() => updatePlayer(i, { name: '', nameTyping: false, rejectingMatch: false })}
                         className="mt-1 text-xs text-zaff-muted underline"
                       >
-                        Scegli dall&apos;elenco giocatori
+                        {t('scegli_dall_elenco_giocatori')}
                       </button>
                     )}
                   </>
@@ -821,7 +821,7 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onDiscard, 
                     className={cx(FIELD_CONTROL_SM, 'flex w-full items-center justify-between gap-2 text-left')}
                   >
                     <span className={cx('min-w-0 truncate', p.name ? undefined : 'text-zaff-muted')}>
-                      {p.name || `Scegli il giocatore ${i + 1}`}
+                      {p.name || t('scegli_giocatore_n', { n: i + 1 })}
                     </span>
                     <span className="shrink-0 text-xl leading-none text-zaff-muted" aria-hidden="true">
                       ›
@@ -833,7 +833,7 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onDiscard, 
                 <button
                   type="button"
                   onClick={() => removePlayer(i)}
-                  title="Togli giocatore"
+                  title={t('togli_giocatore')}
                   className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-lg border border-zaff-border text-xl leading-none text-zaff-muted transition hover:border-red-400 hover:text-red-400 active:scale-95"
                 >
                   ×
@@ -846,7 +846,7 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onDiscard, 
               if (duplicate !== -1) {
                 return (
                   <p role="alert" className="mb-2 rounded-lg border border-red-400/40 bg-red-400/10 p-2.5 text-sm text-red-400">
-                    "{p.name.trim()}" è già in questa partita (giocatore {duplicate + 1}): scegli un altro giocatore.
+                    {t('gia_in_questa_partita', { name: p.name.trim(), n: duplicate + 1 })}
                   </p>
                 );
               }
@@ -868,8 +868,7 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onDiscard, 
                 return (
                   <div className="mb-2 rounded-lg border border-red-400/40 bg-red-400/10 p-2.5 text-sm text-zaff-text">
                     <p className="mb-2 text-red-400">
-                      Allora scegli un nome diverso da "{match}": cambiare solo maiuscole o spazi non basta a
-                      distinguerli. Ad esempio:
+                      {t('allora_scegli_un_nome_diverso', { name: match })}
                     </p>
                     <div className="flex flex-wrap gap-2">
                       <Button size="sm" onClick={() => updatePlayer(i, { name: s1, rejectingMatch: false })}>
@@ -885,13 +884,13 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onDiscard, 
 
               return (
                 <div className="mb-2 rounded-lg border border-amber-400/40 bg-amber-400/10 p-2.5 text-sm text-zaff-text">
-                  <p className="mb-2">Esiste già un giocatore chiamato "{match}". È la stessa persona?</p>
+                  <p className="mb-2">{t('esiste_gia_un_giocatore_chiamato', { name: match })}</p>
                   <div className="flex flex-wrap gap-2">
                     <Button size="sm" onClick={() => updatePlayer(i, { name: match, rejectingMatch: false })}>
-                      Sì, è lui/lei
+                      {t('si_lui_lei')}
                     </Button>
                     <Button variant="ghost" size="sm" onClick={() => updatePlayer(i, { rejectingMatch: true })}>
-                      No, è un'altra persona
+                      {t('no_un_altra_persona')}
                     </Button>
                   </div>
                 </div>
@@ -906,7 +905,7 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onDiscard, 
                   className={cx(FIELD_CONTROL_SM, 'flex min-w-0 flex-1 items-center justify-between gap-2 text-left')}
                 >
                   <span className={cx('min-w-0 truncate', p.deckSelect ? undefined : 'text-zaff-muted')}>
-                    {p.deckSelect || 'Scegli il mazzo'}
+                    {p.deckSelect || t('scegli_mazzo')}
                   </span>
                   <span className="shrink-0 text-xl leading-none text-zaff-muted" aria-hidden="true">
                     ›
@@ -917,7 +916,7 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onDiscard, 
                   type="text"
                   value={p.deckManual}
                   onChange={(e) => updatePlayer(i, { deckManual: e.target.value })}
-                  placeholder="Nome mazzo libero"
+                  placeholder={t('nome_mazzo_libero')}
                   className={cx(FIELD_CONTROL_SM, 'min-w-0 flex-1')}
                 />
               )}
@@ -933,7 +932,7 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onDiscard, 
                 }
                 className="shrink-0"
               >
-                {p.deckMode === 'select' ? 'Scrivi a Mano' : 'Scegli dai Mazzi Salvati'}
+                {p.deckMode === 'select' ? t('scrivi_mano') : t('scegli_dai_mazzi_salvati')}
               </Button>
             </div>
 
@@ -941,7 +940,7 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onDiscard, 
               type="text"
               value={p.desc}
               onChange={(e) => updatePlayer(i, { desc: e.target.value })}
-              placeholder="Com'è fatto il mazzo, strategia, note"
+              placeholder={t('com_fatto_mazzo_strategia_note')}
               className={cx(FIELD_CONTROL_SM, 'mb-2')}
             />
 
@@ -957,14 +956,14 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onDiscard, 
                     className="mtg-switch-input absolute h-0 w-0 opacity-0"
                   />
                   <span className="mtg-switch mtg-switch-lg" />
-                  Vincitore
+                  {t('vincitore')}
                 </label>
 
                 <NumberStepper
                   value={p.life}
                   onChange={(next) => updatePlayer(i, { life: next })}
                   placeholder="PV"
-                  aria-label="Punti vita"
+                  aria-label={t('punti_vita')}
                   className="w-[176px]"
                 />
               </div>
@@ -974,7 +973,7 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onDiscard, 
       </div>
 
       {playerPickerFor !== null && (
-        <Modal level={2} title={`Giocatore ${playerPickerFor + 1}`} onClose={() => setPlayerPickerFor(null)}>
+        <Modal level={2} title={t('giocatore_n', { n: playerPickerFor + 1 })} onClose={() => setPlayerPickerFor(null)}>
           <div className="grid grid-cols-2 gap-2.5">
             {playerNames.map((n) => {
               const usedElsewhere = players.some((q, qi) => qi !== playerPickerFor && sameName(q.name, n));
@@ -986,7 +985,7 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onDiscard, 
                   size="lg"
                   fullWidth
                   disabled={usedElsewhere || tooLong}
-                  title={tooLong ? `Oltre ${MAX_PLAYER_NAME_LENGTH} caratteri: accorcialo in Gestisci Giocatori` : undefined}
+                  title={tooLong ? t('oltre_caratteri_accorcialo', { max: MAX_PLAYER_NAME_LENGTH }) : undefined}
                   className="min-h-[64px] py-4 text-lg"
                   onClick={() => {
                     selectPlayerName(playerPickerFor, n);
@@ -1000,7 +999,7 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onDiscard, 
           </div>
           {playerNames.some((n) => n.length > MAX_PLAYER_NAME_LENGTH) && (
             <p className={cx(TEXT_MINI, 'mt-2')}>
-              I nomi oltre {MAX_PLAYER_NAME_LENGTH} caratteri non si possono scegliere: accorciali in Gestisci Giocatori.
+              {t('nomi_oltre_caratteri_non_si', { max: MAX_PLAYER_NAME_LENGTH })}
             </p>
           )}
           <Button
@@ -1013,13 +1012,13 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onDiscard, 
               setPlayerPickerFor(null);
             }}
           >
-            + Nuovo giocatore (scrivi il nome)
+            {t('nuovo_giocatore_scrivi_nome')}
           </Button>
         </Modal>
       )}
 
       {deckPickerFor !== null && (
-        <Modal level={2} title="Mazzo" onClose={() => setDeckPickerFor(null)}>
+        <Modal level={2} title={t('mazzo')} onClose={() => setDeckPickerFor(null)}>
           <div className="mb-3 rounded-lg border border-zaff-border bg-zaff-surface p-2.5">
             <ColorFilter
               colors={deckColorFilter}
@@ -1044,10 +1043,10 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onDiscard, 
                 setDeckPickerFor(null);
               }}
             >
-              Nessun mazzo
+              {t('nessun_mazzo')}
             </Button>
             {decks.length > 0 && visibleDeckOptions.length === 0 && (
-              <p className={TEXT_MUTED}>Nessun mazzo con questi colori.</p>
+              <p className={TEXT_MUTED}>{t('nessun_mazzo_con_questi_colori')}</p>
             )}
             {visibleDeckOptions.map((d) => (
               <Button
@@ -1069,12 +1068,12 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onDiscard, 
       )}
 
       <Button variant="link" size="xl" onClick={addPlayer}>
-        + Aggiungi Giocatore
+        {t('aggiungi_giocatore')}
       </Button>
 
       <div className="mt-3.5">
         <label className={FIELD_LABEL} htmlFor="startLife">
-          Punti vita iniziali
+          {t('punti_vita_iniziali')}
         </label>
         <NumberStepper
           value={String(startLife)}
@@ -1096,7 +1095,7 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onDiscard, 
           tablet in su, con più spazio, tornano affiancati.
           Stanno in fondo, prima degli appunti: di solito restano i valori di default. */}
       <div className="mt-4 min-w-0">
-        <span className={FIELD_LABEL}>Data e ora di inizio</span>
+        <span className={FIELD_LABEL}>{t('data_ora_di_inizio')}</span>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <input
             type="date"
@@ -1115,11 +1114,11 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onDiscard, 
 
       <TextAreaField
         id="notes"
-        label="Appunti"
+        label={t('appunti')}
         density="compact"
         value={notes}
         onChange={(e) => setNotes(e.target.value)}
-        placeholder="Combo assurde, alleanze tradite, mulligan sfortunati…"
+        placeholder={t('combo_assurde_alleanze_tradite')}
         fieldClassName="mt-4"
       />
 
@@ -1131,7 +1130,7 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onDiscard, 
       )}
 
       <p className={cx('mt-2.5', TEXT_MINI)}>
-        I pallini sotto ogni nome sono i colori del mazzo: bianco, blu, nero, rosso, verde.
+        {t('pallini_sotto_ogni_nome')}
       </p>
 
       {/* Barra sempre in vista in fondo allo schermo (sopra la barra di
@@ -1140,21 +1139,21 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onDiscard, 
       <div className="sticky bottom-[calc(4rem+env(safe-area-inset-bottom))] z-10 -mx-4 mt-4 flex flex-col gap-2.5 border-t border-zaff-border bg-zaff-surface px-4 py-3 sm:-mx-6 sm:px-6">
         <div className={canResume ? 'grid grid-cols-2 gap-2.5' : undefined}>
           <Button onClick={() => handleOpenLifeCounter(false)} size="lg" fullWidth className="py-3.5 text-lg">
-            <span className="text-xl leading-none">▶</span> Avvia Partita
+            <span className="text-xl leading-none">▶</span> {t('avvia_partita')}
           </Button>
           {/* Riparte dai punteggi registrati (partita salvata, o punteggio portato dal segna-punti). */}
           {canResume && (
             <Button onClick={() => handleOpenLifeCounter(true)} size="lg" fullWidth className="py-3.5 text-lg">
-              <span className="text-xl leading-none">⏯</span> Riprendi Partita
+              <span className="text-xl leading-none">⏯</span> {t('riprendi_partita')}
             </Button>
           )}
         </div>
         <div className="grid grid-cols-2 gap-2.5">
           <Button fullWidth size="lg" onClick={() => { void handleSaveClick(); }} disabled={saving}>
-            {editingGame ? 'Salva Modifiche' : 'Salva Partita'}
+            {editingGame ? t('salva_modifiche') : t('salva_partita')}
           </Button>
           <Button fullWidth size="lg" variant="ghost" onClick={onBack}>
-            Annulla
+            {t('annulla')}
           </Button>
         </div>
       </div>
