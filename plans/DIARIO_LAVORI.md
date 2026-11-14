@@ -60,7 +60,8 @@ qui c'è il "perché" e la cronologia. Va aggiornato a ogni blocco di lavoro.
 | #12 | Pagina Account con cancellazione dell'account |
 | #13 | Mazzi Salvati: pannello Filtri (colori, nome carta, parole chiave multiple "Tutte · Almeno una", testo); `Modal.footer` |
 | — | Andrea (su `main`): i18next + react-i18next, lingua nell'indirizzo (`/it/`, `/en/`), metodo di traduzione in AGENTS.md, elenco `unstranslated_components.md` |
-| (questa patch) | "Fine Partita" salva da solo (con "Chi ha vinto?" se non è chiaro) e torna alla Home; copia della partita in corso sul telefono ("Partita non salvata · Riprendi") |
+| #15 | "Fine Partita" salva da solo (con "Chi ha vinto?" se non è chiaro) e torna alla Home; copia della partita in corso sul telefono ("Partita non salvata · Riprendi") |
+| (questa patch) | FAQ: sezione "Grafici mazzo" (Costi di mana, Produzione di mana) con link dai grafici del mazzo; "Mazzo preferito": a parità, ordine alfabetico |
 
 ## Scelte prese (e perché)
 

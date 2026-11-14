@@ -251,7 +251,7 @@ function DeckDetailSession({ deckId, active }: { deckId: string; active: 'deck' 
     <SectionPage title={deck?.name ?? 'Dettaglio Mazzo'} stickyTitle ancestors={[DECKS_CRUMB]}>
       <DeckPageFrame deckId={deckId} deck={deck} active={active}>
         {loading ? <p className={TEXT_MUTED}>Caricamento…</p> : deck && (active === 'stats'
-          ? <DeckStatsContents key={deckId} cards={deck.cards} />
+          ? <DeckStatsContents key={deckId} cards={deck.cards} faqLinks />
           : <DeckViewContents source={deck.source} colors={deck.colors} cards={deck.cards.map(c => ({ ...c, section: c.section ?? 'main' }))} />)}
         {error && <p className="mt-3 text-sm text-error" role="alert">{error}</p>}
       </DeckPageFrame>

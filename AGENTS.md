@@ -329,7 +329,9 @@ without one stay in the game list and the Home counters. Win-rate rankings (card
 Statistiche Mazzi sorted by %) need `MIN_GAMES` (5) games; Statistiche Mazzi lists the other decks
 below, unranked. The Colori average counts each player with deck colours once.
 FAQ (`mtglog/Faq.tsx`, texts in `mtglog/faqContent.tsx`, menu Altro → FAQ) explains every
-statistic; each statistics page links to its topic ("ⓘ Come si calcola?"). When a statistic's
+statistic; each statistics page links to its topic ("ⓘ Come si calcola?"). Section "Grafici mazzo"
+explains a saved deck's mana cost and production charts (links only on `/decks/:deckId/stats`, not in
+the editor preview, where leaving would lose the draft). When a statistic's
 calculation changes, update its FAQ text in the same change; thresholds come from the code constants.
 Registro data is re-read after saving a game, on the Home button and when the app returns to
 the foreground (`mtglog/useReloadOnResume.ts`): realtime events missed in the background are lost.

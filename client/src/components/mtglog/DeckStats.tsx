@@ -9,6 +9,8 @@ import Button, { ButtonRouteLink } from '../ui/Button';
 import Modal from '../ui/Modal';
 import CloseButton from '../ui/CloseButton';
 import { cx, TEXT_MINI } from '../ui/styles';
+import { paths } from '../../router';
+import { HowItWorks } from './Faq';
 import { useDeckValue } from './CardPrices';
 import { formatEur, formatPriceDate, formatUsd } from './deckValue';
 
@@ -71,7 +73,9 @@ const BAR_RELIEF = [
   'linear-gradient(to right, rgba(0,0,0,0.28) 0%, rgba(0,0,0,0) 22%, rgba(0,0,0,0) 70%, rgba(0,0,0,0.32) 100%)',
 ].join(', ');
 
-export default function DeckStatsContents({ cards }: { cards: DeckStatsItem[] }) {
+/** `faqLinks`: solo nella pagina del mazzo salvato. Nell'anteprima dell'editor un link porterebbe via
+ *  dalle modifiche non salvate. */
+export default function DeckStatsContents({ cards, faqLinks = false }: { cards: DeckStatsItem[]; faqLinks?: boolean }) {
   useDeckImages(cards);
   const stats = computeDeckStats(cards, getCard);
   const deckValue = useDeckValue(cards);
@@ -157,6 +161,7 @@ export default function DeckStatsContents({ cards }: { cards: DeckStatsItem[] })
       >
         Costi di mana
       </ChartTitle>
+      {faqLinks && <HowItWorks to={paths.faqTopic('deck', 'cost')} />}
       <PieChart slices={costSlices} idSuffix="deckstats-cost" unit="simboli" />
       <button
         type="button"
@@ -184,6 +189,7 @@ export default function DeckStatsContents({ cards }: { cards: DeckStatsItem[] })
       <ChartTitle note="Come in ManaBox: ogni fonte conta per ogni colore che può fare (terra doppia = 1 + 1), con il mana che aggiunge (Sol Ring = 2 incolore). Le fonti di qualsiasi colore contano solo i colori del mazzo.">
         Produzione di mana
       </ChartTitle>
+      {faqLinks && <HowItWorks to={paths.faqTopic('deck', 'production')} />}
       <PieChart slices={stats.productionPie} idSuffix="deckstats-prod" unit="mana" />
 
       <ChartTitle>Tipi di carte</ChartTitle>

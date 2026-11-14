@@ -955,7 +955,10 @@ const trendsFavorite: FaqTopic = {
           partite; a parità, quello con più vittorie; poi in ordine alfabetico. Le partite senza mazzo
           indicato non contano.
         </p>
-        <p>L&apos;elenco è in ordine di partite con il mazzo preferito, dalla più alta.</p>
+        <p>
+          L&apos;elenco è in ordine di partite con il mazzo preferito, dalla più alta; a parità, in
+          ordine alfabetico.
+        </p>
       </Block>
 
       <Block title="Esempio">
@@ -965,6 +968,164 @@ const trendsFavorite: FaqTopic = {
             vinte): a pari partite vince Draghi, con più vittorie.
           </p>
         </Example>
+      </Block>
+    </>
+  ),
+};
+
+const deckCost: FaqTopic = {
+  id: 'cost',
+  label: 'Costi di mana',
+  body: (
+    <>
+      <Block title="Cosa mostra">
+        <p>
+          Nelle statistiche di un mazzo salvato: quanto mana di ogni colore chiedono le carte del mazzo
+          per essere lanciate. Dice quali colori il mazzo usa di più; confrontala con la torta
+          &quot;Produzione di mana&quot; qui sotto.
+        </p>
+      </Block>
+
+      <Block title="Come si calcola">
+        <Steps>
+          <li>
+            Contano solo le carte del <b>Main Deck</b>: il Sideboard no. Le terre non hanno costo, quindi
+            non aggiungono niente.
+          </li>
+          <li>
+            Si contano i <b>simboli colorati</b> nel costo di ogni carta, per ogni copia: {'{G}{G}'} vale 2
+            verde, e 4 copie valgono 8.
+          </li>
+          <li>
+            Un simbolo ibrido come {'{W/U}'} vale <b>mezzo</b> bianco e mezzo blu. Un simbolo come{' '}
+            {'{2/W}'} o {'{G/P}'} (phyrexiano) vale 1 del suo colore.
+          </li>
+          <li>Il simbolo {'{C}'} (incolore vero, come nelle carte Eldrazi) conta come incolore.</li>
+          <li>
+            Il mana <b>generico</b> ({'{1}'}, {'{2}'}…) non conta, perché si paga con qualsiasi colore. La
+            X non conta mai.
+          </li>
+        </Steps>
+        <Formula>simboli di un colore = somma, carta per carta, di copie × simboli di quel colore</Formula>
+      </Block>
+
+      <Block title="L'interruttore &quot;Conta il mana incolore&quot;">
+        <p>
+          Spento (com&apos;è all&apos;apertura) la torta mostra solo i colori. Acceso, come in ManaBox,
+          il mana generico ({'{1}'}, {'{2}'}…) entra nella fetta grigia <b>Incolore</b>, insieme ai
+          simboli {'{C}'}: così si vede quanta parte dei costi si può pagare con qualsiasi mana.
+        </p>
+      </Block>
+
+      <Block title="Esempio">
+        <Example>
+          <p>
+            4 Llanowar Elves ({'{G}'}), 2 Kitchen Finks ({'{1}{G/W}{G/W}'}) e 1 Murderous Rider (
+            {'{1}{B}{B}'}):
+          </p>
+          <Bullets>
+            <li>
+              <b>Verde</b> = 4 × 1 + 2 × (½ + ½) = <b>6</b>
+            </li>
+            <li>
+              <b>Bianco</b> = 2 × (½ + ½) = <b>2</b>
+            </li>
+            <li>
+              <b>Nero</b> = 1 × 2 = <b>2</b>
+            </li>
+            <li>
+              Con l&apos;interruttore acceso, <b>Incolore</b> = 2 × 1 + 1 × 1 = <b>3</b>
+            </li>
+          </Bullets>
+        </Example>
+      </Block>
+
+      <Block title="Da tenere presente">
+        <Bullets>
+          <li>
+            Le carte non riconosciute da Scryfall (con il &quot;?&quot;) non contano finché non vengono
+            riconosciute.
+          </li>
+          <li>
+            Conta quanti simboli servono in tutto il mazzo, non quanto presto: una carta da {'{G}'} e una
+            da {'{5}{G}'} pesano uguale sul verde.
+          </li>
+        </Bullets>
+      </Block>
+    </>
+  ),
+};
+
+const deckProduction: FaqTopic = {
+  id: 'production',
+  label: 'Produzione di mana',
+  body: (
+    <>
+      <Block title="Cosa mostra">
+        <p>
+          Quanto mana di ogni colore possono produrre le carte del mazzo: terre, artefatti come Sol
+          Ring, creature come Llanowar Elves. Serve a capire se le fonti di mana sono in equilibrio con i
+          colori che il mazzo deve pagare: confrontala con la torta &quot;Costi di mana&quot; qui sopra.
+        </p>
+      </Block>
+
+      <Block title="Come si calcola (come in ManaBox)">
+        <Steps>
+          <li>
+            Contano solo le carte del <b>Main Deck</b>: il Sideboard no.
+          </li>
+          <li>
+            Ogni carta che produce mana conta <b>per ogni colore che può fare</b>: una terra doppia
+            bianco-blu vale 1 bianco <b>e</b> 1 blu.
+          </li>
+          <li>
+            Conta anche <b>quanto mana aggiunge in una volta</b>, letto dal testo della carta: Sol Ring
+            (&quot;Add {'{C}{C}'}&quot;) vale 2 incolore.
+          </li>
+          <li>Le copie si moltiplicano: 10 Foreste valgono 10 verde.</li>
+          <li>
+            Le fonti di <b>qualsiasi colore</b> (Command Tower, Arcane Signet) contano solo i colori che
+            compaiono nei costi del mazzo: in un mazzo nero-verde valgono 1 nero e 1 verde, non 5 colori.
+          </li>
+        </Steps>
+        <Formula>mana di un colore = somma, carta per carta, di copie × mana che aggiunge di quel colore</Formula>
+      </Block>
+
+      <Block title="Esempio">
+        <Example>
+          <p>
+            Un mazzo nero-verde con 10 Paludi, 10 Foreste, 1 Overgrown Tomb, 1 Command Tower, 1 Llanowar
+            Elves e 1 Sol Ring:
+          </p>
+          <Bullets>
+            <li>
+              <b>Nero</b> = 10 + 1 + 1 = <b>12</b>
+            </li>
+            <li>
+              <b>Verde</b> = 10 + 1 + 1 + 1 = <b>13</b>
+            </li>
+            <li>
+              <b>Incolore</b> = <b>2</b> (Sol Ring)
+            </li>
+          </Bullets>
+        </Example>
+      </Block>
+
+      <Block title="Da tenere presente">
+        <Bullets>
+          <li>
+            Il totale può superare il numero di carte, perché una fonte di più colori conta per ognuno.
+          </li>
+          <li>
+            Differenza voluta rispetto a ManaBox: ManaBox conta Command Tower e simili per tutti e 5 i
+            colori.
+          </li>
+          <li>
+            Le carte non riconosciute da Scryfall (con il &quot;?&quot;) non contano finché non vengono
+            riconosciute.
+          </li>
+          <li>È un conteggio delle fonti: non dice quanto spesso le pescherai.</li>
+        </Bullets>
       </Block>
     </>
   ),
@@ -982,4 +1143,6 @@ export const FAQ_SECTIONS: FaqSection[] = [
   },
   { id: 'matchups', label: 'Sfide', topics: [matchups] },
   { id: 'trends', label: 'Andamento', topics: [trendsMonthly, trendsWins, trendsStreaks, trendsFavorite] },
+  // I grafici del singolo mazzo salvato (Statistiche nella pagina del mazzo).
+  { id: 'deck', label: 'Grafici mazzo', topics: [deckCost, deckProduction] },
 ];
