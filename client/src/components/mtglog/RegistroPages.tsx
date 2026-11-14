@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useSectionInView } from './useSectionInView';
+import { APP_NAME } from '../../appName';
 import { Navigate, useLocation, useNavigate, useParams, type RouteObject } from 'react-router';
 import { useRegistro } from '../MtgLog';
 import HomeOverview from './HomeOverview';
@@ -57,7 +58,7 @@ function RegistroHome() {
   return (
     <main className="mx-auto w-full max-w-[1180px] px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-[calc(1.5rem+env(safe-area-inset-top))] sm:px-5 sm:pt-7">
       <header className="border-b-2 border-zaff-text pb-4 sm:pb-[18px]">
-        <h1 className={HEADING_PAGE}>Registro partite di Magic</h1>
+        <h1 className={HEADING_PAGE}>{APP_NAME}</h1>
         <div className="mtg-sep" />
         {gamesError && <p role="alert">{gamesError}</p>}
         <HomeOverview games={games} deckCount={deckCount} decks={decks} newGames={newGames} gameSaved={gameSaved} draft={draft} />

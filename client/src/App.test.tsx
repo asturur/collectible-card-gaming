@@ -444,7 +444,7 @@ describe('Registro routes', () => {
 
   it.each([
     ['/games', 'Partite Salvate', 'Partite'],
-    ['/', 'Registro partite di Magic', 'Home'],
+    ['/', 'MTG Tracker', 'Home'],
     ['/games/new', 'Nuova Partita', 'Partite'],
     ['/games/new/', 'Nuova Partita', 'Partite'],
     ['/decks', 'Mazzi Salvati', 'Mazzi'],
@@ -642,7 +642,7 @@ describe('Dati aggiornati e statistiche', () => {
   it('apre la FAQ dal menu Altro e mostra l\'argomento scelto nell\'indirizzo', async () => {
     const user = userEvent.setup();
     const { router } = openApp('/');
-    await screen.findByRole('heading', { name: 'Registro partite di Magic' });
+    await screen.findByRole('heading', { name: 'MTG Tracker' });
     await user.click(mainNav().getByRole('link', { name: 'Altro' }));
     await user.click(screen.getByRole('link', { name: /FAQ/ }));
     expect(router.state.location.pathname).toBe('/faq');

@@ -59,9 +59,10 @@ qui c'è il "perché" e la cronologia. Va aggiornato a ogni blocco di lavoro.
 | #11 | Righe scorrevoli solo in orizzontale (`touch-pan-x`) |
 | #12 | Pagina Account con cancellazione dell'account |
 | #13 | Mazzi Salvati: pannello Filtri (colori, nome carta, parole chiave multiple "Tutte · Almeno una", testo); `Modal.footer` |
-| — | Andrea (su `main`): i18next + react-i18next, lingua nell'indirizzo (`/it/`, `/en/`), metodo di traduzione in AGENTS.md, elenco `unstranslated_components.md` |
+| — | Andrea (su `main`): i18next + react-i18next, lingua nell'indirizzo (`/it/`, `/en/`), metodo di traduzione in AGENTS.md, elenco `unstranslated_components.md` (poi rinominato `untranslated_components.md`) |
 | #15 | "Fine Partita" salva da solo (con "Chi ha vinto?" se non è chiaro) e torna alla Home; copia della partita in corso sul telefono ("Partita non salvata · Riprendi") |
-| (questa patch) | FAQ: sezione "Grafici mazzo" (Costi di mana, Produzione di mana) con link dai grafici del mazzo; "Mazzo preferito": a parità, ordine alfabetico |
+| #16 | FAQ: sezione "Grafici mazzo" (Costi di mana, Produzione di mana) con link dai grafici del mazzo; "Mazzo preferito": a parità, ordine alfabetico |
+| (questa patch) | Nome dell'app "MTG Tracker" ovunque; traduzione: elenco rinominato `untranslated_components.md` e completato, regole concordate e glossario in AGENTS.md |
 
 ## Scelte prese (e perché)
 
@@ -84,6 +85,12 @@ qui c'è il "perché" e la cronologia. Va aggiornato a ogni blocco di lavoro.
   ancora a mano (una modifica per sbaglio non deve sovrascrivere da sola). Dopo ogni salvataggio si va
   alla Home. La copia della partita in corso nasce all'avvio del segna-punti (non prima: aprire "Nuova
   Partita" e chiudere non deve lasciare avvisi) e vale solo sul dispositivo dove si gioca.
+- **Nome dell'app:** "MTG Tracker" in tutte le lingue (prima "Registro partite di Magic" / "Registro MTG");
+  ZAFF resta "ZAFF — Collectible Card Gaming". Sul telefono il nome sotto l'icona cambia solo
+  reinstallando l'app ("Aggiungi a Home").
+- **Traduzione (decisioni di Alessandro, da comunicare ad Andrea):** i testi ZAFF in inglese
+  ricevono anche l'italiano; le FAQ si traducono come copia inglese separata; l'elenco comprende
+  anche file di calcolo e servizi; glossario MTG in AGENTS.md.
 - **Testi nuovi** nelle schermate: già con `t()` e chiavi in `locales/it` e `locales/en` (regola di Andrea).
 - **Conferme di sistema (`window.confirm`)** da trasformare in riquadri dell'app: proposto in
   due passi (1: componente comune + 3 cancellazioni + esci senza salvare; 2: uscita dalla

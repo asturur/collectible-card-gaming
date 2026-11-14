@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { toCanvas } from 'html-to-image';
+import { APP_NAME } from '../../appName';
 import { useLocation } from 'react-router';
 import { appHref } from '../../router';
 import Button from '../ui/Button';
@@ -195,7 +196,7 @@ export function ExportCardHost({ cardRef, children }: { cardRef: RefObject<HTMLD
 export function ExportHeader({ title, subtitle }: { title: ReactNode; subtitle?: ReactNode }) {
   return (
     <div className="mb-3.5">
-      <p className="mb-0.5 text-[11px] uppercase tracking-[0.06em] text-zaff-muted">Registro partite di Magic</p>
+      <p className="mb-0.5 text-[11px] uppercase tracking-[0.06em] text-zaff-muted">{APP_NAME}</p>
       <h2 className={HEADING_SECTION}>{title}</h2>
       {subtitle && <p className={TEXT_MINI}>{subtitle}</p>}
     </div>
