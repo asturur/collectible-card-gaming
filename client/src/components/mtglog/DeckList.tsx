@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
+import i18n from '../../i18n';
 import { MAX_DECK_NAME_LENGTH, shortenName } from '../../services/supabase';
 import { listSavedDecks, subscribeSavedDecks, type SavedDeck } from '../../services/savedDecks';
 import { parseDeckText, type DeckEntry } from '../../services/deckCards';
@@ -52,7 +53,7 @@ export default function DeckList({ onCreate, onImportFile }: DeckListProps) {
     reader.onload = () => {
       const parsed = parseManaboxText(String(reader.result));
       if (!parsed.length) {
-        setError('Non sono riuscito a leggere nessuna carta da questo file: controlla il formato.');
+        setError(i18n.t('nessuna_carta_letta_dal_file'));
         return;
       }
       // Il nome del file può essere lungo quanto vuole: lo accorcio a parole intere,
@@ -65,7 +66,7 @@ export default function DeckList({ onCreate, onImportFile }: DeckListProps) {
   function handlePasteImport() {
     const parsed = parsePastedDeckList(pasteText);
     if (!parsed.length) {
-      setPasteError("Non sono riuscito a leggere nessuna carta da questo testo: controlla che ci sia una riga \"<numero> <nome carta>\" per ogni carta.");
+      setPasteError(i18n.t('nessuna_carta_letta_dal_testo'));
       return;
     }
     setPasteError('');
@@ -80,7 +81,7 @@ export default function DeckList({ onCreate, onImportFile }: DeckListProps) {
     let cancelled = false;
     async function load() {
       try { const decks = await listSavedDecks(); if (!cancelled) { setDecks(decks); setError(''); } }
-      catch (err) { if (!cancelled) setError('Non riesco a leggere i mazzi: ' + (err as Error).message); }
+      catch (err) { if (!cancelled) setError(i18n.t('non_riesco_leggere_mazzi', { error: (err as Error).message })); }
       finally { if (!cancelled) setLoading(false); }
     }
     void load();
@@ -119,18 +120,18 @@ export default function DeckList({ onCreate, onImportFile }: DeckListProps) {
   const setKeywords = (keywords: string[]) => setFilters((prev) => ({ ...prev, keywords }));
   // Un chip per filtro: nome carta, ogni parola chiave, testo.
   const filterChips = [
-    ...(filters.card.trim() ? [{ id: 'card', label: 'Carta', value: filters.card, clear: () => setFilter('card', '') }] : []),
-    ...filters.keywords.map((k) => ({ id: 'kw-' + k, label: 'Parola chiave', value: k, clear: () => setKeywords(filters.keywords.filter((x) => x !== k)) })),
-    ...(filters.text.trim() ? [{ id: 'text', label: 'Testo', value: filters.text, clear: () => setFilter('text', '') }] : []),
+    ...(filters.card.trim() ? [{ id: 'card', label: i18n.t('carta'), value: filters.card, clear: () => setFilter('card', '') }] : []),
+    ...filters.keywords.map((k) => ({ id: 'kw-' + k, label: i18n.t('parola_chiave'), value: k, clear: () => setKeywords(filters.keywords.filter((x) => x !== k)) })),
+    ...(filters.text.trim() ? [{ id: 'text', label: i18n.t('testo'), value: filters.text, clear: () => setFilter('text', '') }] : []),
   ];
 
   return (
     <>
       <div className="mb-3">
         {loading ? (
-          <p className={TEXT_MUTED}>Caricamento…</p>
+          <p className={TEXT_MUTED}>{i18n.t('caricamento')}</p>
         ) : decks.length === 0 ? (
-          <p className="text-sm text-zaff-muted">Ancora nessun mazzo salvato.</p>
+          <p className="text-sm text-zaff-muted">{i18n.t('ancora_nessun_mazzo_salvato')}</p>
         ) : (
           <>
             {/* Tutti i filtri stanno nel pannello: in cima, fissi mentre si scorre, solo il pulsante
@@ -138,17 +139,17 @@ export default function DeckList({ onCreate, onImportFile }: DeckListProps) {
             <div className={cx(STICKY_BELOW_TITLE, 'sticky z-10 -mx-1 mb-2 rounded-lg border border-zaff-border bg-zaff-surface p-2.5 shadow-lg')}>
               <div className="flex flex-wrap items-center gap-2">
                 <Button size="sm" variant={activeCount ? 'primary' : 'ghost'} onClick={() => setFiltersOpen(true)}>
-                  🔍 Filtri{activeCount > 0 && <Badge tone="count" size="xs">{activeCount}</Badge>}
+                  {i18n.t('filtri_icona')}{activeCount > 0 && <Badge tone="count" size="xs">{activeCount}</Badge>}
                 </Button>
                 {colorFilter.size > 0 && (
-                  <Button size="sm" variant="link" onClick={() => setColorFilter(new Set())} aria-label="Togli il filtro Colore">
+                  <Button size="sm" variant="link" onClick={() => setColorFilter(new Set())} aria-label={i18n.t('togli_filtro_colore')}>
                     {/* Anche a parole: i simboli da soli non dicono che filtro è. */}
-                    Colore <ManaIcons colors={[...colorFilter]} className="text-[15px]" /> ✕
+                    {i18n.t('colore')} <ManaIcons colors={[...colorFilter]} className="text-[15px]" /> ✕
                   </Button>
                 )}
                 {filterChips.map((chip) => (
                   <Button key={chip.id} size="sm" variant="link" onClick={chip.clear}
-                    aria-label={`Togli il filtro ${chip.label}: ${chip.value}`} className="max-w-full">
+                    aria-label={i18n.t('togli_filtro', { label: chip.label, value: chip.value })} className="max-w-full">
                     <span className="truncate">{chip.value}</span> ✕
                   </Button>
                 ))}
@@ -156,11 +157,11 @@ export default function DeckList({ onCreate, onImportFile }: DeckListProps) {
             </div>
             {filtersActive && (
               <p className={cx('mb-2', TEXT_MINI)}>
-                {visibleDecks.length} di {decks.length} mazzi
-                {needsCardData(filters) && loadingCardData && ` · risultati parziali: carico i dati delle carte (${progress.ready}/${progress.total})`}
+                {i18n.t('mazzi_di_totale', { shown: visibleDecks.length, count: decks.length })}
+                {needsCardData(filters) && loadingCardData && ` · ${i18n.t('risultati_parziali', { ready: progress.ready, total: progress.total })}`}
               </p>
             )}
-            {visibleDecks.length === 0 && <p className="text-sm text-zaff-muted">Nessun mazzo con questi filtri.</p>}
+            {visibleDecks.length === 0 && <p className="text-sm text-zaff-muted">{i18n.t('nessun_mazzo_con_questi_filtri')}</p>}
           <ul>
             {visibleDecks.map((d) => (
               <li key={d.id}>
@@ -194,14 +195,14 @@ export default function DeckList({ onCreate, onImportFile }: DeckListProps) {
 
       {filtersOpen && (
         <Modal
-          title="Filtra mazzi"
+          title={i18n.t('filtra_mazzi')}
           onClose={() => setFiltersOpen(false)}
           // "Mostra N mazzi" sempre raggiungibile, anche su schermi bassi.
           footer={(
             <div className="flex gap-2">
-              <Button variant="ghost" onClick={clearAll} disabled={activeCount === 0}>Azzera</Button>
+              <Button variant="ghost" onClick={clearAll} disabled={activeCount === 0}>{i18n.t('azzera')}</Button>
               <Button className="flex-1" onClick={() => setFiltersOpen(false)}>
-                Mostra {visibleDecks.length} {visibleDecks.length === 1 ? 'mazzo' : 'mazzi'}
+                {i18n.t('mostra_mazzi', { count: visibleDecks.length })}
               </Button>
             </div>
           )}
@@ -210,22 +211,22 @@ export default function DeckList({ onCreate, onImportFile }: DeckListProps) {
             <ColorFilter colors={colorFilter} onToggle={toggleColorFilter} onClear={() => setColorFilter(new Set())} />
           </div>
           <TextField
-            label="Nome carta"
-            placeholder="es. Sol Ring"
+            label={i18n.t('nome_carta')}
+            placeholder={i18n.t('es_sol_ring')}
             value={filters.card}
             onChange={(e) => setFilter('card', e.target.value)}
             suggestions={allCardNames(deckCards)}
             autoComplete="off"
           />
           <CheckboxListField
-            legend={filters.keywords.length ? `Parole chiave (${filters.keywords.length} scelte)` : 'Parole chiave'}
-            searchLabel="Cerca parola chiave"
+            legend={filters.keywords.length ? i18n.t('parole_chiave_scelte', { count: filters.keywords.length }) : i18n.t('parole_chiave')}
+            searchLabel={i18n.t('cerca_parola_chiave')}
             values={filters.keywords}
             onChange={setKeywords}
             options={keywordsInDecks(deckCards, getCard).map((k) => ({
-              value: k.keyword, label: k.keyword, hint: `(${k.decks} ${k.decks === 1 ? 'mazzo' : 'mazzi'})`,
+              value: k.keyword, label: k.keyword, hint: `(${i18n.t('mazzi_count', { count: k.decks })})`,
             }))}
-            hint={loadingCardData ? `Carico i dati delle carte (${progress.ready}/${progress.total})…` : 'Le parole chiave delle carte dei vostri mazzi, come su Scryfall.'}
+            hint={loadingCardData ? i18n.t('carico_dati_delle_carte', { ready: progress.ready, total: progress.total }) : i18n.t('parole_chiave_delle_carte_dei')}
             className="mb-2"
           />
           {/* Con più parole chiave si sceglie come combinarle. */}
@@ -234,15 +235,15 @@ export default function DeckList({ onCreate, onImportFile }: DeckListProps) {
               className="mb-4"
               value={filters.keywordMode}
               onChange={(v) => setFilters((prev) => ({ ...prev, keywordMode: v as KeywordMode }))}
-              options={[{ value: 'all', label: 'Tutte' }, { value: 'any', label: 'Almeno una' }]}
+              options={[{ value: 'all', label: i18n.t('tutte') }, { value: 'any', label: i18n.t('almeno_una') }]}
             />
           )}
           <TextField
-            label="Testo della carta"
-            placeholder="es. draw a card"
+            label={i18n.t('testo_della_carta')}
+            placeholder={i18n.t('es_draw_card')}
             value={filters.text}
             onChange={(e) => setFilter('text', e.target.value)}
-            hint="In inglese, come su Scryfall: draw, sacrifice, +1/+1 counter…"
+            hint={i18n.t('in_inglese_come_su_scryfall')}
             autoComplete="off"
           />
         </Modal>
@@ -268,12 +269,12 @@ export default function DeckList({ onCreate, onImportFile }: DeckListProps) {
             setCreateOpen(true);
           }}
         >
-          + Crea Nuovo Mazzo
+          {i18n.t('crea_nuovo_mazzo_piu')}
         </Button>
       </div>
 
       {createOpen && (
-        <Modal level={2} title="Crea Nuovo Mazzo" subtitle="Come vuoi iniziare?" onClose={() => setCreateOpen(false)}>
+        <Modal level={2} title={i18n.t('crea_nuovo_mazzo')} subtitle={i18n.t('come_vuoi_iniziare')} onClose={() => setCreateOpen(false)}>
           <div className="flex flex-col gap-2.5">
             <Button
               size="lg"
@@ -284,7 +285,7 @@ export default function DeckList({ onCreate, onImportFile }: DeckListProps) {
                 onCreate();
               }}
             >
-              ✍️ Inserimento manuale
+              {i18n.t('inserimento_manuale')}
             </Button>
             <Button
               variant="ghost"
@@ -296,7 +297,7 @@ export default function DeckList({ onCreate, onImportFile }: DeckListProps) {
                 fileInputRef.current?.click();
               }}
             >
-              📄 Importa file (ManaBox)
+              {i18n.t('importa_file_manabox')}
             </Button>
             <Button
               variant="ghost"
@@ -309,7 +310,7 @@ export default function DeckList({ onCreate, onImportFile }: DeckListProps) {
                 setPasteOpen(true);
               }}
             >
-              📋 Incolla Elenco da Testo
+              {i18n.t('incolla_elenco_da_testo_icona')}
             </Button>
           </div>
         </Modal>
@@ -318,15 +319,14 @@ export default function DeckList({ onCreate, onImportFile }: DeckListProps) {
       {pasteOpen && (
         <Modal
           level={2}
-          title="Incolla Elenco da Testo"
+          title={i18n.t('incolla_elenco_da_testo')}
           onClose={() => {
             setPasteOpen(false);
             setPasteText('');
           }}
         >
           <p className={cx('mb-2', TEXT_MINI)}>
-            Incolla qui l&apos;elenco copiato da ManaBox, MTG Scanner o app simili: righe come &quot;Deck&quot; o
-            &quot;Sideboard&quot; (anche con un numero dopo) vengono riconosciute e saltate da sole.
+            {i18n.t('incolla_qui_elenco_copiato_da')}
           </p>
           <textarea
             value={pasteText}
@@ -342,7 +342,7 @@ export default function DeckList({ onCreate, onImportFile }: DeckListProps) {
           )}
           <div className="mt-3 grid grid-cols-2 gap-2.5">
             <Button size="lg" onClick={handlePasteImport} disabled={!pasteText.trim()}>
-              Importa
+              {i18n.t('importa')}
             </Button>
             <Button
               size="lg"
@@ -352,7 +352,7 @@ export default function DeckList({ onCreate, onImportFile }: DeckListProps) {
                 setPasteText('');
               }}
             >
-              Annulla
+              {i18n.t('annulla')}
             </Button>
           </div>
         </Modal>

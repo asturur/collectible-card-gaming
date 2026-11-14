@@ -38,7 +38,7 @@ describe('Registro save controls', () => {
     const user = userEvent.setup(); render(<DeckEditor deckId={null} initialDraft={{ name: 'Draft', cards: [{ name: 'Unknown', qty: 1 }] }} onBack={() => {}} onSaved={() => {}} />);
     await user.click(screen.getByRole('button', { name: 'Salva Mazzo' }));
     expect(screen.getByLabelText('Nome mazzo')).toHaveValue('Draft');
-    await user.click(await screen.findByRole('button', { name: /Salva solo per il registro/ }));
+    await user.click(await screen.findByRole('button', { name: /Salva solo per MTG Tracker/ }));
     expect(saveSavedDeck).toHaveBeenLastCalledWith(expect.objectContaining({ name: 'Draft' }), expect.objectContaining({ allowUnresolved: true }));
   });
   it('confirms overwrite using the fresh revision and rejects a second conflict', async () => {

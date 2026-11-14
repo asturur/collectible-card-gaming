@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import i18n from '../../i18n';
 import { createPortal } from 'react-dom';
 import { getCard, getToken, type ScryToken } from '../../services/scryfall';
 import { useDeckImages, useTokenImages } from './useDeckImages';
@@ -37,7 +38,7 @@ function fmt(n: number): string {
 /** Torta con legenda (colore, nome, percentuale e valore). */
 function PieChart({ slices, idSuffix, unit }: { slices: Slice[]; idSuffix: string; unit: string }) {
   const total = slices.reduce((s, x) => s + x.value, 0);
-  if (total === 0) return <p className={TEXT_MINI}>Nessun dato.</p>;
+  if (total === 0) return <p className={TEXT_MINI}>{i18n.t('nessun_dato')}</p>;
   let angle = 0;
   const paths = slices.map((s) => {
     const share = (s.value / total) * 360;
@@ -109,11 +110,11 @@ export default function DeckStatsContents({ cards, faqLinks = false }: { cards: 
   return (
     <>
       <p className={cx('mb-3', TEXT_MINI)}>
-        Solo Main Deck · {stats.total} carte
-        {stats.unknown > 0 && ` (${stats.unknown} non ancora riconosciute da Scryfall: non sono contate)`}
+        {i18n.t('solo_main_deck_carte', { count: stats.total })}
+        {stats.unknown > 0 && ` ${i18n.t('non_ancora_riconosciute_scryfall', { count: stats.unknown })}`}
       </p>
 
-      <ChartTitle note="Terre escluse. Le carte multicolore hanno il segmento oro.">Valore di mana</ChartTitle>
+      <ChartTitle note={i18n.t('terre_escluse_carte_multicolore_hanno')}>{i18n.t('valore_di_mana')}</ChartTitle>
       <div className="flex items-end justify-between gap-1.5" style={{ height: CURVE_HEIGHT + 22 }}>
         {stats.curve.map((b) => (
           <div key={b.value} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end">
@@ -155,11 +156,11 @@ export default function DeckStatsContents({ cards, faqLinks = false }: { cards: 
       <ChartTitle
         note={
           countColorless
-            ? 'Simboli colorati nei costi (GG = 2 verde; {W/U} = ½ + ½) più il mana incolore/generico ({1}, {2}…).'
-            : 'Simboli colorati nei costi (GG = 2 verde; {W/U} = ½ + ½). Il mana generico non conta.'
+            ? i18n.t('nota_costi_con_incolore')
+            : i18n.t('nota_costi_senza_incolore')
         }
       >
-        Costi di mana
+        {i18n.t('costi_di_mana')}
       </ChartTitle>
       {faqLinks && <HowItWorks to={paths.faqTopic('deck', 'cost')} />}
       <PieChart slices={costSlices} idSuffix="deckstats-cost" unit="simboli" />
@@ -170,7 +171,7 @@ export default function DeckStatsContents({ cards, faqLinks = false }: { cards: 
         onClick={() => setCountColorless((v) => !v)}
         className="mt-3 flex min-h-11 w-full items-center justify-between gap-3 rounded-lg border border-zaff-border px-3 text-left text-sm text-zaff-text transition active:scale-[0.99]"
       >
-        <span>Conta il mana incolore</span>
+        <span>{i18n.t('conta_mana_incolore')}</span>
         <span
           className={cx(
             'relative h-6 w-11 shrink-0 rounded-full transition-colors',
@@ -186,20 +187,20 @@ export default function DeckStatsContents({ cards, faqLinks = false }: { cards: 
         </span>
       </button>
 
-      <ChartTitle note="Come in ManaBox: ogni fonte conta per ogni colore che può fare (terra doppia = 1 + 1), con il mana che aggiunge (Sol Ring = 2 incolore). Le fonti di qualsiasi colore contano solo i colori del mazzo.">
-        Produzione di mana
+      <ChartTitle note={i18n.t('nota_produzione_mana')}>
+        {i18n.t('produzione_di_mana')}
       </ChartTitle>
       {faqLinks && <HowItWorks to={paths.faqTopic('deck', 'production')} />}
       <PieChart slices={stats.productionPie} idSuffix="deckstats-prod" unit="mana" />
 
-      <ChartTitle>Tipi di carte</ChartTitle>
+      <ChartTitle>{i18n.t('tipi_di_carte')}</ChartTitle>
       <PieChart slices={stats.typePie} idSuffix="deckstats-types" unit="carte" />
 
       {stats.subtypes.map((chart) => {
         const max = Math.max(1, ...chart.rows.map((r) => r.n));
         return (
           <div key={chart.title}>
-            <ChartTitle>{`Sottotipi · ${chart.title}`}</ChartTitle>
+            <ChartTitle>{`${i18n.t('sottotipi')} · ${chart.title}`}</ChartTitle>
             <div className="flex flex-col gap-2">
               {chart.rows.map((r) => (
                 <div key={r.name} className="flex items-center gap-2 text-sm">
@@ -221,7 +222,7 @@ export default function DeckStatsContents({ cards, faqLinks = false }: { cards: 
 
       {(tokens.groups.length > 0 || tokens.pending > 0) && (
         <>
-          <ChartTitle note="Token che le carte del Main Deck possono creare. Tocca l'immagine per vedere tutto il token.">
+          <ChartTitle note={i18n.t('token_che_carte_del_main')}>
             Token
           </ChartTitle>
           <div className="flex flex-col gap-3">
@@ -230,7 +231,7 @@ export default function DeckStatsContents({ cards, faqLinks = false }: { cards: 
                 <button
                   type="button"
                   onClick={() => setOpenToken(g.token)}
-                  aria-label={`Mostra il token ${g.label}`}
+                  aria-label={i18n.t('mostra_token', { name: g.label })}
                   className="shrink-0"
                 >
                   <img
@@ -302,7 +303,7 @@ export function DeckStatsLink({ to }: { to: string }) {
   return (
     <ButtonRouteLink to={to} size="lg" fullWidth>
       <HistogramIcon />
-      Statistiche del mazzo
+      {i18n.t('statistiche_del_mazzo')}
     </ButtonRouteLink>
   );
 }
@@ -312,13 +313,13 @@ export function DeckStatsButton({ cards, deckName }: { cards: DeckStatsItem[]; d
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Button size="lg" fullWidth onClick={() => setOpen(true)} aria-label="Statistiche del mazzo">
+      <Button size="lg" fullWidth onClick={() => setOpen(true)} aria-label={i18n.t('statistiche_del_mazzo')}>
         <HistogramIcon />
-        Statistiche del mazzo
+        {i18n.t('statistiche_del_mazzo')}
       </Button>
       {open &&
         createPortal(
-          <Modal level={2} title="Statistiche mazzo" subtitle={deckName} onClose={() => setOpen(false)}>
+          <Modal level={2} title={i18n.t('statistiche_del_mazzo')} subtitle={deckName} onClose={() => setOpen(false)}>
             <DeckStatsContents cards={cards} />
           </Modal>,
           document.body
@@ -331,16 +332,16 @@ export function DeckStatsButton({ cards, deckName }: { cards: DeckStatsItem[]; d
 function DeckValueSection({ value, loading, failed }: ReturnType<typeof useDeckValue>) {
   const box = 'rounded-lg border border-zaff-border bg-zaff-bg px-3 py-2.5';
   const note = value.oldest !== null
-    ? `Prezzi Scryfall del ${formatPriceDate(value.oldest)} · stampa scelta, non foil.`
-    : 'Prezzi Scryfall · stampa scelta, non foil.';
+    ? i18n.t('prezzi_scryfall_del', { date: formatPriceDate(value.oldest) })
+    : i18n.t('prezzi_scryfall_stampa_scelta');
   return (
     <>
-      <ChartTitle note={note}>Valore del mazzo</ChartTitle>
+      <ChartTitle note={note}>{i18n.t('valore_del_mazzo')}</ChartTitle>
       {loading ? (
-        <p className={TEXT_MINI}>Carico i prezzi…</p>
+        <p className={TEXT_MINI}>{i18n.t('carico_prezzi')}</p>
       ) : value.oldest === null ? (
         <p className={TEXT_MINI}>
-          {failed ? 'Non riesco a leggere i prezzi da Scryfall: riprova più tardi.' : 'Nessun prezzo disponibile per queste carte.'}
+          {failed ? i18n.t('non_riesco_leggere_prezzi_da') : i18n.t('nessun_prezzo_disponibile_per_queste')}
         </p>
       ) : (
         <>
@@ -363,7 +364,7 @@ function DeckValueSection({ value, loading, failed }: ReturnType<typeof useDeckV
           </div>
           {value.top.length > 0 && (
             <>
-              <p className="mb-2 text-xs font-semibold text-zaff-text">Le carte che valgono di più nel mazzo</p>
+              <p className="mb-2 text-xs font-semibold text-zaff-text">{i18n.t('carte_che_valgono_di_piu')}</p>
               <ul>
                 {value.top.map((c) => {
                   const image = getCard(c.name, c.scryfallId)?.faces[0]?.small;
@@ -387,7 +388,7 @@ function DeckValueSection({ value, loading, failed }: ReturnType<typeof useDeckV
           )}
           {value.unpriced > 0 && (
             <p className={cx('mt-1', TEXT_MINI)}>
-              {value.unpriced === 1 ? '1 carta senza prezzo non è contata.' : `${value.unpriced} carte senza prezzo non sono contate.`}
+              {i18n.t('carte_senza_prezzo_non_contate', { count: value.unpriced })}
             </p>
           )}
           {failed && <p className={cx('mt-1', TEXT_MINI)}>Alcuni prezzi non sono arrivati da Scryfall: il totale è parziale.</p>}
