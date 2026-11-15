@@ -1,55 +1,17 @@
-import type { ReactNode } from 'react';
 import { MIN_GAMES, SIGNATURE_MIN_GAMES, SIGNATURE_MIN_SHARE, TOP } from './cardStatsMath';
 import { SHOWN as HOME_SHOWN } from './HomeOverview';
 import { SHOWN_MONTHS } from './trends';
-import { cx, SURFACE } from '../ui/styles';
+import { Block, Bullets, Example, Formula, Steps, type FaqSection, type FaqTopic } from './faqParts';
 
-/** Un argomento della FAQ: una statistica, spiegata. */
-export interface FaqTopic {
-  id: string;
-  label: string;
-  body: ReactNode;
-}
-
-/** Una sezione della FAQ, come le voci del menu Statistiche. */
-export interface FaqSection {
-  id: string;
-  label: string;
-  topics: FaqTopic[];
-}
+export type { FaqSection, FaqTopic } from './faqParts';
 
 /*
+ * FAQ in italiano. La copia inglese è faqContent.en.tsx: stesse sezioni, stessi argomenti
+ * (id), stesse costanti. Se cambia un testo qui, va cambiato anche là (un test lo controlla).
  * I testi descrivono i calcoli di stats.ts, cardStatsMath.ts, trends.ts e delle
  * pagine statistiche: se cambia un calcolo, va cambiato anche qui. Le soglie
  * vengono dalle stesse costanti del codice, così restano sempre giuste.
  */
-
-/* Mattoncini del testo: tutti gli argomenti seguono lo stesso schema. */
-
-function Block({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section className="mb-5">
-      <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-zaff-muted">{title}</h3>
-      <div className="space-y-2.5 text-[15px] leading-relaxed text-zaff-text">{children}</div>
-    </section>
-  );
-}
-
-function Formula({ children }: { children: ReactNode }) {
-  return <p className={cx(SURFACE, 'px-3 py-2.5 text-center font-semibold')}>{children}</p>;
-}
-
-function Example({ children }: { children: ReactNode }) {
-  return <div className={cx(SURFACE, 'space-y-2 border-l-4 border-l-zaff-primary px-3 py-2.5')}>{children}</div>;
-}
-
-function Steps({ children }: { children: ReactNode }) {
-  return <ol className="list-decimal space-y-1.5 pl-5">{children}</ol>;
-}
-
-function Bullets({ children }: { children: ReactNode }) {
-  return <ul className="list-disc space-y-1.5 pl-5">{children}</ul>;
-}
 
 const GREEN = <b className="text-success">verde</b>;
 const RED = <b className="text-error">rossa</b>;

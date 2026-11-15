@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { currentLocale } from '../../i18n';
 import i18n from '../../i18n';
 import { toCanvas } from 'html-to-image';
 import { APP_NAME } from '../../appName';
@@ -21,7 +22,7 @@ export function JpgBadge() {
 }
 
 export function todayLabel(): string {
-  return new Date().toLocaleDateString(i18n.language, { day: 'numeric', month: 'long', year: 'numeric' });
+  return new Date().toLocaleDateString(currentLocale(), { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
 export function todayIso(): string {

@@ -217,8 +217,10 @@ words or context to make the keys different. Do not nest keys.
 
 The locale is selected by the `/it/` or `/en/` route prefix; unprefixed routes
 redirect to Italian (no remembered preference yet: adding one later only changes that redirect). `router.ts` supplies the locale-aware base and share links.
-Italian is the fallback language. Only strings added to the locale files are
-translated so far.
+Italian is the fallback language. The whole app is translated (November 2026): every new
+user-visible text goes into both locale files. Dates and numbers use `currentLocale()` from
+`i18n.ts` (it-IT, or en-GB: day/month/year); labels kept in module constants use
+`translatedLabels`/`withTranslatedLabel` so they follow the language chosen at startup.
 
 ##### How to gather translations
 
@@ -265,7 +267,8 @@ elements, and leave user-provided data as data.
   text: Italian users see Italian, English users see English. Derive the key from the
   Italian translation, as for any other text.
 - **The FAQ is translated as a separate English copy** of `mtglog/faqContent.tsx`
-  (same sections, topic ids and code constants), not as keys: its long texts with
+  (`faqContent.en.tsx`, shared building blocks in `faqParts.tsx`; same sections, topic ids
+  and code constants, checked by a test), not as keys: its long texts with
   formulas and markup are easier to translate and to keep aligned as a whole. A change
   to an FAQ text updates both copies.
 - The list also covers logic and service files (labels, assembled sentences, error
@@ -445,7 +448,7 @@ Registro and ZAFF implementations. Some legacy controls still bypass it.
 | `FilterTabs`, `NumberStepper` | Group/source filters, −/+ numeric input |
 | `ChipRow` | Layout shared by `FilterTabs`/`NavTabs`: up to 4 options that fit → equal-width selector; otherwise one horizontally scrolling row (edge fade, active option kept in view, pans only sideways: `touch-pan-x`, no vertical scroll). No wrapping rows of chips. |
 | `NavTabs` | Rows of sub-page router links with the `FilterTabs` look (`aria-current`, history replace), e.g. FAQ sections |
-| `LanguageSwitch` | "IT · EN" language links (same page under `/it/` or `/en/`, `router.localeHref`); in the ZAFF join panel corner (`CenteredPanel corner`). MTG Tracker gets it (Account page) only when its translation is complete |
+| `LanguageSwitch` | "IT · EN" language links (same page under `/it/` or `/en/`, `router.localeHref`); in the ZAFF join panel corner (`CenteredPanel corner`) and on the MTG Tracker Account page |
 | `Tile` | `GridTile` and the existing navigation illustrations |
 | `styles.ts` | `PANEL`, `FIELD_*`, `HEADING_*`, `TEXT_*`, `cx()` |
 

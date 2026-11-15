@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { currentLocale } from '../../i18n';
 import i18n from '../../i18n';
 import { useTranslation } from 'react-i18next';
 import Button from '../ui/Button';
@@ -1152,7 +1153,7 @@ export default function LifeCounter({ players, startLife, resume, onEdit, onFini
                 {[...history].reverse().map((e) => (
                   <li key={e.id} className="text-sm text-zaff-text">
                     <span className="text-zaff-muted">
-                      {new Date(e.t).toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                      {new Date(e.t).toLocaleTimeString(currentLocale(), { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                     </span>{' '}
                     <b>{e.name}</b> · {historyLabel(e)}
                   </li>

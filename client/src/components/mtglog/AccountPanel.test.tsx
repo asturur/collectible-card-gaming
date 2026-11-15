@@ -1,6 +1,7 @@
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { MemoryRouter } from 'react-router';
 import AccountPanel from './AccountPanel';
 import i18n from '../../i18n';
 import type { Game } from './GameList';
@@ -22,7 +23,7 @@ const game = (createdBy: string) => ({ id: createdBy + Math.random(), createdBy 
 
 async function openDialog() {
   const user = userEvent.setup();
-  render(<AccountPanel userId="me" email="io@example.com" games={[game('me'), game('me'), game('me'), game('other')]} />);
+  render(<MemoryRouter initialEntries={['/account']}><AccountPanel userId="me" email="io@example.com" games={[game('me'), game('me'), game('me'), game('other')]} /></MemoryRouter>);
   await user.click(screen.getByRole('button', { name: 'Elimina account…' }));
   return user;
 }
@@ -68,7 +69,7 @@ describe('AccountPanel', () => {
     await act(async () => { await i18n.changeLanguage('en'); });
     try {
       const user = userEvent.setup();
-      render(<AccountPanel userId="me" email="io@example.com" games={[game('me')]} />);
+      render(<MemoryRouter initialEntries={['/account']}><AccountPanel userId="me" email="io@example.com" games={[game('me')]} /></MemoryRouter>);
       await user.click(screen.getByRole('button', { name: 'Delete account…' }));
       expect(screen.getByText(/\(1 game\)/)).toBeInTheDocument();
       await user.type(screen.getByLabelText('To confirm, type DELETE'), 'delete');
@@ -76,5 +77,10 @@ describe('AccountPanel', () => {
     } finally {
       await act(async () => { await i18n.changeLanguage('it'); });
     }
+  });
+
+  it('lets you switch language from the account page', () => {
+    render(<MemoryRouter initialEntries={['/account']}><AccountPanel userId="me" email="io@example.com" games={[]} /></MemoryRouter>);
+    expect(screen.getByRole('link', { name: 'English' })).toHaveAttribute('href', expect.stringMatching(/\/en\/account$/));
   });
 });

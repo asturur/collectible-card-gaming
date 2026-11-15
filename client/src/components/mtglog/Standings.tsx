@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import i18n from '../../i18n';
+import i18n, { currentLocale } from '../../i18n';
 import { Link } from 'react-router';
 import { paths } from '../../router';
 import type { Game } from './GameList';
@@ -95,7 +95,7 @@ function PlayerRows({
     <ul className={tight ? '' : 'mt-4'}>
       {/* Più partite giocate in alto; a parità, % di vittorie più alta. */}
       {[...rows]
-        .sort((a, b) => b.g - a.g || (b.g ? b.w / b.g : 0) - (a.g ? a.w / a.g : 0) || a.name.localeCompare(b.name, i18n.language))
+        .sort((a, b) => b.g - a.g || (b.g ? b.w / b.g : 0) - (a.g ? a.w / a.g : 0) || a.name.localeCompare(b.name, currentLocale()))
         .map((t) => {
         const pct = t.g ? (t.w / t.g) * 100 : 0;
         const content = (
