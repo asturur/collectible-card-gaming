@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import i18n from '../../i18n';
 import { useSectionInView } from './useSectionInView';
 import { APP_NAME } from '../../appName';
 import { Navigate, useLocation, useNavigate, useParams, type RouteObject } from 'react-router';
@@ -31,8 +32,9 @@ import { matchupNamesFromPath, paths, playerNameFromPath } from '../../router';
 import Faq from './Faq';
 import AccountPanel from './AccountPanel';
 
-const DECKS_CRUMB = { label: 'Mazzi', to: paths.decks };
-const GAMES_CRUMB = { label: 'Partite', to: paths.games };
+/** Briciole di pane: il testo si traduce quando la pagina si mostra. */
+const DECKS_CRUMB = () => ({ label: i18n.t('mazzi'), to: paths.decks });
+const GAMES_CRUMB = () => ({ label: i18n.t('partite'), to: paths.games });
 
 /** All game statistics use the already mounted Registro query and subscription. */
 /** Le partite delle statistiche: solo quelle con un vincitore segnato (vedi `decidedGames`). */
@@ -43,7 +45,7 @@ function useStatsGames() {
 
 function GameStatisticsData({ children }: { children: ReactNode }) {
   const { gamesLoading, gamesError } = useRegistro();
-  if (gamesLoading) return <p className={TEXT_MUTED}>Caricamento…</p>;
+  if (gamesLoading) return <p className={TEXT_MUTED}>{i18n.t('caricamento')}</p>;
   if (gamesError) return <p role="alert">{gamesError}</p>;
   return children;
 }
@@ -74,7 +76,7 @@ function GamesPage() {
   const { gameId } = useParams();
   const navigate = useNavigate();
   return (
-    <SectionPage title={gameId ? 'Dettaglio Partita' : 'Partite Salvate'} stickyTitle wide xl={Boolean(gameId)} ancestors={gameId ? [GAMES_CRUMB] : []}>
+    <SectionPage title={gameId ? i18n.t('dettaglio_partita') : i18n.t('partite_salvate')} stickyTitle wide xl={Boolean(gameId)} ancestors={gameId ? [GAMES_CRUMB()] : []}>
       <GameList userId={userId} games={games} loading={gamesLoading} loadError={gamesError} reloadGames={reloadGames} onEdit={(game) => { void navigate(paths.editGame(game.id)); }} onRematch={(game) => { void navigate(paths.rematch(game.id)); }} />
     </SectionPage>
   );
@@ -113,13 +115,13 @@ function GameEditorSession({ gameId, rematch }: { gameId?: string; rematch: bool
   }, [game, candidate, forbidden, gamesError]);
   const ready = !gameId || Boolean(game);
   const waiting = gameId && !game && (gamesLoading || (candidate && !forbidden && !gamesError) || (!candidate && !fetchDone && !gamesError && Boolean(supabase)));
-  const guard = useLeaveGuard(ready ? 'Uscire dalla partita? Quello che non hai salvato andrà perso.' : undefined);
+  const guard = useLeaveGuard(ready ? i18n.t('uscire_dalla_partita') : undefined);
   const backTo = gameId ? paths.game(gameId) : paths.games;
   return (
-    <SectionPage title={rematch ? 'Rivincita' : gameId ? 'Modifica Partita' : 'Nuova Partita'} wide stickyTitle ancestors={[
-      GAMES_CRUMB, ...(gameId ? [{ label: 'Dettaglio Partita', to: paths.game(gameId) }] : []),
+    <SectionPage title={rematch ? i18n.t('rivincita') : gameId ? i18n.t('modifica_partita') : i18n.t('nuova_partita')} wide stickyTitle ancestors={[
+      GAMES_CRUMB(), ...(gameId ? [{ label: i18n.t('dettaglio_partita'), to: paths.game(gameId) }] : []),
     ]}>
-      {waiting ? <p className={TEXT_MUTED}>Caricamento…</p> : !ready ? <p role="alert">{gamesError || (forbidden ? 'Puoi modificare solo le partite che hai salvato.' : 'Partita non trovata.')}</p> : (
+      {waiting ? <p className={TEXT_MUTED}>{i18n.t('caricamento')}</p> : !ready ? <p role="alert">{gamesError || (forbidden ? i18n.t('puoi_modificare_solo_partite') : i18n.t('partita_non_trovata'))}</p> : (
         <GameForm
           key={gameId ?? 'new'}
           editingGame={rematch ? null : game}
@@ -140,7 +142,7 @@ function GameEditorSession({ gameId, rematch }: { gameId?: string; rematch: bool
 function DecksPage() {
   const navigate = useNavigate();
   return (
-    <SectionPage title="Mazzi Salvati" stickyTitle>
+    <SectionPage title={i18n.t('mazzi_salvati_titolo')} stickyTitle>
       <DeckList
         onCreate={() => { void navigate(paths.newDeck); }}
         onImportFile={(name, cards) => { void navigate(paths.newDeck, { state: { draft: { name, cards } } }); }}
@@ -179,7 +181,7 @@ function DeckPageFrame({ deckId, deck, active, children }: { deckId: string; dec
     setShareNotice('');
     if (navigator.share) {
       try {
-        await navigator.share({ title: deck.name, text: 'Mazzo di Magic: ' + deck.name, url });
+        await navigator.share({ title: deck.name, text: i18n.t('mazzo_di_magic', { name: deck.name }), url });
         return;
       } catch {
         // Annullato dall'utente o non disponibile: si prova a copiarlo.
@@ -187,7 +189,7 @@ function DeckPageFrame({ deckId, deck, active, children }: { deckId: string; dec
     }
     try {
       await navigator.clipboard.writeText(url);
-      setShareNotice('Link copiato negli appunti.');
+      setShareNotice(i18n.t('link_copiato_negli_appunti'));
     } catch {
       setShareNotice(url);
     }
@@ -195,7 +197,7 @@ function DeckPageFrame({ deckId, deck, active, children }: { deckId: string; dec
 
   async function handleDelete() {
     if (!deck || deleting || !canEdit(deck.createdBy, userId)) return;
-    if (!window.confirm('Cancellare questo mazzo? Le partite che lo usano già continueranno a mostrarne solo il nome.')) return;
+    if (!window.confirm(i18n.t('cancellare_questo_mazzo'))) return;
     setDeleteError('');
     setDeleting(true);
     guard.onPersistingChange(true);
@@ -203,7 +205,7 @@ function DeckPageFrame({ deckId, deck, active, children }: { deckId: string; dec
       await deleteSavedDeck(deckId);
       guard.onSaved(paths.decks);
     } catch (err) {
-      setDeleteError('Cancellazione mazzo non riuscita: ' + (err as Error).message);
+      setDeleteError(i18n.t('cancellazione_mazzo_non_riuscita', { error: (err as Error).message }));
     } finally {
       setDeleting(false);
       guard.onPersistingChange(false);
@@ -249,7 +251,7 @@ function DeckPageFrame({ deckId, deck, active, children }: { deckId: string; dec
 function DeckDetailSession({ deckId, active }: { deckId: string; active: 'deck' | 'stats' }) {
   const { deck, loading, error } = useSavedDeck(deckId);
   return (
-    <SectionPage title={deck?.name ?? 'Dettaglio Mazzo'} stickyTitle ancestors={[DECKS_CRUMB]}>
+    <SectionPage title={deck?.name ?? i18n.t('dettaglio_mazzo')} stickyTitle ancestors={[DECKS_CRUMB()]}>
       <DeckPageFrame deckId={deckId} deck={deck} active={active}>
         {loading ? <p className={TEXT_MUTED}>Caricamento…</p> : deck && (active === 'stats'
           ? <DeckStatsContents key={deckId} cards={deck.cards} faqLinks />
@@ -270,13 +272,13 @@ function DeckEditorSession({ deckId }: { deckId?: string }) {
   const { userId } = useRegistro();
   const location = useLocation();
   const navigate = useNavigate();
-  const [deckName, setDeckName] = useState('Dettaglio Mazzo');
+  const [deckName, setDeckName] = useState(i18n.t('dettaglio_mazzo'));
   const guard = useLeaveGuard();
   const backTo = deckId ? paths.deck(deckId) : paths.decks;
   const state = location.state as { draft?: { name: string; cards: DeckEntry[] } } | null;
   return (
-    <SectionPage title={deckId ? 'Modifica Mazzo' : 'Nuovo Mazzo'} ancestors={[
-      DECKS_CRUMB, ...(deckId ? [{ label: deckName, to: paths.deck(deckId) }] : []),
+    <SectionPage title={deckId ? i18n.t('modifica_mazzo') : i18n.t('nuovo_mazzo_titolo')} ancestors={[
+      DECKS_CRUMB(), ...(deckId ? [{ label: deckName, to: paths.deck(deckId) }] : []),
     ]}>
       <DeckEditor
         deckId={deckId ?? null}
@@ -294,7 +296,7 @@ function DeckEditorSession({ deckId }: { deckId?: string }) {
 function PlayerStatsPage() {
   const games = useStatsGames();
   return (
-    <SectionPage title="Statistiche Giocatori" stickyTitle wide>
+    <SectionPage title={i18n.t('statistiche_giocatori')} stickyTitle wide>
       <GameStatisticsData><Standings rows={computeTally(games)} showPie /></GameStatisticsData>
     </SectionPage>
   );
@@ -307,12 +309,12 @@ function PlayerDetailPage() {
   const playerName = playerNameFromPath(pathname);
   const row = computeTally(games).find(player => player.name === playerName);
   return (
-    <SectionPage title={playerName ?? 'Statistiche Giocatore'} subtitle="Statistiche Giocatore" ancestors={[
-      { label: 'Giocatori', to: paths.playerStats },
+    <SectionPage title={playerName ?? i18n.t('statistiche_giocatore')} subtitle={i18n.t('statistiche_giocatore')} ancestors={[
+      { label: i18n.t('giocatori'), to: paths.playerStats },
     ]}>
       <GameStatisticsData>
         {row ? <PlayerStatsDetail key={row.name} row={row} games={games} decks={decks} />
-          : <p role="alert">Nessuna partita con vincitore registrata per questo giocatore.</p>}
+          : <p role="alert">{i18n.t('nessuna_partita_con_vincitore_giocatore')}</p>}
       </GameStatisticsData>
     </SectionPage>
   );
@@ -320,18 +322,18 @@ function PlayerDetailPage() {
 
 function CardStatsPage() {
   const games = useStatsGames();
-  return <SectionPage title="Statistiche Carte" stickyTitle wide><GameStatisticsData><CardStats games={games} /></GameStatisticsData></SectionPage>;
+  return <SectionPage title={i18n.t('statistiche_carte')} stickyTitle wide><GameStatisticsData><CardStats games={games} /></GameStatisticsData></SectionPage>;
 }
 
 function TrendsPage() {
   const { decks } = useRegistro();
   const games = useStatsGames();
-  return <SectionPage title="Andamento" stickyTitle wide><GameStatisticsData><TrendsStats games={games} decks={decks} /></GameStatisticsData></SectionPage>;
+  return <SectionPage title={i18n.t('andamento')} stickyTitle wide><GameStatisticsData><TrendsStats games={games} decks={decks} /></GameStatisticsData></SectionPage>;
 }
 
 function MatchupsPage() {
   const games = useStatsGames();
-  return <SectionPage title="Statistiche per Sfida" stickyTitle wide><GameStatisticsData><MatchupStats games={games} /></GameStatisticsData></SectionPage>;
+  return <SectionPage title={i18n.t('statistiche_per_sfida')} stickyTitle wide><GameStatisticsData><MatchupStats games={games} /></GameStatisticsData></SectionPage>;
 }
 
 function MatchupDetailPage() {
@@ -340,12 +342,12 @@ function MatchupDetailPage() {
   const names = matchupNamesFromPath(pathname);
   const selected = names ? computeMatchups(games).find(matchup => matchup.key === matchupKey(names)) : undefined;
   return (
-    <SectionPage title={selected?.label ?? names?.join(' vs ') ?? 'Dettaglio Sfida'} subtitle="Statistiche per Sfida" ancestors={[
-      { label: 'Sfide', to: paths.matchups },
+    <SectionPage title={selected?.label ?? names?.join(' vs ') ?? i18n.t('dettaglio_sfida')} subtitle={i18n.t('statistiche_per_sfida')} ancestors={[
+      { label: i18n.t('sfide'), to: paths.matchups },
     ]}>
       <GameStatisticsData>
         {selected ? <MatchupStatsDetail key={selected.key} selected={selected} />
-          : <p role="alert">{names ? 'Nessuna partita con vincitore registrata con questa formazione.' : 'Indirizzo della sfida non valido.'}</p>}
+          : <p role="alert">{names ? i18n.t('nessuna_partita_con_vincitore_formazione') : i18n.t('indirizzo_sfida_non_valido')}</p>}
       </GameStatisticsData>
     </SectionPage>
   );
@@ -354,7 +356,7 @@ function MatchupDetailPage() {
 function PlayersPage() {
   const { userId, games } = useRegistro();
   return (
-    <SectionPage title="Giocatori" stickyTitle subtitle="Tocca un nome per vedere le partite giocate e le statistiche, o per rinominarlo o cancellarlo. Rinominando, il nome cambia anche nelle partite già salvate; cancellando, le partite già salvate mantengono il suo nome.">
+    <SectionPage title={i18n.t('giocatori')} stickyTitle subtitle={i18n.t('tocca_un_nome_per_vedere')}>
       <PlayersRoster userId={userId} games={games} />
     </SectionPage>
   );
@@ -363,7 +365,7 @@ function PlayersPage() {
 function FaqPage() {
   const { section, topic } = useParams();
   return (
-    <SectionPage title="FAQ Statistiche" subtitle="Come si calcola ogni statistica del registro." stickyTitle>
+    <SectionPage title={i18n.t('faq_statistiche')} subtitle={i18n.t('come_si_calcola_ogni_statistica')} stickyTitle>
       <Faq sectionId={section} topicId={topic} />
     </SectionPage>
   );
@@ -379,7 +381,7 @@ function AccountPage() {
 }
 
 function NotFoundPage() {
-  return <SectionPage title="Pagina non trovata"><p className={TEXT_MUTED}>Questo indirizzo non corrisponde a una sezione del registro.</p></SectionPage>;
+  return <SectionPage title={i18n.t('pagina_non_trovata')}><p className={TEXT_MUTED}>{i18n.t('indirizzo_non_corrisponde_sezione')}</p></SectionPage>;
 }
 
 export const registroRoutes: RouteObject[] = [

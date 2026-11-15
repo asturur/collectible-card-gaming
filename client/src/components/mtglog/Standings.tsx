@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import i18n from '../../i18n';
 import { Link } from 'react-router';
 import { paths } from '../../router';
 import type { Game } from './GameList';
@@ -59,7 +60,7 @@ function GroupPieSection({ rows, idSuffix }: { rows: TallyRow[]; idSuffix: strin
   return (
     <div>
       <p className="mb-2 text-xs text-zaff-muted">
-        Come si dividono tutte le {totalWins} vittorie registrate, tra i giocatori:
+        {i18n.t('come_si_dividono_tutte_vittorie', { count: totalWins })}
       </p>
       <div className="flex flex-wrap items-center gap-5">
         <GlossyPie slices={slices} idSuffix={idSuffix} />
@@ -70,7 +71,7 @@ function GroupPieSection({ rows, idSuffix }: { rows: TallyRow[]; idSuffix: strin
                 className="mr-1.5 inline-block h-[11px] w-[11px] rounded-full align-[-1px]"
                 style={{ background: s.color }}
               />
-              {s.name} — {Math.round((s.w / totalWins) * 100)}% delle vittorie totali ({s.w} di {totalWins})
+              {s.name} — {i18n.t('perc_vittorie_totali', { pct: Math.round((s.w / totalWins) * 100), w: s.w, total: totalWins })}
             </div>
           ))}
         </div>
@@ -94,7 +95,7 @@ function PlayerRows({
     <ul className={tight ? '' : 'mt-4'}>
       {/* Più partite giocate in alto; a parità, % di vittorie più alta. */}
       {[...rows]
-        .sort((a, b) => b.g - a.g || (b.g ? b.w / b.g : 0) - (a.g ? a.w / a.g : 0) || a.name.localeCompare(b.name, 'it'))
+        .sort((a, b) => b.g - a.g || (b.g ? b.w / b.g : 0) - (a.g ? a.w / a.g : 0) || a.name.localeCompare(b.name, i18n.language))
         .map((t) => {
         const pct = t.g ? (t.w / t.g) * 100 : 0;
         const content = (
@@ -135,7 +136,7 @@ function PlayerRows({
 function PlayersStatsCard({ rows, showPie }: { rows: TallyRow[]; showPie: boolean }) {
   return (
     <>
-      <ExportHeader title="Statistiche Giocatori" subtitle={`Aggiornato al ${todayLabel()}`} />
+      <ExportHeader title={i18n.t('statistiche_giocatori')} subtitle={i18n.t('aggiornato_al_maiuscolo', { date: todayLabel() })} />
       {showPie && <GroupPieSection rows={rows} idSuffix="group-export" />}
       <PlayerRows rows={rows} />
     </>
@@ -178,14 +179,14 @@ function PlayerDetail({
         <div className="text-sm text-zaff-muted">
           <p className={HEADING_SECTION}>{pct}%</p>
           <p>
-            {row.g} partite giocate · {row.w} vinte
+            {i18n.t('partite_giocate_count', { count: row.g })} · {i18n.t('vinte_count', { count: row.w })}
           </p>
         </div>
       </div>
 
-      <p className={cx('mb-1.5 mt-5', TEXT_MINI)}>Mazzi usati</p>
+      <p className={cx('mb-1.5 mt-5', TEXT_MINI)}>{i18n.t('mazzi_usati')}</p>
       {deckStats.length === 0 ? (
-        <p className={TEXT_MUTED}>Nessun mazzo indicato nelle sue partite.</p>
+        <p className={TEXT_MUTED}>{i18n.t('nessun_mazzo_indicato_nelle_sue')}</p>
       ) : (
         <div>
           {deckStats.map((d) => (
@@ -193,7 +194,7 @@ function PlayerDetail({
               <div className="flex items-baseline justify-between gap-2.5">
                 <b className="min-w-0 truncate text-[15px] font-semibold text-zaff-text">{d.deck}</b>
                 <span className="shrink-0 whitespace-nowrap text-[13px] text-zaff-muted">
-                  {d.g} partite · {d.w} vinte · {d.pct}%
+                  {i18n.t('partite_count', { count: d.g })} · {i18n.t('vinte_count', { count: d.w })} · {d.pct}%
                 </span>
               </div>
               <div className="mt-1.5 h-[7px] overflow-hidden rounded bg-zaff-bg">
@@ -230,7 +231,7 @@ export function PlayerStatsDetail({
         if (p.name !== row.name) return;
         const found = resolve(p);
         const key = found?.key ?? 'none';
-        const entry = tally.get(key) ?? { deck: found?.name ?? 'Mazzo non indicato', g: 0, w: 0 };
+        const entry = tally.get(key) ?? { deck: found?.name ?? i18n.t('mazzo_non_indicato'), g: 0, w: 0 };
         entry.g++;
         if (p.winner) entry.w++;
         tally.set(key, entry);
@@ -246,21 +247,21 @@ export function PlayerStatsDetail({
       <HowItWorks to={paths.faqTopic('players', 'detail')} />
       <PlayerDetail row={row} deckStats={deckStats} idSuffix="player" />
 
-      <ExportedImage image={exporter.image} error={exporter.error} alt={`Statistiche di ${row.name}, da salvare`} />
+      <ExportedImage image={exporter.image} error={exporter.error} alt={i18n.t('statistiche_di_da_salvare', { name: row.name })} />
       <ShareBar
         exporting={exporter.exporting}
         shareTitle={row.name}
         onExport={() =>
           exporter.exportImage({
-            fileName: `giocatore_${safeFileName(row.name) || 'magic'}_${todayIso()}.jpg`,
+            fileName: `${i18n.t('file_giocatore')}_${safeFileName(row.name) || 'magic'}_${todayIso()}.jpg`,
             shareTitle: row.name,
-            shareText: 'Statistiche di ' + row.name,
+            shareText: i18n.t('statistiche_di', { name: row.name }),
           })
         }
       />
 
       <ExportCardHost cardRef={exporter.cardRef}>
-        <ExportHeader title={row.name} subtitle={`Statistiche Giocatore · aggiornato al ${todayLabel()}`} />
+        <ExportHeader title={row.name} subtitle={`${i18n.t('statistiche_giocatore')} · ${i18n.t('aggiornato_al', { date: todayLabel() })}`} />
         <PlayerDetail row={row} deckStats={deckStats} idSuffix="player-export" />
       </ExportCardHost>
     </>
@@ -282,7 +283,7 @@ export default function Standings({ rows, showPie }: StandingsProps) {
   const shownRows = rows.filter((r) => matchesSearch(r.name, query));
 
   if (rows.length === 0) {
-    return <p className={cx('mt-4', TEXT_MUTED)}>Ancora nessuna partita qui: la classifica compare da qui.</p>;
+    return <p className={cx('mt-4', TEXT_MUTED)}>{i18n.t('ancora_nessuna_partita_classifica')}</p>;
   }
 
   return (
@@ -292,23 +293,23 @@ export default function Standings({ rows, showPie }: StandingsProps) {
 
       {/* La ricerca resta in cima, sotto il titolo, mentre si scorre l'elenco. */}
       <div className={cx(STICKY_BELOW_TITLE, 'sticky z-10 -mx-1 mb-2 mt-4 bg-zaff-surface px-1 pb-1 pt-1')}>
-        <SearchField value={query} onChange={setQuery} placeholder="Cerca giocatore…" label="Cerca nelle statistiche dei giocatori" />
+        <SearchField value={query} onChange={setQuery} placeholder={i18n.t('cerca_giocatore')} label={i18n.t('cerca_nelle_statistiche_dei_giocatori')} />
       </div>
       {shownRows.length === 0 ? (
-        <p className={TEXT_MUTED}>Nessun giocatore corrisponde alla ricerca.</p>
+        <p className={TEXT_MUTED}>{i18n.t('nessun_giocatore_corrisponde_alla_ricerca')}</p>
       ) : (
         <PlayerRows rows={shownRows} interactive tight />
       )}
 
-      <ExportedImage image={exporter.image} error={exporter.error} alt="Statistiche giocatori, da salvare" />
+      <ExportedImage image={exporter.image} error={exporter.error} alt={i18n.t('statistiche_giocatori_da_salvare')} />
       <ShareBar
         exporting={exporter.exporting}
-        shareTitle="Statistiche Giocatori"
+        shareTitle={i18n.t('statistiche_giocatori')}
         onExport={() =>
           exporter.exportImage({
-            fileName: `statistiche_giocatori_${todayIso()}.jpg`,
-            shareTitle: 'Statistiche Giocatori',
-            shareText: 'Statistiche giocatori del registro partite di Magic',
+            fileName: `${i18n.t('file_statistiche_giocatori')}_${todayIso()}.jpg`,
+            shareTitle: i18n.t('statistiche_giocatori'),
+            shareText: i18n.t('statistiche_giocatori_di_mtg_tracker'),
           })
         }
       />

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import i18n from '../../i18n';
 import {
   canEdit,
   MAX_PLAYER_NAME_LENGTH,
@@ -61,7 +62,7 @@ export default function PlayersRoster({ userId, games = [] }: PlayersRosterProps
     if (!supabase) return;
     const { data, error: loadError } = await supabase.from(TABLE_PLAYERS).select('name, created_by').order('name');
     if (loadError) {
-      setError('Non riesco a leggere la rubrica: ' + loadError.message);
+      setError(i18n.t('non_riesco_leggere_rubrica', { error: loadError.message }));
       return;
     }
     setRoster((data ?? []).map((r) => ({ name: r.name, createdBy: r.created_by })));
@@ -79,7 +80,7 @@ export default function PlayersRoster({ userId, games = [] }: PlayersRosterProps
     const name = (forcedName ?? newName).trim();
     if (!name || !supabase) return;
     if (name.length > MAX_PLAYER_NAME_LENGTH) {
-      setError(`Il nome può avere al massimo ${MAX_PLAYER_NAME_LENGTH} caratteri.`);
+      setError(i18n.t('nome_al_massimo_caratteri', { max: MAX_PLAYER_NAME_LENGTH }));
       return;
     }
 
@@ -100,7 +101,7 @@ export default function PlayersRoster({ userId, games = [] }: PlayersRosterProps
 
     const { error: insertError } = await supabase.from(TABLE_PLAYERS).insert({ name });
     if (insertError && insertError.code !== '23505') {
-      setError('Non sono riuscito ad aggiungere il giocatore: ' + insertError.message);
+      setError(i18n.t('non_sono_riuscito_aggiungere_giocatore', { error: insertError.message }));
       return;
     }
     setNewName('');
@@ -110,7 +111,7 @@ export default function PlayersRoster({ userId, games = [] }: PlayersRosterProps
   }
 
   async function renamePlayerEverywhere(oldName: string, newNameValue: string): Promise<string | null> {
-    if (!supabase) return 'Supabase non configurato.';
+    if (!supabase) return i18n.t('supabase_non_configurato');
 
     // Se il nuovo nome coincide (a parte maiuscole/spazi) con uno già in
     // elenco ed è davvero la stessa persona, fondo i due usando la grafia
@@ -160,7 +161,7 @@ export default function PlayersRoster({ userId, games = [] }: PlayersRosterProps
     setRenameConflict(null);
     const renameError = await renamePlayerEverywhere(oldName, newNameValue);
     if (renameError) {
-      setError('Rinomina non riuscita: ' + renameError);
+      setError(i18n.t('rinomina_non_riuscita', { error: renameError }));
       return;
     }
     setSelected(null);
@@ -177,7 +178,7 @@ export default function PlayersRoster({ userId, games = [] }: PlayersRosterProps
     }
     // Un nome salvato prima del limite si può tenere, ma per cambiarlo va accorciato.
     if (trimmed.length > MAX_PLAYER_NAME_LENGTH) {
-      setError(`Il nome può avere al massimo ${MAX_PLAYER_NAME_LENGTH} caratteri.`);
+      setError(i18n.t('nome_al_massimo_caratteri', { max: MAX_PLAYER_NAME_LENGTH }));
       return;
     }
     // Come per "Aggiungi": una somiglianza (non un'identità esatta, impossibile
@@ -192,10 +193,10 @@ export default function PlayersRoster({ userId, games = [] }: PlayersRosterProps
 
   async function handleDelete(name: string) {
     if (!supabase) return;
-    if (!confirm(`Cancellare "${name}" dall'elenco giocatori? Le partite già salvate continueranno a mostrare il suo nome.`)) return;
+    if (!confirm(i18n.t('cancellare_dall_elenco_giocatori', { name }))) return;
     const { error: deleteError } = await supabase.from(TABLE_PLAYERS).delete().eq('name', name);
     if (deleteError) {
-      setError('Cancellazione non riuscita: ' + deleteError.message);
+      setError(i18n.t('cancellazione_non_riuscita', { error: deleteError.message }));
       return;
     }
     setSelected(null);
@@ -220,8 +221,7 @@ export default function PlayersRoster({ userId, games = [] }: PlayersRosterProps
       return (
         <div className="rounded-lg border border-red-400/40 bg-red-400/10 p-2.5 text-sm text-zaff-text">
           <p className="mb-2 text-red-400">
-            Allora scegli un nome diverso da "{conflict.existing}": cambiare solo maiuscole o spazi non basta a
-            distinguerli. Ad esempio:
+            {i18n.t('allora_scegli_un_nome_diverso', { name: conflict.existing })}
           </p>
           <div className="flex flex-wrap gap-2">
             {[s1, s2].map((suggestion) => (
@@ -242,17 +242,17 @@ export default function PlayersRoster({ userId, games = [] }: PlayersRosterProps
     }
     return (
       <div className="rounded-lg border border-amber-400/40 bg-amber-400/10 p-2.5 text-sm text-zaff-text">
-        <p className="mb-2">Esiste già un giocatore chiamato "{conflict.existing}". È la stessa persona?</p>
+        <p className="mb-2">{i18n.t('esiste_gia_un_giocatore_chiamato', { name: conflict.existing })}</p>
         <div className="flex flex-wrap gap-2">
           <Button size="sm" onClick={() => applyRename(conflict.oldName, conflict.typed)}>
-            Sì, è lui/lei
+            {i18n.t('si_lui_lei')}
           </Button>
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setRenameConflict((c) => (c ? { ...c, wantsDifferent: true } : c))}
           >
-            No, è un'altra persona
+            {i18n.t('no_un_altra_persona')}
           </Button>
         </div>
       </div>
@@ -271,7 +271,7 @@ export default function PlayersRoster({ userId, games = [] }: PlayersRosterProps
               setAddConflict(null);
             }}
             onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
-            placeholder="Nome nuovo giocatore"
+            placeholder={i18n.t('nome_nuovo_giocatore')}
             maxLength={MAX_PLAYER_NAME_LENGTH}
             aria-describedby="new-player-name-count"
             className={cx(FIELD_CONTROL_SM, 'w-full')}
@@ -279,7 +279,7 @@ export default function PlayersRoster({ userId, games = [] }: PlayersRosterProps
           <CharCount id="new-player-name-count" value={newName} max={MAX_PLAYER_NAME_LENGTH} />
         </div>
         <Button onClick={() => handleAdd()} className="shrink-0 self-start">
-          Aggiungi
+          {i18n.t('aggiungi')}
         </Button>
       </div>
 
@@ -290,8 +290,7 @@ export default function PlayersRoster({ userId, games = [] }: PlayersRosterProps
             return (
               <div className="mb-4 rounded-lg border border-red-400/40 bg-red-400/10 p-2.5 text-sm text-zaff-text">
                 <p className="mb-2 text-red-400">
-                  Allora scegli un nome diverso da "{addConflict.existing}": cambiare solo maiuscole o spazi non
-                  basta a distinguerli. Ad esempio:
+                  {i18n.t('allora_scegli_un_nome_diverso', { name: addConflict.existing })}
                 </p>
                 <div className="flex flex-wrap gap-2">
                   <Button size="sm" onClick={() => handleAdd(s1)}>
@@ -306,7 +305,7 @@ export default function PlayersRoster({ userId, games = [] }: PlayersRosterProps
           })()
         ) : (
           <div className="mb-4 rounded-lg border border-amber-400/40 bg-amber-400/10 p-2.5 text-sm text-zaff-text">
-            <p className="mb-2">Esiste già un giocatore chiamato "{addConflict.existing}". È la stessa persona?</p>
+            <p className="mb-2">{i18n.t('esiste_gia_un_giocatore_chiamato', { name: addConflict.existing })}</p>
             <div className="flex flex-wrap gap-2">
               <Button
                 size="sm"
@@ -315,23 +314,23 @@ export default function PlayersRoster({ userId, games = [] }: PlayersRosterProps
                   setAddConflict(null);
                 }}
               >
-                Sì, non aggiungere
+                {i18n.t('si_non_aggiungere')}
               </Button>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setAddConflict((c) => (c ? { ...c, wantsDifferent: true } : c))}
               >
-                No, è un'altra persona
+                {i18n.t('no_un_altra_persona')}
               </Button>
             </div>
           </div>
         ))}
 
       {loading ? (
-        <p className="text-zaff-muted">Caricamento…</p>
+        <p className="text-zaff-muted">{i18n.t('caricamento')}</p>
       ) : roster.length === 0 ? (
-        <p className="text-sm text-zaff-muted">Ancora nessun giocatore in elenco.</p>
+        <p className="text-sm text-zaff-muted">{i18n.t('ancora_nessun_giocatore_in_elenco')}</p>
       ) : (
         <ul>
           {roster.map((r) => (
@@ -369,7 +368,7 @@ export default function PlayersRoster({ userId, games = [] }: PlayersRosterProps
                 }}
                 onKeyDown={(e) => e.key === 'Enter' && confirmRename(selectedEntry.name)}
                 maxLength={MAX_PLAYER_NAME_LENGTH}
-                aria-label="Nuovo nome del giocatore"
+                aria-label={i18n.t('nuovo_nome_del_giocatore')}
                 aria-describedby="rename-player-count"
                 autoFocus
                 className={FIELD_CONTROL_SM}
@@ -377,7 +376,7 @@ export default function PlayersRoster({ userId, games = [] }: PlayersRosterProps
               <CharCount id="rename-player-count" value={renameValue} max={MAX_PLAYER_NAME_LENGTH} />
               <div className="mt-3 grid grid-cols-2 gap-2.5">
                 <Button fullWidth onClick={() => confirmRename(selectedEntry.name)}>
-                  Salva
+                  {i18n.t('salva')}
                 </Button>
                 <Button
                   fullWidth
@@ -387,7 +386,7 @@ export default function PlayersRoster({ userId, games = [] }: PlayersRosterProps
                     setRenameConflict(null);
                   }}
                 >
-                  Annulla
+                  {i18n.t('annulla')}
                 </Button>
               </div>
               {renameConflict && renameConflict.oldName === selectedEntry.name && (
@@ -398,18 +397,18 @@ export default function PlayersRoster({ userId, games = [] }: PlayersRosterProps
             <>
               <p className="mb-3 text-[15px] text-zaff-text">
                 <span className="text-2xl font-bold">{gamesPlayed}</span>{' '}
-                {gamesPlayed === 1 ? 'partita giocata' : 'partite giocate'}
+                {i18n.t('partite_giocate_parola', { count: gamesPlayed })}
               </p>
               <ButtonRouteLink to={paths.player(selectedEntry.name)} size="lg" fullWidth className="mb-2.5">
-                📊 Statistiche giocatore
+                {i18n.t('statistiche_giocatore_icona')}
               </ButtonRouteLink>
               {canEdit(selectedEntry.createdBy, userId) && (
                 <div className="grid grid-cols-2 gap-2.5">
                   <Button variant="ghost" fullWidth onClick={() => startRename(selectedEntry.name)}>
-                    ✏️ Modifica
+                    {i18n.t('modifica_icona')}
                   </Button>
                   <Button variant="danger" fullWidth onClick={() => handleDelete(selectedEntry.name)}>
-                    🗑️ Cancella
+                    {i18n.t('cancella_icona')}
                   </Button>
                 </div>
               )}

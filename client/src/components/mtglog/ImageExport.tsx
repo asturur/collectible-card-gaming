@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
+import i18n from '../../i18n';
 import { toCanvas } from 'html-to-image';
 import { APP_NAME } from '../../appName';
 import { useLocation } from 'react-router';
@@ -20,7 +21,7 @@ export function JpgBadge() {
 }
 
 export function todayLabel(): string {
-  return new Date().toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' });
+  return new Date().toLocaleDateString(i18n.language, { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
 export function todayIso(): string {
@@ -77,7 +78,7 @@ export function useImageExport() {
       });
       const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.92));
       if (!blob) {
-        setError("Non sono riuscito a generare l'immagine: riprova.");
+        setError(i18n.t('non_sono_riuscito_generare_immagine'));
         return;
       }
       const file = new File([blob], req.fileName, { type: 'image/jpeg' });
@@ -88,7 +89,7 @@ export function useImageExport() {
       }
       replaceImage(URL.createObjectURL(blob));
     } catch {
-      setError("Non sono riuscito a generare l'immagine: riprova.");
+      setError(i18n.t('non_sono_riuscito_generare_immagine'));
     } finally {
       setExporting(false);
     }
@@ -125,7 +126,7 @@ export function ShareBar({ exporting, onExport, shareTitle, shareText }: { expor
     }
     try {
       await navigator.clipboard.writeText(url);
-      setNotice('Link copiato negli appunti.');
+      setNotice(i18n.t('link_copiato_negli_appunti'));
     } catch {
       setNotice(url);
     }
@@ -140,11 +141,11 @@ export function ShareBar({ exporting, onExport, shareTitle, shareText }: { expor
           <div className="grid grid-cols-2 gap-2">
             <Button fullWidth onClick={onExport} disabled={exporting}>
               {exporting ? (
-                'Genero…'
+                i18n.t('genero')
               ) : (
                 <>
                   <JpgBadge />
-                  Esporta
+                  {i18n.t('esporta')}
                 </>
               )}
             </Button>
@@ -172,8 +173,7 @@ export function ExportedImage({ image, error, alt }: { image: string | null; err
       {image && (
         <div ref={box} className="mt-3.5 rounded-lg border border-zaff-border bg-zaff-bg p-3">
           <p className={cx('mb-2', TEXT_MINI)}>
-            Tieni premuto sull&apos;immagine qui sotto e scegli &quot;Salva immagine&quot; (o condividila da lì) — più
-            affidabile del tasto, che su alcuni iPhone non riesce ad aprire da solo il foglio di condivisione.
+            {i18n.t('tieni_premuto_sull_immagine')}
           </p>
           <img src={image} alt={alt} className="w-full rounded-lg border border-zaff-border" />
         </div>
