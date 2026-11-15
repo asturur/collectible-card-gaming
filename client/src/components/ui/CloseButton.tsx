@@ -1,4 +1,5 @@
 import type { ButtonHTMLAttributes } from 'react';
+import i18n from '../../i18n';
 import Button from './Button';
 import { cx } from './styles';
 
@@ -9,7 +10,8 @@ interface CloseButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>,
 }
 
 /** Shared square daisyUI close control for task dialogs and card previews. */
-export default function CloseButton({ label = 'Chiudi', surface = 'panel', className, ...props }: CloseButtonProps) {
+export default function CloseButton({ label, surface = 'panel', className, ...props }: CloseButtonProps) {
+  label ??= i18n.t('chiudi');
   return (
     <Button {...props} variant={surface === 'image' ? 'neutral' : 'subtle'} size="lg" shape="square"
       className={cx('shrink-0', className)} title={label} aria-label={label}>

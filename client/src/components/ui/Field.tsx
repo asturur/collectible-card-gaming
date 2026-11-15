@@ -1,4 +1,5 @@
 import { useId, useState, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
+import i18n from '../../i18n';
 import { cx } from './styles';
 
 interface FieldShellProps {
@@ -173,7 +174,7 @@ export function CheckboxListField({ legend, options, values, onChange, searchLab
       )}
       {/* Una voce per riga (l'etichetta daisyUI è in linea). Bassa: circa 4 voci, meno sugli schermi bassi. */}
       <div className="flex max-h-[min(10rem,24vh)] flex-col overflow-y-auto overscroll-contain rounded-field border border-base-content/20 px-3 py-1">
-        {visible.length === 0 && <p className="py-2 text-sm text-base-content/70">Nessuna voce.</p>}
+        {visible.length === 0 && <p className="py-2 text-sm text-base-content/70">{i18n.t('nessuna_voce')}</p>}
         {visible.map((option) => (
           <label key={option.value} className="label flex w-full shrink-0 cursor-pointer items-start gap-3 whitespace-normal py-1.5 text-sm text-base-content">
             <input type="checkbox" className="checkbox checkbox-sm mt-0.5 shrink-0" checked={chosen.has(option.value)} onChange={() => toggle(option.value)} />

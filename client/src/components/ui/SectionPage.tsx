@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react';
+import i18n from '../../i18n';
 import Breadcrumbs, { type BreadcrumbLink } from './Breadcrumbs';
 import { paths } from '../../router';
 import { cx, HEADING_SECTION, TEXT_MINI } from './styles';
@@ -22,7 +23,7 @@ export default function SectionPage({ title, subtitle, ancestors = [], wide, xl,
   return (
     <main className="px-3 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-[calc(0.75rem+env(safe-area-inset-top))] sm:px-4 sm:pt-6">
       <div className={cx('mx-auto w-full', xl ? 'max-w-[900px]' : wide ? 'max-w-[680px]' : 'max-w-[560px]')}>
-        <Breadcrumbs ancestors={[{ label: 'Home', to: paths.home }, ...ancestors]} current={title} />
+        <Breadcrumbs ancestors={[{ label: i18n.t('home'), to: paths.home }, ...ancestors]} current={title} />
         <section className="rounded-xl border border-zaff-border bg-zaff-surface p-4 sm:p-6">
           <h1 ref={heading} tabIndex={-1} className={cx(
               HEADING_SECTION,

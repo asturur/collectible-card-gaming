@@ -1,4 +1,5 @@
 import { cx } from './styles';
+import i18n from '../../i18n';
 
 interface NumberStepperProps {
   value: string;
@@ -35,7 +36,7 @@ export default function NumberStepper({
 
   return (
     <div className={cx('flex overflow-hidden rounded-lg border border-zaff-border', className)}>
-      <button type="button" onClick={() => bump(-step)} aria-label="Diminuisci" className={buttonClass}>
+      <button type="button" onClick={() => bump(-step)} aria-label={i18n.t('diminuisci')} className={buttonClass}>
         −
       </button>
       <input
@@ -48,7 +49,7 @@ export default function NumberStepper({
         onChange={(e) => onChange(e.target.value)}
         className="mtg-life-input w-11 min-w-0 flex-1 border-0 bg-zaff-bg px-0.5 py-3 text-center tabular-nums text-zaff-text placeholder:text-zaff-muted focus:outline-none"
       />
-      <button type="button" onClick={() => bump(step)} aria-label="Aumenta" className={buttonClass}>
+      <button type="button" onClick={() => bump(step)} aria-label={i18n.t('aumenta')} className={buttonClass}>
         +
       </button>
     </div>

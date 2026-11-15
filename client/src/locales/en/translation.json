@@ -566,5 +566,9 @@
   "pagina_non_trovata": "Page not found",
   "indirizzo_non_corrisponde_sezione": "This address doesn't match any MTG Tracker section.",
   "partite_giocate_tra_queste_formazioni_one": "{{count}} game played with this lineup",
-  "partite_giocate_tra_queste_formazioni_other": "{{count}} games played with this lineup"
+  "partite_giocate_tra_queste_formazioni_other": "{{count}} games played with this lineup",
+  "percorso_di_navigazione": "Breadcrumb",
+  "nessuna_voce": "No items.",
+  "diminuisci": "Decrease",
+  "aumenta": "Increase"
 }

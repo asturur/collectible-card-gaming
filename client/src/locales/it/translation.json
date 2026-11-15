@@ -566,5 +566,9 @@
   "pagina_non_trovata": "Pagina non trovata",
   "indirizzo_non_corrisponde_sezione": "Questo indirizzo non corrisponde a una sezione di MTG Tracker.",
   "partite_giocate_tra_queste_formazioni_one": "{{count}} partita giocata tra queste formazioni",
-  "partite_giocate_tra_queste_formazioni_other": "{{count}} partite giocate tra queste formazioni"
+  "partite_giocate_tra_queste_formazioni_other": "{{count}} partite giocate tra queste formazioni",
+  "percorso_di_navigazione": "Percorso di navigazione",
+  "nessuna_voce": "Nessuna voce.",
+  "diminuisci": "Diminuisci",
+  "aumenta": "Aumenta"
 }
