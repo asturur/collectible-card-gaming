@@ -22,6 +22,6 @@ describe('deck data and gameplay', () => {
     const deck = fromSavedDeck({ cardRows: [row, { name: 'Unknown', qty: 1 }], id: 'x' } as SavedDeck);
     expect(() => expandPlayableDeck(deck)).toThrow('Unknown');
     expect(dedupePlayableCards(deck.mainBoard)).toHaveLength(2);
-    expect(() => expandPlayableDeck({ ...deck, mainBoard: [], sideBoard: [] })).toThrow('empty');
+    expect(() => expandPlayableDeck({ ...deck, mainBoard: [], sideBoard: [] })).toThrow('Questo mazzo è vuoto.');
   });
 });

@@ -1,4 +1,5 @@
 import type { ScryCard } from '../../services/scryfall';
+import { withTranslatedLabel } from '../../i18n';
 
 /** Ordinamento carte dei mazzi: prima per colore, poi per tipo, poi per nome. */
 
@@ -20,28 +21,28 @@ export type GroupMode = 'color' | 'type';
  *  multicolore, poi gli incolori (artefatti ecc.), infine le terre. Le carte
  *  non ancora riconosciute da Scryfall restano in fondo. */
 export const COLOR_GROUPS: { id: ColorGroupId; label: string; stripe: string }[] = [
-  { id: 'W', label: 'Bianco', stripe: '#f3e9b5' },
-  { id: 'U', label: 'Blu', stripe: '#3b82f6' },
-  { id: 'B', label: 'Nero', stripe: '#8b8fa3' },
-  { id: 'R', label: 'Rosso', stripe: '#ef4444' },
-  { id: 'G', label: 'Verde', stripe: '#22c55e' },
-  { id: 'M', label: 'Multicolore', stripe: '#f5c451' },
-  { id: 'C', label: 'Incolore', stripe: '#94a3b8' },
-  { id: 'L', label: 'Terre', stripe: '#b7791f' },
-  { id: '?', label: 'Non classificate', stripe: '#475569' },
+  withTranslatedLabel({ id: 'W' as const, stripe: '#f3e9b5' }, 'bianco'),
+  withTranslatedLabel({ id: 'U' as const, stripe: '#3b82f6' }, 'blu'),
+  withTranslatedLabel({ id: 'B' as const, stripe: '#8b8fa3' }, 'nero'),
+  withTranslatedLabel({ id: 'R' as const, stripe: '#ef4444' }, 'rosso'),
+  withTranslatedLabel({ id: 'G' as const, stripe: '#22c55e' }, 'verde'),
+  withTranslatedLabel({ id: 'M' as const, stripe: '#f5c451' }, 'multicolore'),
+  withTranslatedLabel({ id: 'C' as const, stripe: '#94a3b8' }, 'incolore'),
+  withTranslatedLabel({ id: 'L' as const, stripe: '#b7791f' }, 'terre'),
+  withTranslatedLabel({ id: '?' as const, stripe: '#475569' }, 'non_classificate'),
 ];
 
 /** Ordine dei tipi: istantanei, stregonerie, creature, artefatti, poi il
  *  resto. Le terre, quando contano come tipo (vista per tipo), stanno in fondo. */
 export const TYPE_GROUPS: { id: TypeGroupId; label: string }[] = [
-  { id: 'instant', label: 'Istantanei' },
-  { id: 'sorcery', label: 'Stregonerie' },
-  { id: 'creature', label: 'Creature' },
-  { id: 'artifact', label: 'Artefatti' },
-  { id: 'enchantment', label: 'Incantesimi' },
-  { id: 'planeswalker', label: 'Planeswalker' },
-  { id: 'other', label: 'Altro' },
-  { id: 'land', label: 'Terre' },
+  withTranslatedLabel({ id: 'instant' as const }, 'istantanei'),
+  withTranslatedLabel({ id: 'sorcery' as const }, 'stregonerie'),
+  withTranslatedLabel({ id: 'creature' as const }, 'creature'),
+  withTranslatedLabel({ id: 'artifact' as const }, 'artefatti'),
+  withTranslatedLabel({ id: 'enchantment' as const }, 'incantesimi'),
+  withTranslatedLabel({ id: 'planeswalker' as const }, 'planeswalker'),
+  withTranslatedLabel({ id: 'other' as const }, 'altro_tipo'),
+  withTranslatedLabel({ id: 'land' as const }, 'terre'),
 ];
 
 /** Tipo di una carta dalla riga dei tipi. Se ne ha più di uno vince il primo
@@ -103,7 +104,7 @@ export function groupCards<T extends { name: string; scryfallId?: string | null;
       byType.set(key, [...(byType.get(key) ?? []), item]);
     });
     const out: GroupedColor<T>[] = [];
-    [...TYPE_GROUPS, { id: '?' as const, label: 'Non classificate' }].forEach((tg) => {
+    [...TYPE_GROUPS, withTranslatedLabel({ id: '?' as const }, 'non_classificate')].forEach((tg) => {
       const list = byType.get(tg.id);
       if (!list || list.length === 0) return;
       const sorted = alpha(list);

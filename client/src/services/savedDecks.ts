@@ -1,4 +1,5 @@
 import { sameName, supabase, TABLE_DECKS, TABLE_DECK_CARDS, subscribeToTable } from './supabase';
+import i18n, { currentLocale } from '../i18n';
 import { entryKey, nameKey, normalizeEntries, serializeEntry, type DeckEntry } from './deckCards';
 import { cachedScryfallCard, cardIdentity, fetchCardsById, fetchPrintings, firstImage, matchesName, resolveScryfallNames } from './scryfallLookup';
 import { getCard } from './scryfall';
@@ -23,7 +24,7 @@ interface DeckRow {
 // Embedding the FK relation reads header/JSON/children from one database snapshot.
 const SELECT = 'id,name,source,format,colors,created_by,revision,cards,card_rows:mazzi-cards(id,name,qty,section,position,scryfall_id,oracle_id,image_url,type_line,set_code,collector_number)';
 function client() {
-  if (!supabase) throw new Error('Supabase non configurato.');
+  if (!supabase) throw new Error(i18n.t('supabase_non_configurato'));
   return supabase;
 }
 function fromRow(row: DeckRow): SavedDeck {
@@ -36,7 +37,7 @@ function fromRow(row: DeckRow): SavedDeck {
   const jsonCards = normalizeEntries(row.cards);
   if (jsonCards.length !== cardRows.length || jsonCards.some((c, i) =>
     entryKey(c) !== entryKey(cardRows[i]) || c.qty !== cardRows[i].qty)) {
-    throw new Error('Le carte del mazzo non sono sincronizzate. Riprova a caricarlo.');
+    throw new Error(i18n.t('carte_mazzo_non_sincronizzate'));
   }
   return { id: row.id, name: row.name, source: row.source ?? '', format: row.format ?? '',
     colors: row.colors ?? [], createdBy: row.created_by, revision: row.revision, cardRows,
@@ -51,12 +52,12 @@ export async function listSavedDecks(): Promise<SavedDeck[]> {
     rows.push(...(data as unknown as DeckRow[]));
     if (data.length < 100) break;
   }
-  return rows.map(fromRow).sort((a, b) => a.name.localeCompare(b.name, 'it', { sensitivity: 'base' }));
+  return rows.map(fromRow).sort((a, b) => a.name.localeCompare(b.name, currentLocale(), { sensitivity: 'base' }));
 }
 export async function getSavedDeck(id: string): Promise<SavedDeck> {
   const { data, error } = await client().from(TABLE_DECKS).select(SELECT).eq('id', id).maybeSingle();
   if (error) throw error;
-  if (!data) throw new Error('Questo mazzo non esiste più: è stato cancellato.');
+  if (!data) throw new Error(i18n.t('questo_mazzo_non_esiste_piu'));
   return fromRow(data as unknown as DeckRow);
 }
 /** Nome di un altro mazzo uguale a `name` (a parte maiuscole/spazi), se c'è: due mazzi con lo
@@ -67,17 +68,17 @@ export async function findDeckWithSameName(name: string, exceptId: string): Prom
   return (data ?? []).find((d) => String(d.id) !== exceptId && sameName(String(d.name), name))?.name ?? null;
 }
 export class DeckConflictError extends Error {
-  constructor() { super('Qualcun altro ha modificato il mazzo. Le tue modifiche sono ancora qui.'); }
+  constructor() { super(i18n.t('qualcun_altro_ha_modificato_mazzo_breve')); }
 }
 export class UnresolvedCardsError extends Error {
   constructor(public names: string[]) {
-    super('Scryfall non riconosce: ' + names.join(', ') + '. Correggi i nomi oppure salva solo per il registro.');
+    super(i18n.t('scryfall_non_riconosce', { names: names.join(', ') }));
   }
 }
 export class CardLookupError extends UnresolvedCardsError {
   constructor(names: string[]) {
     super(names);
-    this.message = 'Non riesco a verificare le carte su Scryfall. Riprova oppure salva solo per il registro.';
+    this.message = i18n.t('non_riesco_verificare_carte_scryfall');
   }
 }
 export interface SaveDeckInput {
@@ -171,7 +172,7 @@ export async function saveSavedDeck(input: SaveDeckInput, options: {
 export async function deleteSavedDeck(id: string): Promise<void> {
   const { data, error } = await client().from(TABLE_DECKS).delete().eq('id', id).select('id');
   if (error) throw error;
-  if (!data.length) throw new Error('Il mazzo è stato cancellato oppure non hai il permesso di modificarlo.');
+  if (!data.length) throw new Error(i18n.t('mazzo_cancellato_o_senza_permesso'));
   notifySavedDecks();
 }
 const listeners = new Set<() => void>();

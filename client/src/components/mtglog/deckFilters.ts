@@ -1,4 +1,5 @@
 import type { ScryCard } from '../../services/scryfall';
+import i18n from '../../i18n';
 
 /** Filtri della lista mazzi oltre ai colori: vuoto = non attivo. */
 export interface DeckFilters {
@@ -72,7 +73,7 @@ export function matchDeck(cards: FilterCard[], filters: DeckFilters, lookup: Car
   if (text) {
     const n = list.filter((c) => norm(lookup(c.name, c.scryfallId)?.oracle ?? '').includes(text)).length;
     if (!n) return { ok: false, notes: [] };
-    notes.push(`«${filters.text.trim()}» in ${n} ${n === 1 ? 'carta' : 'carte'}`);
+    notes.push(i18n.t('testo_in_carte', { text: filters.text.trim(), count: n }));
   }
   return { ok: true, notes };
 }

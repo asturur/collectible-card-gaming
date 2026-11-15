@@ -1,4 +1,5 @@
 import type { DeckEntry } from './deckCards';
+import i18n from '../i18n';
 
 /**
  * Testo di un mazzo nel formato "standard" che leggono ManaBox, MTG Arena,
@@ -22,5 +23,5 @@ export function deckFileName(deckName: string): string {
     .replace(/\s+/g, ' ')
     .trim()
     .slice(0, 80);
-  return `${base || 'mazzo'}.txt`;
+  return `${base || i18n.t('file_mazzo')}.txt`;
 }

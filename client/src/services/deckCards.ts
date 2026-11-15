@@ -1,3 +1,4 @@
+import i18n from '../i18n';
 export type DeckSection = 'main' | 'side';
 
 export interface DeckEntry {
@@ -22,7 +23,7 @@ export function normalizeEntries(cards: DeckEntry[]): DeckEntry[] {
   const groups = new Map<string, DeckEntry>();
   for (const card of cards) {
     if (!card.name.trim() || !Number.isSafeInteger(card.qty) || card.qty < 1) {
-      throw new Error('Ogni carta deve avere un nome e un numero intero di copie maggiore di zero.');
+      throw new Error(i18n.t('ogni_carta_deve_avere_nome'));
     }
     const key = entryKey(card);
     const previous = groups.get(key);

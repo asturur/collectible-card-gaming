@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import i18n from '../../i18n';
 import { getSavedDeck, listSavedDecks, subscribeSavedDecks, type SavedDeck } from '../../services/savedDecks';
 
 interface DeckSnapshot {
@@ -23,7 +24,7 @@ export function useSavedDeck(deckId: string) {
       } catch (err) {
         if (active && current === request) setSnapshot({
           id: deckId, deck: null, loading: false,
-          error: 'Non riesco a leggere il mazzo: ' + (err as Error).message,
+          error: i18n.t('non_riesco_leggere_mazzo', { error: (err as Error).message }),
         });
       }
     }
@@ -47,7 +48,7 @@ export function useSavedDeckList() {
         const decks = await listSavedDecks();
         if (active && current === request) setState({ decks, loading: false, error: '' });
       } catch (err) {
-        if (active && current === request) setState((prev) => ({ ...prev, loading: false, error: 'Non riesco a leggere i mazzi: ' + (err as Error).message }));
+        if (active && current === request) setState((prev) => ({ ...prev, loading: false, error: i18n.t('non_riesco_leggere_mazzi', { error: (err as Error).message }) }));
       }
     }
     void load();

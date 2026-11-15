@@ -1,4 +1,5 @@
 import { type MtgJsonDeck, type MtgJsonCard, scryfallImageUrl } from './mtgjson';
+import i18n from '../i18n';
 import type { SavedDeck } from './savedDecks';
 
 export interface PlayableCard {
@@ -27,9 +28,9 @@ export function fromSavedDeck(deck: SavedDeck): PlayableDeck {
 }
 export function expandPlayableDeck(deck: PlayableDeck): { cardId: string; imageUrl: string }[] {
   const entries = [...deck.mainBoard, ...deck.sideBoard, ...deck.commander];
-  if (!entries.length) throw new Error('This deck is empty.');
+  if (!entries.length) throw new Error(i18n.t('questo_mazzo_vuoto'));
   const invalid = entries.filter(c => !c.scryfallId || !c.imageUrl || !c.type || !Number.isSafeInteger(c.count) || c.count < 1);
-  if (invalid.length) throw new Error('This deck is not ready to play. Resolve these cards in Registro: ' + invalid.map(c => c.name).join(', '));
+  if (invalid.length) throw new Error(i18n.t('mazzo_non_pronto_per_giocare', { cards: invalid.map(c => c.name).join(', ') }));
   // Match the existing server behavior: main, sideboard and commander share the deck zone.
   return entries.flatMap(c => Array.from({ length: c.count }, () => ({ cardId: c.scryfallId!, imageUrl: c.imageUrl! })));
 }
