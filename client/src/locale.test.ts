@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import i18n from './i18n';
 import { localeBase, localeFromPath } from './router';
+import { formatEur } from './components/mtglog/deckValue';
+import { dateLabel } from './components/mtglog/stats';
+import { monthLabel } from './components/mtglog/trends';
+import { MANA_LABELS } from './components/mtglog/deckMath';
 
 describe('locale routing and translations', () => {
   it('recognizes supported language prefixes under the app base', () => {
@@ -26,5 +30,15 @@ describe('locale routing and translations', () => {
   it('provides the home action in both languages', () => {
     expect(i18n.getFixedT('it')('nuova_partita')).toBe('Nuova Partita');
     expect(i18n.getFixedT('en')('nuova_partita')).toBe('New Game');
+  });
+
+  it('writes dates, months, prices and labels in the language in use', async () => {
+    expect([dateLabel('2026-11-05'), monthLabel('2026-11'), formatEur(1234.5), MANA_LABELS.W]).toEqual(['05/11/2026', 'Novembre 2026', '€ 1.234,50', 'Bianco']);
+    await i18n.changeLanguage('en');
+    try {
+      expect([dateLabel('2026-11-05'), monthLabel('2026-11'), formatEur(1234.5), MANA_LABELS.W]).toEqual(['11/05/2026', 'November 2026', '€ 1,234.50', 'White']);
+    } finally {
+      await i18n.changeLanguage('it');
+    }
   });
 });

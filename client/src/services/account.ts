@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import i18n from '../i18n';
 
 /** Cosa fare, alla cancellazione dell'account, dei mazzi salvati da chi se ne va. */
 export interface DeleteAccountChoices {
@@ -12,12 +13,12 @@ export interface DeleteAccountChoices {
  * gruppi, senza proprietario.
  */
 export async function deleteMyAccount({ deleteDecks }: DeleteAccountChoices): Promise<void> {
-  if (!supabase) throw new Error('Database non configurato.');
+  if (!supabase) throw new Error(i18n.t('database_non_configurato'));
   const { error } = await supabase.rpc('delete_my_account', { p_delete_decks: deleteDecks });
   if (error) {
     // PGRST202: la funzione non esiste (migrazione non ancora eseguita).
     throw new Error(error.code === 'PGRST202'
-      ? 'La cancellazione dell’account non è ancora attiva sul database.'
+      ? i18n.t('cancellazione_account_non_attiva')
       : error.message);
   }
   // L'account non esiste più: basta dimenticare la sessione su questo dispositivo.

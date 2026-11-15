@@ -1,23 +1,29 @@
 /** Statistiche nel tempo: calcolate solo dalle partite già salvate. */
 
 import type { Game } from './GameList';
+import i18n, { currentLocale } from '../../i18n';
 import { makeDeckResolver, type DeckRef } from './deckRefs';
 
 /** Quanti mesi mostrare nei grafici di Andamento. */
 export const SHOWN_MONTHS = 12;
 
-const MONTH_NAMES = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
+/** Nome del mese (1–12) nella lingua in uso, con l'iniziale maiuscola: "Novembre", "November". */
+function monthName(month: number): string | undefined {
+  if (!(month >= 1 && month <= 12)) return undefined;
+  const name = new Date(2000, month - 1, 1).toLocaleDateString(currentLocale(), { month: 'long' });
+  return name.charAt(0).toUpperCase() + name.slice(1);
+}
 
 /** "2026-10" → "Ottobre 2026". */
 export function monthLabel(key: string): string {
   const [year, month] = key.split('-');
-  return `${MONTH_NAMES[Number(month) - 1] ?? key} ${year}`;
+  return `${monthName(Number(month)) ?? key} ${year}`;
 }
 
 /** "2026-10" → "Ott 26", per le etichette strette dei grafici. */
 export function monthShortLabel(key: string): string {
   const [year, month] = key.split('-');
-  return `${(MONTH_NAMES[Number(month) - 1] ?? key).slice(0, 3)} ${year.slice(2)}`;
+  return `${(monthName(Number(month)) ?? key).slice(0, 3)} ${year.slice(2)}`;
 }
 
 function monthOf(game: Game): string {
@@ -121,10 +127,10 @@ export function monthSummary(rows: MonthRow[]): string {
   const current = rows[rows.length - 1];
   if (!current) return '';
   const label = monthLabel(current.month);
-  if (current.games === 0) return `${label}: ancora nessuna partita.`;
-  const games = `${current.games} ${current.games === 1 ? 'partita' : 'partite'}`;
+  if (current.games === 0) return i18n.t('mese_ancora_nessuna_partita', { label });
+  const games = i18n.t('partite_count', { count: current.games });
   const best = Math.max(0, ...Object.values(current.wins));
   if (best === 0) return `${label}: ${games}.`;
   const leaders = Object.entries(current.wins).filter(([, w]) => w === best).map(([n]) => n).sort();
-  return `${label}: ${games}, più vittorie: ${leaders.join(' e ')} (${best}).`;
+  return i18n.t('mese_piu_vittorie', { label, games, leaders: new Intl.ListFormat(currentLocale(), { type: 'conjunction' }).format(leaders), best });
 }

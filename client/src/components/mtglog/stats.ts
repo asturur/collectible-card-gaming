@@ -1,6 +1,7 @@
 /** Calcoli e utilità condivise fra classifica in testata, storico e statistiche. */
 
 import type { Game } from './GameList';
+import i18n, { currentLocale } from '../../i18n';
 
 export interface TallyRow {
   name: string;
@@ -56,9 +57,10 @@ export function pieSlicePath(cx: number, cy: number, r: number, startDeg: number
 }
 
 export function dateLabel(iso: string): string {
-  if (!iso) return 'Senza data';
-  const [y, m, d] = iso.split('-');
-  return `${d}/${m}/${y}`;
+  if (!iso) return i18n.t('senza_data');
+  const [y, m, d] = iso.split('-').map(Number);
+  if (!y || !m || !d) return iso;
+  return new Date(y, m - 1, d).toLocaleDateString(currentLocale(), { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
 /** Ora (HH:mm, fuso locale) di un timestamp ISO salvato da `started_at`/`ended_at`. */

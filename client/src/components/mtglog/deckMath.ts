@@ -1,4 +1,5 @@
 import type { ScryCard, ScryToken } from '../../services/scryfall';
+import { translatedLabels } from '../../i18n';
 import { classify, TYPE_GROUPS, type TypeGroupId } from './cardGroups';
 
 /** Statistiche del Main Deck (la riserva non conta). Solo le carte già
@@ -20,15 +21,15 @@ export const MANA_COLORS: Record<CurveKey, string> = {
   M: '#f5c451',
 };
 
-export const MANA_LABELS: Record<CurveKey, string> = {
-  W: 'Bianco',
-  U: 'Blu',
-  B: 'Nero',
-  R: 'Rosso',
-  G: 'Verde',
-  C: 'Incolore',
-  M: 'Multicolore',
-};
+export const MANA_LABELS: Record<CurveKey, string> = translatedLabels({
+  W: 'bianco',
+  U: 'blu',
+  B: 'nero',
+  R: 'rosso',
+  G: 'verde',
+  C: 'incolore',
+  M: 'multicolore',
+});
 
 export const TYPE_COLORS: Record<TypeGroupId, string> = {
   instant: '#38bdf8',
@@ -112,15 +113,15 @@ function subtypesOf(typeLine: string): string[] {
     .filter(Boolean);
 }
 
-const SUBTYPE_TITLES: Partial<Record<TypeGroupId, string>> = {
-  creature: 'Creature',
-  land: 'Terre',
-  artifact: 'Artefatti',
-  enchantment: 'Incantesimi',
-  instant: 'Istantanei',
-  sorcery: 'Stregonerie',
-  planeswalker: 'Planeswalker',
-};
+const SUBTYPE_TITLES: Partial<Record<TypeGroupId, string>> = translatedLabels({
+  creature: 'creature',
+  land: 'terre',
+  artifact: 'artefatti',
+  enchantment: 'incantesimi',
+  instant: 'istantanei',
+  sorcery: 'stregonerie',
+  planeswalker: 'planeswalker',
+});
 
 export function computeDeckStats(
   cards: { name: string; scryfallId?: string | null; qty: number; section?: string }[],

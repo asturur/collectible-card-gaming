@@ -9,20 +9,6 @@ Review in order. Entries include partially translated files and files that may h
 Text shown to the user also lives outside components: labels, assembled sentences,
 error messages and locale-specific formatting (`'it-IT'` dates, numbers, month names).
 
-- `client/src/components/mtglog/cardGroups.ts`
-- `client/src/components/mtglog/deckFilters.ts`
-- `client/src/components/mtglog/deckMath.ts`
-- `client/src/components/mtglog/deckValue.ts`
-- `client/src/components/mtglog/stats.ts`
-- `client/src/components/mtglog/trends.ts`
-- `client/src/components/mtglog/useSavedDeck.ts`
-- `client/src/services/account.ts`
-- `client/src/services/deckCards.ts`
-- `client/src/services/deckExport.ts`
-- `client/src/services/mtgjson.ts`
-- `client/src/services/playableDeck.ts`
-- `client/src/services/savedDecks.ts`
-- `client/src/services/scryfallLookup.ts`
 
 ## Static files (one language only)
 

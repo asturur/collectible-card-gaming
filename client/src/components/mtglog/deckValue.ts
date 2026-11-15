@@ -1,4 +1,5 @@
 import type { CardPrice } from '../../services/cardPrices';
+import { currentLocale } from '../../i18n';
 
 export interface PricedItem {
   name: string;
@@ -72,8 +73,10 @@ export function computeDeckValue(items: PricedItem[], topCount = 3): DeckValue {
  *  (la formattazione italiana del browser lo omette sotto le 10.000). */
 function money(n: number): string {
   const [int, dec] = Math.abs(n).toFixed(2).split('.');
-  return (n < 0 ? '-' : '') + int.replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',' + dec;
+  // In inglese virgola per le migliaia e punto per i decimali (1,234.50).
+  const [group, decimal] = currentLocale().startsWith('en') ? [',', '.'] : ['.', ','];
+  return (n < 0 ? '-' : '') + int.replace(/\B(?=(\d{3})+(?!\d))/g, group) + decimal + dec;
 }
 export const formatEur = (n: number) => `€ ${money(n)}`;
 export const formatUsd = (n: number) => `$ ${money(n)}`;
-export const formatPriceDate = (at: number) => new Date(at).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+export const formatPriceDate = (at: number) => new Date(at).toLocaleDateString(currentLocale(), { day: '2-digit', month: '2-digit', year: 'numeric' });

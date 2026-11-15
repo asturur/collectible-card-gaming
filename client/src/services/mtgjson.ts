@@ -1,3 +1,4 @@
+import i18n from '../i18n';
 /**
  * MTGJSON API client for fetching deck lists and individual decks.
  * See https://mtgjson.com/api/v5/ for documentation.
@@ -51,7 +52,7 @@ const MTGJSON_BASE = 'https://mtgjson.com/api/v5';
 export async function fetchDeckList(): Promise<DeckListEntry[]> {
   const res = await fetch(`${MTGJSON_BASE}/DeckList.json`);
   if (!res.ok) {
-    throw new Error(`Failed to fetch deck list: ${res.status} ${res.statusText}`);
+    throw new Error(i18n.t('mtgjson_elenco_non_scaricato', { status: `${res.status} ${res.statusText}`.trim() }));
   }
   const json = await res.json();
   // MTGJSON wraps the list in { meta: {...}, data: [...] }
@@ -66,7 +67,7 @@ export async function fetchDeckList(): Promise<DeckListEntry[]> {
 export async function fetchDeck(fileName: string): Promise<MtgJsonDeck> {
   const res = await fetch(`${MTGJSON_BASE}/decks/${fileName}.json`);
   if (!res.ok) {
-    throw new Error(`Failed to fetch deck "${fileName}": ${res.status} ${res.statusText}`);
+    throw new Error(i18n.t('mtgjson_mazzo_non_scaricato', { name: fileName, status: `${res.status} ${res.statusText}`.trim() }));
   }
   const wrapper = await res.json();
   // MTGJSON wraps the deck in a { data: { ... } } envelope

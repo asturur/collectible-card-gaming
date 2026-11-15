@@ -1,3 +1,4 @@
+import i18n from '../i18n';
 /** Browser-independent lookup core, shared with the off-browser backfill. */
 export interface RawFaceImages { small?: string; normal?: string; art_crop?: string }
 export interface RawCard {
@@ -96,7 +97,7 @@ export function firstImage(card: RawCard): string | undefined {
 }
 
 export function cardIdentity(card: RawCard) {
-  if (!card.id || !firstImage(card) || !card.type_line) throw new Error(`Carta senza dati completi: ${card.name}`);
+  if (!card.id || !firstImage(card) || !card.type_line) throw new Error(i18n.t('carta_senza_dati_completi', { name: card.name }));
   return { scryfallId: card.id, oracleId: card.oracle_id ?? card.card_faces?.[0]?.oracle_id ?? null,
     imageUrl: firstImage(card)!, typeLine: card.type_line,
     setCode: card.set ?? null, collectorNumber: card.collector_number ?? null };
