@@ -3,19 +3,6 @@
 Review in order. Entries include partially translated files and files that may have no translatable text; remove each only after review is complete. Paths are relative to the repository root.
 
 - `client/src/components/mtglog/faqContent.tsx`
-- `client/src/components/ui/Badge.tsx`
-- `client/src/components/ui/Breadcrumbs.tsx`
-- `client/src/components/ui/Button.tsx`
-- `client/src/components/ui/ChipRow.tsx`
-- `client/src/components/ui/CloseButton.tsx`
-- `client/src/components/ui/Field.tsx`
-- `client/src/components/ui/Modal.tsx`
-- `client/src/components/ui/NavTabs.tsx`
-- `client/src/components/ui/NumberStepper.tsx`
-- `client/src/components/ui/Panel.tsx`
-- `client/src/components/ui/SectionPage.tsx`
-- `client/src/components/ui/SpeedDial.tsx`
-- `client/src/components/ui/Tile.tsx`
 
 ## Logic and service files
 

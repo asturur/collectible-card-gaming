@@ -1,4 +1,5 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import i18n from '../../i18n';
 import { Link } from 'react-router';
 import { fitBreadcrumbLabels } from './breadcrumbLayout';
 
@@ -53,7 +54,7 @@ export default function Breadcrumbs({ ancestors, current }: { ancestors: readonl
   }, [labels]);
 
   return (
-    <nav ref={nav} aria-label="Percorso di navigazione" className="breadcrumbs relative m-0 mb-2 py-0 text-sm text-zaff-muted">
+    <nav ref={nav} aria-label={i18n.t('percorso_di_navigazione')} className="breadcrumbs relative m-0 mb-2 py-0 text-sm text-zaff-muted">
       <ol className={ROW}>
         {ancestors.map(({ label, to }, index) => (
           <li key={to}>
