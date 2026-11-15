@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import i18n from '../../i18n';
 import { Link } from 'react-router';
 import { paths } from '../../router';
 import type { Game } from './GameList';
@@ -43,7 +44,7 @@ function MatchupDetail({ selected, idSuffix }: { selected: MatchupRow; idSuffix:
 
   return (
     <>
-      <p className={TEXT_MINI}>{selected.games} partite giocate tra queste formazioni</p>
+      <p className={TEXT_MINI}>{i18n.t('partite_giocate_tra_queste_formazioni', { count: selected.games })}</p>
 
       <div className="mt-3.5">
         {selected.players.map((p, i) => {
@@ -62,7 +63,7 @@ function MatchupDetail({ selected, idSuffix }: { selected: MatchupRow; idSuffix:
                 <span className="min-w-0 [overflow-wrap:anywhere]">{p.name}</span>
               </span>
               <span className={cx('shrink-0 whitespace-nowrap', TEXT_MINI)}>
-                {p.w} vittorie · {losses} sconfitte · {pct}%
+                {i18n.t('vittorie_count', { count: p.w })} · {i18n.t('sconfitte_count', { count: losses })} · {pct}%
               </span>
             </div>
           );
@@ -85,7 +86,7 @@ function MatchupDetail({ selected, idSuffix }: { selected: MatchupRow; idSuffix:
           </div>
         </div>
       ) : (
-        <p className={cx('mt-3.5', TEXT_MUTED)}>Nessuna partita ha ancora un vincitore segnato.</p>
+        <p className={cx('mt-3.5', TEXT_MUTED)}>{i18n.t('nessuna_partita_ha_ancora_vincitore')}</p>
       )}
     </>
   );
@@ -100,7 +101,7 @@ export default function MatchupStats({ games }: MatchupStatsProps) {
   if (matchups.length === 0) {
     return (
       <p className={TEXT_MUTED}>
-        Ancora nessuna sfida tra più giocatori registrata: compare qui appena ci sono partite salvate.
+        {i18n.t('ancora_nessuna_sfida_registrata')}
       </p>
     );
   }
@@ -110,9 +111,9 @@ export default function MatchupStats({ games }: MatchupStatsProps) {
       <HowItWorks to={paths.faqTopic('matchups')} />
       {/* La ricerca resta in cima, sotto il titolo, mentre si scorre l'elenco. */}
       <div className={cx(STICKY_BELOW_TITLE, 'sticky z-10 -mx-1 mb-2 bg-zaff-surface px-1 pb-1 pt-1')}>
-        <SearchField value={query} onChange={setQuery} placeholder="Cerca giocatore…" label="Cerca nelle sfide" />
+        <SearchField value={query} onChange={setQuery} placeholder={i18n.t('cerca_giocatore')} label={i18n.t('cerca_nelle_sfide')} />
       </div>
-      {shown.length === 0 && <p className={TEXT_MUTED}>Nessuna sfida corrisponde alla ricerca.</p>}
+      {shown.length === 0 && <p className={TEXT_MUTED}>{i18n.t('nessuna_sfida_corrisponde_alla_ricerca')}</p>}
       <ul>
         {shown.map((m) => (
           <li key={m.key}>
@@ -125,7 +126,7 @@ export default function MatchupStats({ games }: MatchupStatsProps) {
                   {m.label}
                 </span>
                 <span className={cx('block', TEXT_MINI)}>
-                  {m.games} {m.games === 1 ? 'partita' : 'partite'}
+                  {i18n.t('partite_count', { count: m.games })}
                 </span>
               </span>
               <span className="shrink-0 text-2xl leading-none text-zaff-muted" aria-hidden="true">
@@ -147,21 +148,21 @@ export function MatchupStatsDetail({ selected }: { selected: MatchupRow }) {
       <HowItWorks to={paths.faqTopic('matchups')} />
       <MatchupDetail selected={selected} idSuffix="matchup" />
 
-      <ExportedImage image={exporter.image} error={exporter.error} alt={`Statistiche della sfida ${selected.label}`} />
+      <ExportedImage image={exporter.image} error={exporter.error} alt={i18n.t('statistiche_della_sfida', { name: selected.label })} />
       <ShareBar
         exporting={exporter.exporting}
         shareTitle={selected.label}
         onExport={() =>
           exporter.exportImage({
-            fileName: `sfida_${safeFileName(selected.label) || 'magic'}_${todayIso()}.jpg`,
+            fileName: `${i18n.t('file_sfida')}_${safeFileName(selected.label) || 'magic'}_${todayIso()}.jpg`,
             shareTitle: selected.label,
-            shareText: 'Statistiche della sfida ' + selected.label,
+            shareText: i18n.t('statistiche_della_sfida', { name: selected.label }),
           })
         }
       />
 
       <ExportCardHost cardRef={exporter.cardRef}>
-        <ExportHeader title={selected.label} subtitle={`Statistiche per Sfida · aggiornato al ${todayLabel()}`} />
+        <ExportHeader title={selected.label} subtitle={`${i18n.t('statistiche_per_sfida')} · ${i18n.t('aggiornato_al', { date: todayLabel() })}`} />
         <MatchupDetail selected={selected} idSuffix="matchup-export" />
       </ExportCardHost>
     </>

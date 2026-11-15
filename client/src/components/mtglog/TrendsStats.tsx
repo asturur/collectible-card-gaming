@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import i18n from '../../i18n';
 import {
   ExportCardHost,
   ExportedImage,
@@ -61,15 +62,15 @@ function TrendsContent({ games, decks }: { games: Game[]; decks: readonly DeckRe
     <>
       <p className="font-semibold text-zaff-text">{monthSummary(allMonths)}</p>
 
-      <h2 className={SECTION_TITLE}>Partite per mese</h2>
+      <h2 className={SECTION_TITLE}>{i18n.t('partite_per_mese')}</h2>
       <Bars
         values={months.map((m) => m.games)}
         labels={shortLabels}
         max={maxGames}
-        label={`Partite per mese, da ${monthLabel(months[0].month)} a ${monthLabel(months[months.length - 1].month)}`}
+        label={i18n.t('partite_per_mese_da_a', { from: monthLabel(months[0].month), to: monthLabel(months[months.length - 1].month) })}
       />
 
-      <h2 className={SECTION_TITLE}>Vittorie per mese</h2>
+      <h2 className={SECTION_TITLE}>{i18n.t('vittorie_per_mese')}</h2>
       {players.map((name, i) => (
         <div key={name} className="mb-3">
           <p className="mb-1 flex items-center gap-2 text-sm text-zaff-text">
@@ -80,25 +81,25 @@ function TrendsContent({ games, decks }: { games: Game[]; decks: readonly DeckRe
             values={months.map((m) => m.wins[name] ?? 0)}
             max={maxWins}
             color={PIE_COLORS[i % PIE_COLORS.length]}
-            label={`Vittorie per mese di ${name}`}
+            label={i18n.t('vittorie_per_mese_di', { name })}
           />
         </div>
       ))}
-      <p className={TEXT_MINI}>Ultimi {Math.min(SHOWN_MONTHS, months.length)} mesi, a partire da {monthLabel(months[0].month)}.</p>
+      <p className={TEXT_MINI}>{i18n.t('ultimi_mesi_a_partire_da', { count: Math.min(SHOWN_MONTHS, months.length), from: monthLabel(months[0].month) })}</p>
 
-      <h2 className={SECTION_TITLE}>Serie di vittorie</h2>
+      <h2 className={SECTION_TITLE}>{i18n.t('serie_di_vittorie')}</h2>
       {streaks.map((s) => (
         <div key={s.name} className={ROW}>
           <span className="min-w-0 flex-1 truncate text-[15px] text-zaff-text">{s.name}</span>
           <span className="shrink-0 whitespace-nowrap text-sm text-zaff-muted">
-            in corso {s.current} · record {s.best}
+            {i18n.t('in_corso_record', { current: s.current, best: s.best })}
           </span>
         </div>
       ))}
 
-      <h2 className={SECTION_TITLE}>Mazzo preferito</h2>
+      <h2 className={SECTION_TITLE}>{i18n.t('mazzo_preferito')}</h2>
       {favorites.length === 0 ? (
-        <p className={TEXT_MUTED}>Nessuna partita con un mazzo indicato.</p>
+        <p className={TEXT_MUTED}>{i18n.t('nessuna_partita_con_un_mazzo')}</p>
       ) : (
         favorites.map((f) => (
           <div key={f.name} className={ROW}>
@@ -107,7 +108,7 @@ function TrendsContent({ games, decks }: { games: Game[]; decks: readonly DeckRe
               <span className={cx('block truncate', TEXT_MINI)}>{f.deck}</span>
             </span>
             <span className="shrink-0 whitespace-nowrap text-sm text-zaff-muted">
-              {f.games} {f.games === 1 ? 'partita' : 'partite'} · {f.wins} {f.wins === 1 ? 'vinta' : 'vinte'}
+              {i18n.t('partite_count', { count: f.games })} · {i18n.t('vinte_count', { count: f.wins })}
             </span>
           </div>
         ))
@@ -121,7 +122,7 @@ export default function TrendsStats({ games, decks }: { games: Game[]; decks: re
   const exporter = useImageExport();
 
   if (games.length === 0) {
-    return <p className={TEXT_MUTED}>Ancora nessuna partita registrata: l&apos;andamento compare dopo la prima.</p>;
+    return <p className={TEXT_MUTED}>{i18n.t('ancora_nessuna_partita_registrata_andamento')}</p>;
   }
 
   return (
@@ -129,21 +130,21 @@ export default function TrendsStats({ games, decks }: { games: Game[]; decks: re
       <HowItWorks to={paths.faqTopic('trends')} />
       <TrendsContent games={games} decks={decks} />
 
-      <ExportedImage image={exporter.image} error={exporter.error} alt="Andamento nel tempo, da salvare" />
+      <ExportedImage image={exporter.image} error={exporter.error} alt={i18n.t('andamento_nel_tempo_da_salvare')} />
       <ShareBar
         exporting={exporter.exporting}
-        shareTitle="Andamento"
+        shareTitle={i18n.t('andamento')}
         onExport={() =>
           exporter.exportImage({
-            fileName: `andamento_${todayIso()}.jpg`,
-            shareTitle: 'Andamento',
-            shareText: 'Andamento nel tempo del registro partite di Magic',
+            fileName: `${i18n.t('file_andamento')}_${todayIso()}.jpg`,
+            shareTitle: i18n.t('andamento'),
+            shareText: i18n.t('andamento_nel_tempo_di_mtg_tracker'),
           })
         }
       />
 
       <ExportCardHost cardRef={exporter.cardRef}>
-        <ExportHeader title="Andamento" subtitle={`Statistiche nel tempo · aggiornato al ${todayLabel()}`} />
+        <ExportHeader title={i18n.t('andamento')} subtitle={`${i18n.t('statistiche_nel_tempo')} · ${i18n.t('aggiornato_al', { date: todayLabel() })}`} />
         <TrendsContent games={games} decks={decks} />
       </ExportCardHost>
     </>

@@ -144,8 +144,8 @@ describe('Registro routes', () => {
     await user.click(link);
     expect(await screen.findByRole('heading', { name: 'Alice', level: 1 })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/stats/players/Alice');
-    expect(screen.getAllByText('2 partite giocate · 1 vinte')).toHaveLength(2);
-    expect(screen.getAllByText('2 partite · 1 vinte · 50%')).toHaveLength(2);
+    expect(screen.getAllByText('2 partite giocate · 1 vinta')).toHaveLength(2);
+    expect(screen.getAllByText('2 partite · 1 vinta · 50%')).toHaveLength(2);
     expect(screen.getByRole('button', { name: 'Esporta' })).toBeInTheDocument();
     const breadcrumbs = screen.getByRole('navigation', { name: 'Percorso di navigazione' });
     expect(within(breadcrumbs).getAllByRole('listitem').map(item => item.textContent)).toEqual(['Home', 'Giocatori', 'Alice']);
@@ -187,7 +187,7 @@ describe('Registro routes', () => {
     await user.click(link);
     expect(await screen.findByRole('heading', { name: 'Alice vs Bob', level: 1 })).toBeInTheDocument();
     expect(screen.getAllByText('2 partite giocate tra queste formazioni')).toHaveLength(2);
-    expect(screen.getAllByText('1 vittorie · 1 sconfitte · 50%')).toHaveLength(4);
+    expect(screen.getAllByText('1 vittoria · 1 sconfitta · 50%')).toHaveLength(4);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     const breadcrumbs = screen.getByRole('navigation', { name: 'Percorso di navigazione' });
     expect(within(breadcrumbs).getAllByRole('listitem').map(item => item.textContent)).toEqual(['Home', 'Sfide', 'Alice vs Bob']);
@@ -195,7 +195,7 @@ describe('Registro routes', () => {
     await user.click(await screen.findByRole('link', { name: 'Alice vs Bob vs Carol 1 partita' }));
     expect(await screen.findByRole('heading', { name: 'Alice vs Bob vs Carol', level: 1 })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/stats/matchups/Alice/vs/Bob/vs/Carol');
-    expect(screen.getAllByText('1 partite giocate tra queste formazioni')).toHaveLength(2);
+    expect(screen.getAllByText('1 partita giocata tra queste formazioni')).toHaveLength(2);
     await act(async () => { await router.navigate('/stats/matchups/Bob/vs/Alice'); });
     expect(await screen.findByRole('heading', { name: 'Alice vs Bob', level: 1 })).toBeInTheDocument();
     expect(screen.getAllByText('2 partite giocate tra queste formazioni')).toHaveLength(2);
