@@ -1,8 +1,9 @@
 # Untranslated components
 
+**Nothing left to translate (November 2026).** New components use `t()` from the start; keep this file for anything found later.
+
 Review in order. Entries include partially translated files and files that may have no translatable text; remove each only after review is complete. Paths are relative to the repository root.
 
-- `client/src/components/mtglog/faqContent.tsx`
 
 ## Logic and service files
 

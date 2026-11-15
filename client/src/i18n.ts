@@ -27,5 +27,5 @@ export function withTranslatedLabel<T extends object>(item: T, key: string): T &
   return Object.defineProperty({ ...item }, 'label', { get: () => i18n.t(key), enumerable: true }) as T & { readonly label: string };
 }
 
-/** Lingua in uso per date e numeri (it-IT, en…). */
-export const currentLocale = () => i18n.language || 'it';
+/** Lingua in uso per date e numeri: italiano, oppure inglese britannico (date giorno/mese/anno). */
+export const currentLocale = () => (i18n.language === 'en' ? 'en-GB' : 'it-IT');

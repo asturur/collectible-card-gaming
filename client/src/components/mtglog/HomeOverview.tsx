@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { currentLocale } from '../../i18n';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { paths } from '../../router';
@@ -131,7 +132,7 @@ export default function HomeOverview({
           <span className="min-w-0 flex-1">
             <span className="block text-[15px] font-semibold text-warning">{t('partita_non_salvata')}</span>
             <span className="block truncate text-sm text-zaff-muted">
-              {new Intl.ListFormat(i18n.language, { type: 'conjunction' }).format(draftPlayerNames(draft))}
+              {new Intl.ListFormat(currentLocale(), { type: 'conjunction' }).format(draftPlayerNames(draft))}
             </span>
           </span>
           <span className="shrink-0 text-[15px] font-semibold text-zaff-text">{t('riprendi')} ›</span>

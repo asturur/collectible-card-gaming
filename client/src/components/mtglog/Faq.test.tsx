@@ -3,6 +3,7 @@ import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import Faq from './Faq';
 import { FAQ_SECTIONS } from './faqContent';
+import { FAQ_SECTIONS_EN } from './faqContent.en';
 
 describe('FAQ Statistiche', () => {
   it('has one topic for every view of Statistiche Carte, so its link always lands on the right one', () => {
@@ -31,5 +32,10 @@ describe('FAQ Statistiche', () => {
     const topics = within(screen.getByRole('navigation', { name: 'Argomenti di Carte' }));
     expect(topics.getByRole('link', { name: 'Più vincenti' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getAllByText(/5 presenze/).length).toBeGreaterThan(0);
+  });
+
+  it('has an English copy with the same sections and topics, in the same order', () => {
+    const shape = (sections: typeof FAQ_SECTIONS) => sections.map((s) => [s.id, s.topics.map((t) => t.id)]);
+    expect(shape(FAQ_SECTIONS_EN)).toEqual(shape(FAQ_SECTIONS));
   });
 });

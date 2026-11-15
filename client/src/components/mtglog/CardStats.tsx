@@ -1,4 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react';
+import { currentLocale } from '../../i18n';
 import i18n from '../../i18n';
 import type { Game } from './GameList';
 import { computeCardStats, inPeriod, MIN_GAMES, SIGNATURE_MIN_GAMES, type CardRow, type Period } from './cardStatsMath';
@@ -40,7 +41,7 @@ const record = (wins: number, games: number) =>
   `${i18n.t('vittorie_count', { count: wins })} ${i18n.t('su_partite_count', { count: games })}`;
 
 /** Una cifra decimale, con la virgola: 5,1. */
-const oneDecimal = (n: number) => n.toLocaleString(i18n.language, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const oneDecimal = (n: number) => n.toLocaleString(currentLocale(), { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
 const ROW = 'mb-2 flex w-full items-center gap-3 rounded-lg border border-zaff-border bg-zaff-bg px-3 py-2 text-left';
 

@@ -6,6 +6,7 @@ import { ChoiceField, TextField } from '../ui/Field';
 import { cx, HEADING_SECTION, SURFACE, TEXT_MINI, TEXT_MUTED } from '../ui/styles';
 import { deleteMyAccount, signOut } from '../../services/account';
 import { useSavedDeckList } from './useSavedDeck';
+import LanguageSwitch from '../ui/LanguageSwitch';
 import type { Game } from './GameList';
 
 
@@ -57,6 +58,12 @@ export default function AccountPanel({ userId, email, games }: { userId: string;
         <p className={TEXT_MUTED}>{t('accesso_con')}</p>
         <p className="mb-4 break-all text-base text-zaff-text">{email ?? '—'}</p>
         <Button variant="ghost" onClick={() => { void signOut(); }}>{t('esci')}</Button>
+      </section>
+
+      {/* Lingua dell'app: stessa pagina in italiano o in inglese (/it/ ↔ /en/). */}
+      <section className={cx(SURFACE, 'mb-6 flex items-center justify-between gap-3 p-4')}>
+        <h2 className={HEADING_SECTION}>{t('lingua')}</h2>
+        <LanguageSwitch />
       </section>
 
       <section className={cx(SURFACE, 'p-4')}>

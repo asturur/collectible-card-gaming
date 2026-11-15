@@ -64,7 +64,9 @@ qui c'è il "perché" e la cronologia. Va aggiornato a ogni blocco di lavoro.
 | #16 | FAQ: sezione "Grafici mazzo" (Costi di mana, Produzione di mana) con link dai grafici del mazzo; "Mazzo preferito": a parità, ordine alfabetico |
 | #17 | Nome dell'app "MTG Tracker" ovunque; traduzione: elenco rinominato `untranslated_components.md` e completato, regole concordate e glossario in AGENTS.md |
 | #18 | Traduzione di tutta ZAFF (DeckPicker, DeckPreview, GameView, JoinScreen, ZaffApp); tasto "MTG Tracker" nella schermata d'ingresso; tolto "CIAO" |
-| (questa patch) | Selettore della lingua "IT · EN" (`ui/LanguageSwitch`) nell'angolo della mascherina ZAFF |
+| #19 | Selettore della lingua "IT · EN" (`ui/LanguageSwitch`) nell'angolo della mascherina ZAFF |
+| #20–#27 | Traduzione di MTG Tracker a gruppi di file (accesso, Account, barra, mazzi, partite, segnapunti, statistiche, kit comune, file di calcolo); corretti i plurali italiani ("1 vittoria", "1 giocatore"…) |
+| (questa patch) | FAQ in inglese (copia separata), date in formato britannico, selettore IT · EN nella pagina Account: doppia lingua completata |
 
 ## Scelte prese (e perché)
 
@@ -97,6 +99,9 @@ qui c'è il "perché" e la cronologia. Va aggiornato a ogni blocco di lavoro.
   vedono, e una bandiera indica un paese, non una lingua). Subito in ZAFF (tutta tradotta); in MTG
   Tracker (pagina Account) solo a traduzione finita. Senza lingua nell'indirizzo si resta in italiano;
   ricordare la scelta sul dispositivo si potrà aggiungere in seguito senza problemi.
+- **Doppia lingua completata (novembre 2026):** date inglesi giorno/mese/anno (britanniche), parole
+  brevi per menu e pulsanti, soprannomi scherzosi e formati salvati lasciati uguali; la lingua si
+  sceglie da ZAFF e dalla pagina Account (senza lingua nell'indirizzo resta l'italiano).
 - **Testi nuovi** nelle schermate: già con `t()` e chiavi in `locales/it` e `locales/en` (regola di Andrea).
 - **Conferme di sistema (`window.confirm`)** da trasformare in riquadri dell'app: proposto in
   due passi (1: componente comune + 3 cancellazioni + esci senza salvare; 2: uscita dalla

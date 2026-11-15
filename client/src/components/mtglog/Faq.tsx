@@ -4,6 +4,10 @@ import NavTabs from '../ui/NavTabs';
 import { ButtonRouteLink } from '../ui/Button';
 import { cx, HEADING_SECTION } from '../ui/styles';
 import { FAQ_SECTIONS } from './faqContent';
+import { FAQ_SECTIONS_EN } from './faqContent.en';
+
+/** FAQ nella lingua in uso: italiano (originale) o la copia inglese. */
+const faqSections = () => (i18n.language === 'en' ? FAQ_SECTIONS_EN : FAQ_SECTIONS);
 
 /**
  * FAQ delle statistiche: le sezioni del menu Statistiche in alto, sotto gli
@@ -11,14 +15,15 @@ import { FAQ_SECTIONS } from './faqContent';
  * nell'indirizzo, così ogni pagina statistica porta dritta alla sua spiegazione.
  */
 export default function Faq({ sectionId, topicId }: { sectionId?: string; topicId?: string }) {
-  const section = FAQ_SECTIONS.find((s) => s.id === sectionId) ?? FAQ_SECTIONS[0];
+  const sections = faqSections();
+  const section = sections.find((s) => s.id === sectionId) ?? sections[0];
   const topic = section.topics.find((t) => t.id === topicId) ?? section.topics[0];
   return (
     <>
       <NavTabs
         label={i18n.t('sezioni')}
         value={section.id}
-        options={FAQ_SECTIONS.map((s) => ({ value: s.id, label: s.label, to: paths.faqTopic(s.id) }))}
+        options={sections.map((s) => ({ value: s.id, label: s.label, to: paths.faqTopic(s.id) }))}
         className="mb-3"
       />
       {section.topics.length > 1 && (

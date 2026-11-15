@@ -36,7 +36,7 @@ describe('locale routing and translations', () => {
     expect([dateLabel('2026-11-05'), monthLabel('2026-11'), formatEur(1234.5), MANA_LABELS.W]).toEqual(['05/11/2026', 'Novembre 2026', '€ 1.234,50', 'Bianco']);
     await i18n.changeLanguage('en');
     try {
-      expect([dateLabel('2026-11-05'), monthLabel('2026-11'), formatEur(1234.5), MANA_LABELS.W]).toEqual(['11/05/2026', 'November 2026', '€ 1,234.50', 'White']);
+      expect([dateLabel('2026-11-05'), monthLabel('2026-11'), formatEur(1234.5), MANA_LABELS.W]).toEqual(['05/11/2026', 'November 2026', '€ 1,234.50', 'White']);
     } finally {
       await i18n.changeLanguage('it');
     }

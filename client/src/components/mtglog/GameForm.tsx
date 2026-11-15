@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { currentLocale } from '../../i18n';
 import { useTranslation } from 'react-i18next';
 import {
   findCanonicalName,
@@ -1162,9 +1163,9 @@ export default function GameForm({ editingGame, rematchFrom, onBack, onDiscard, 
         <Modal title={t('partita_non_salvata')} onClose={() => setDraftOffer(null)}>
           <p className="mb-4 text-[15px] text-zaff-text">
             {t('hai_una_partita_iniziata_date', {
-              date: new Date(draftOffer.startedAt).toLocaleDateString(i18n.language, { day: 'numeric', month: 'long' }),
-              time: new Date(draftOffer.startedAt).toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit' }),
-              players: new Intl.ListFormat(i18n.language, { type: 'conjunction' }).format(draftPlayerNames(draftOffer)),
+              date: new Date(draftOffer.startedAt).toLocaleDateString(currentLocale(), { day: 'numeric', month: 'long' }),
+              time: new Date(draftOffer.startedAt).toLocaleTimeString(currentLocale(), { hour: '2-digit', minute: '2-digit' }),
+              players: new Intl.ListFormat(currentLocale(), { type: 'conjunction' }).format(draftPlayerNames(draftOffer)),
             })}
           </p>
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
